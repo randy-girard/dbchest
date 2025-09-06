@@ -1,0 +1,21 @@
+<%= form_with(model: cluster, local: true) do |form| %>
+  <% if cluster.errors.any? %>
+    <div class="alert alert-danger">
+      <h4><%= pluralize(cluster.errors.count, "error") %> prohibited this cluster from being saved:</h4>
+      <ul class="mb-0">
+        <% cluster.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="mb-3">
+    <%= form.label :name, class: "form-label" %>
+    <%= form.text_field :name, class: "form-control", autofocus: true %>
+  </div>
+
+  <div>
+    <%= form.submit class: "btn btn-primary" %>
+  </div>
+<% end %>

@@ -1,0 +1,17 @@
+<% if f.object.new_record? %>
+  <%= f.select :value, [], { prompt: "Select a template" },
+    id: "template_template",
+    class: "form-control",
+    data: {
+      controller: "dynamic-select",
+      dynamic_select_url_value: "/api/providers/#node_provider_id?function=template_template&node=#node_node&storage=#template_storage",
+      dynamic_select_text_field_value: "name",
+      dynamic_select_value_field_value: "id",
+      dynamic_select_disabled_message_value: "Must select a template storage first",
+      dynamic_select_selected_value_value: f.object.value
+    } %>
+<% else %>
+  <div class="form-control-plaintext">
+    <%= f.object.value %>
+  </div>
+<% end %>

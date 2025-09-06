@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  provider_type: one
+  key: MyString
+  label: MyString
+  required: false
+  sensitive: false
+
+two:
+  provider_type: two
+  key: MyString
+  label: MyString
+  required: false
+  sensitive: false

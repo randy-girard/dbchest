@@ -1,0 +1,23 @@
+<% content_for :title, "Editing Cluster" %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <h1 class="page-title">
+      Editing Cluster
+    </h1>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        <%= render "form", cluster: @cluster %>
+      </div>
+      <div class="card-footer">
+        <%= link_to "Show this cluster", @cluster, class: "btn btn-outline-primary me-2" %>
+        <%= link_to "Back to clusters", clusters_path, class: "btn btn-outline-secondary" %>
+      </div>
+    </div>
+  </div>
+</div>

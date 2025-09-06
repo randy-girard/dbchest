@@ -1,0 +1,35 @@
+<%= form_with(model: provider, local: true) do |form| %>
+  <% if provider.errors.any? %>
+    <div class="alert alert-danger">
+      <h4><%= pluralize(provider.errors.count, "error") %> prohibited this provider from being saved:</h4>
+      <ul class="mb-0">
+        <% provider.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="mb-3">
+    <%= form.label :name, class: "form-label" %>
+    <%= form.text_field :name, class: "form-control", autofocus: true %>
+  </div>
+
+  <div class="mb-3">
+    <%= form.label :provider_type_id, "Provider Type", class: "form-label" %>
+    <%= form.collection_select :provider_type_id, @provider_types, :id, :name,
+          { prompt: "Select Provider" },
+          class: "form-select",
+          data: { turbo_frame: "config_partial", controller: "provider-config", action: "change->provider-config#change" } %>
+  </div>
+
+  <%= turbo_frame_tag "config_partial" do %>
+    <% if @provider.provider_type.present? %>
+      <%= render "config_partial", f: form %>
+    <% end %>
+  <% end %>
+
+  <div class="mt-4">
+    <%= form.submit "Save Provider", class: "btn btn-primary" %>
+  </div>
+<% end %>

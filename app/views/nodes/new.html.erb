@@ -1,0 +1,20 @@
+<% content_for :title, "New Node" %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <h1 class="page-title">New Node</h1>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        <%= render "form", node: @node %>
+      </div>
+      <div class="card-footer">
+        <%= link_to "Back to nodes", cluster_nodes_path(@cluster), class: "btn btn-outline-secondary" %>
+      </div>
+    </div>
+  </div>
+</div>

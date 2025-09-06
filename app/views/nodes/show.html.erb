@@ -1,0 +1,25 @@
+<% if notice.present? %>
+  <div class="alert alert-success"><%= notice %></div>
+<% end %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <h1 class="page-title">Node Details</h1>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        <%= render @node %>
+      </div>
+
+      <div class="card-footer d-flex gap-2">
+        <%= link_to "Edit this node", edit_cluster_node_path(@cluster, @node), class: "btn btn-primary" %>
+        <%= link_to "Back to nodes", cluster_nodes_path(@cluster), class: "btn btn-outline-secondary" %>
+        <%= button_to "Destroy this node", [@cluster, @node], method: :delete, data: { confirm: "Are you sure?" }, class: "btn btn-danger ms-auto" %>
+      </div>
+    </div>
+  </div>
+</div>

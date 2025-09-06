@@ -1,0 +1,17 @@
+<% if f.object.new_record? %>
+  <%= f.select :value, [], { prompt: "Select a node" },
+    id: "node_node",
+    class: "form-control",
+    data: {
+      controller: "dynamic-select",
+      dynamic_select_url_value: "/api/providers/#node_provider_id?function=nodes",
+      dynamic_select_text_field_value: "name",
+      dynamic_select_value_field_value: "id",
+      dynamic_select_children_value: "#node_storage",
+      dynamic_select_selected_value_value: f.object.value
+    } %>
+<% else %>
+  <div class="form-control-plaintext">
+    <%= f.object.value %>
+  </div>
+<% end %>

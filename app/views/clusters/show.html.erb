@@ -1,0 +1,61 @@
+<% if notice.present? %>
+  <div class="alert alert-success"><%= notice %></div>
+<% end %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl d-flex justify-content-between align-items-center">
+    <h1 class="page-title">Cluster Details</h1>
+    <%= link_to "Add New Node", new_cluster_node_path(@cluster), class: "btn btn-primary" %>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <!-- Cluster info card -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <%= render @cluster %>
+      </div>
+      <div class="card-footer d-flex gap-2">
+        <%= link_to "Edit this cluster", edit_cluster_path(@cluster), class: "btn btn-primary" %>
+        <%= link_to "Back to clusters", clusters_path, class: "btn btn-outline-secondary" %>
+        <%= button_to "Destroy this cluster", @cluster, method: :delete, data: { confirm: "Are you sure?" }, class: "btn btn-danger ms-auto" %>
+      </div>
+    </div>
+
+    <!-- Nodes list card -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Nodes in this Cluster</h3>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover table-striped align-middle">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Status</th> <!-- Optional, if you have statuses -->
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @cluster.nodes.each do |node| %>
+              <tr>
+                <td><%= node.name %></td>
+                <td>
+                  <%# Example: status badge, customize as needed %>
+                  <span class="badge bg-success">Active</span>
+                </td>
+                <td class="text-nowrap">
+                  <%= link_to "Show", cluster_node_path(@cluster, node), class: "btn btn-sm btn-outline-primary me-1" %>
+                  <%= link_to "Edit", edit_cluster_node_path(@cluster, node), class: "btn btn-sm btn-outline-secondary me-1" %>
+                  <%= button_to "Delete", cluster_node_path(@cluster, node), method: :delete, data: { confirm: "Are you sure?" }, class: "btn btn-sm btn-danger" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

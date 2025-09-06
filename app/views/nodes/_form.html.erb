@@ -1,0 +1,37 @@
+<%= form_with(model: [@cluster, node], local: true) do |form| %>
+  <% if node.errors.any? %>
+    <div class="alert alert-danger">
+      <h4><%= pluralize(node.errors.count, "error") %> prohibited this node from being saved:</h4>
+      <ul class="mb-0">
+        <% node.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="mb-3">
+    <%= form.label :provider_id, "Provider", class: "form-label" %>
+    <%= form.collection_select :provider_id, @providers, :id, :name,
+        { prompt: "Select Provider" },
+        class: "form-select",
+        data: { turbo_frame: "config_partial",
+                controller: "node-config",
+                action: "change->node-config#change",
+                cluster_id: @cluster.id,
+                node_id: @node.id } %>
+  </div>
+
+  <div class="mb-3">
+    <%= form.label :name, class: "form-label" %>
+    <%= form.text_field :name, class: "form-control", autofocus: true %>
+  </div>
+
+  <%= turbo_frame_tag "config_partial" do %>
+    <%= render "config_partial", f: form %>
+  <% end %>
+
+  <div>
+    <%= form.submit "Save Node", class: "btn btn-primary" %>
+  </div>
+<% end %>

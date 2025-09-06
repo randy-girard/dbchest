@@ -1,0 +1,27 @@
+<%= turbo_frame_tag "config_partial" do %>
+  <% if @provider&.provider_type.present? %>
+    <h3 class="mb-3"><%= @provider.provider_type.name %> Settings</h3>
+
+    <table class="table table-striped table-hover table-bordered">
+      <thead>
+        <tr>
+          <th>Key</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= f.fields_for :provider_settings do |sf| %>
+          <tr>
+            <td><%= sf.label sf.object.provider_type_option.label, class: "form-label" %></td>
+            <td>
+              <%= sf.hidden_field :id %>
+              <%= sf.hidden_field :provider_type_option_id %>
+              <%= sf.hidden_field :key %>
+              <%= sf.text_field :value, class: "form-control" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+<% end %>

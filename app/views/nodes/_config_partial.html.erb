@@ -1,0 +1,29 @@
+<%= turbo_frame_tag "config_partial" do %>
+  <h3 class="mb-3">Settings</h3>
+
+  <table class="table table-striped table-hover table-bordered">
+    <thead>
+      <tr>
+        <th>Setting</th>
+        <th>Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <%= f.fields_for :node_settings do |ns| %>
+        <tr>
+          <td>
+            <div class="form-control-plaintext">
+              <%= ns.label ns.object.provider_type_node_option.label, class: "form-label" %>
+            </div>
+          </td>
+          <td>
+            <%= ns.hidden_field :id %>
+            <%= ns.hidden_field :provider_type_node_option_id %>
+            <%= ns.hidden_field :key %>
+            <%= render "nodes/node_settings/#{ns.object.node.provider.provider_type.key}/#{ns.object.key}", f: ns %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

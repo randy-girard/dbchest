@@ -1,0 +1,29 @@
+<% if notice.present? %>
+  <div class="alert alert-success"><%= notice %></div>
+<% end %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <h1 class="page-title">
+      Provider Details
+    </h1>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        <%= render @provider %>
+      </div>
+
+      <div class="card-footer d-flex gap-2">
+        <%= link_to "Edit this provider", edit_provider_path(@provider), class: "btn btn-primary" %>
+
+        <%= link_to "Back to providers", providers_path, class: "btn btn-outline-secondary" %>
+
+        <%= button_to "Destroy this provider", @provider, method: :delete, data: { confirm: "Are you sure?" }, class: "btn btn-danger ms-auto" %>
+      </div>
+    </div>
+  </div>
+</div>
