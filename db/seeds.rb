@@ -1,9 +1,61 @@
-# This file should ensure the existence of records required to run the application in every environment (production,
-# development, test). The code here should be idempotent so that it can be executed at any point in every environment.
-# The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
-#
-# Example:
-#
-#   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
-#     MovieGenre.find_or_create_by!(name: genre_name)
-#   end
+ProviderType.create(
+  name: "Proxmox",
+  key: "proxmox"
+)
+
+provider = ProviderType.find_by(key: "proxmox")
+provider.provider_type_options.create(
+  key: "api_url",
+  label: "API URL",
+  required: true,
+  sensitive: true
+)
+provider.provider_type_options.create(
+  key: "username",
+  label: "Username",
+  required: true,
+  sensitive: true
+)
+provider.provider_type_options.create(
+  key: "password",
+  label: "Password",
+  required: true,
+  sensitive: true
+)
+
+provider.provider_type_node_options.create(
+  key: "template_storage",
+  label: "Storage",
+  required: true
+)
+provider.provider_type_node_options.create(
+  key: "template_template",
+  label: "Template",
+  required: true
+)
+
+provider.provider_type_node_options.create(
+  key: "disk_size",
+  label: "Disk Size",
+  required: true
+)
+provider.provider_type_node_options.create(
+  key: "node",
+  label: "Node",
+  required: true
+)
+provider.provider_type_node_options.create(
+  key: "storage",
+  label: "Storage",
+  required: true
+)
+provider.provider_type_node_options.create(
+  key: "ip_address",
+  label: "IP Address",
+  required: true
+)
+provider.provider_type_node_options.create(
+  key: "gateway",
+  label: "Gateway",
+  required: true
+)

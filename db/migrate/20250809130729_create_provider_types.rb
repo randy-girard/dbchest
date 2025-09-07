@@ -6,10 +6,5 @@ class CreateProviderTypes < ActiveRecord::Migration[8.0]
       
       t.timestamps
     end
-
-    ProviderType.create(
-      name: "Proxmox",
-      key: "proxmox"
-    )
   end
 end
