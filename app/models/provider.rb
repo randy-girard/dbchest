@@ -1,5 +1,5 @@
-require 'proxmox_api'
-require 'ostruct'
+require "proxmox_api"
+require "ostruct"
 
 class Provider < ApplicationRecord
   belongs_to :provider_type

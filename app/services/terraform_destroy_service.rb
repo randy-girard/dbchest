@@ -26,7 +26,7 @@ class TerraformDestroyService
         @node.node_settings.each do |node_setting|
           vars[node_setting.key] = node_setting.value
         end
-        
+
         # Load state from DB into work dir
         load_state_from_db(work_dir, @node)
 
@@ -48,7 +48,7 @@ class TerraformDestroyService
         @node.terraform_state = nil
         @node.save
 
-        #save_state_to_db(work_dir, @node)
+        # save_state_to_db(work_dir, @node)
 
       ensure
         # Clean up working directory

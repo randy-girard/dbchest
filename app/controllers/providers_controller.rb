@@ -81,7 +81,7 @@ class ProvidersController < ApplicationController
         :provider_type_id,
         :name,
         provider_settings_attributes: [
-          [:id, :provider_type_option_id, :key, :value]
+          [ :id, :provider_type_option_id, :key, :value ]
         ]
       ])
     end

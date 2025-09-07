@@ -3,7 +3,7 @@ module ProviderClient
     include ActionView::Helpers::NumberHelper
 
     def nodes(args)
-      client.nodes.get.map {|node|
+      client.nodes.get.map { |node|
         {
           "id" => node[:node],
           "name" => node[:node]
@@ -15,8 +15,8 @@ module ProviderClient
       client.nodes[args[:node]]
             .storage
             .get
-            .select {|storage| storage[:type] != "dir" }
-            .map {|storage|
+            .select { |storage| storage[:type] != "dir" }
+            .map { |storage|
               avail = number_to_human_size(storage[:avail].to_i)
               total = number_to_human_size(storage[:total].to_i)
               {
@@ -30,8 +30,8 @@ module ProviderClient
       client.nodes[args[:node]]
             .storage
             .get
-            .select {|storage| storage[:type] == "dir" }
-            .map {|storage|
+            .select { |storage| storage[:type] == "dir" }
+            .map { |storage|
               avail = number_to_human_size(storage[:avail].to_i)
               total = number_to_human_size(storage[:total].to_i)
               {
@@ -46,8 +46,8 @@ module ProviderClient
             .storage[args[:storage]]
             .content
             .get
-            .select {|content| content[:content] == "vztmpl" }
-            .map {|content|
+            .select { |content| content[:content] == "vztmpl" }
+            .map { |content|
               {
                 "id" => content[:volid],
                 "name" => content[:volid]
@@ -56,20 +56,19 @@ module ProviderClient
     end
 
     def ip(args)
-
-      exec = client.nodes('pve').execute.post(commands: [])
+      exec = client.nodes("pve").execute.post(commands: [])
       puts exec.inspect
-      upid = exec['data']['upid']
+      upid = exec["data"]["upid"]
 
       # Wait for the command to complete and retrieve the output
       loop do
         status = client.nodes(node).lxc(vmid).tasks(upid).status.get
-        break if status['data']['status'] == 'stopped'
+        break if status["data"]["status"] == "stopped"
         sleep 1
       end
 
       # Fetch the command output
-      output = client.nodes(node).lxc(vmid).tasks(upid).status.get['data']['exitstatus_stdout']
+      output = client.nodes(node).lxc(vmid).tasks(upid).status.get["data"]["exitstatus_stdout"]
       puts "Command Output: #{output}"
     end
 

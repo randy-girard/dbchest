@@ -1,5 +1,4 @@
 class ApiController < ApplicationController
-
   def index
     @provider = Provider.find(params[:provider_id])
     @client = @provider.api_client
@@ -9,5 +8,4 @@ class ApiController < ApplicationController
 
     render json: @data
   end
-
 end

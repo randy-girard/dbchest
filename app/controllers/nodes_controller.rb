@@ -27,8 +27,8 @@ class NodesController < ApplicationController
 
     respond_to do |format|
       if @node.save
-        format.html { redirect_to [@cluster, @node], notice: "Node was successfully created." }
-        format.json { render :show, status: :created, location: [@cluster, @node] }
+        format.html { redirect_to [ @cluster, @node ], notice: "Node was successfully created." }
+        format.json { render :show, status: :created, location: [ @cluster, @node ] }
       else
         format.html { render :new, status: :unprocessable_entity }
         format.json { render json: @node.errors, status: :unprocessable_entity }
@@ -40,8 +40,8 @@ class NodesController < ApplicationController
   def update
     respond_to do |format|
       if @node.update(node_params)
-        format.html { redirect_to [@cluster, @node], notice: "Node was successfully updated.", status: :see_other }
-        format.json { render :show, status: :ok, location: [@cluster, @node] }
+        format.html { redirect_to [ @cluster, @node ], notice: "Node was successfully updated.", status: :see_other }
+        format.json { render :show, status: :ok, location: [ @cluster, @node ] }
       else
         format.html { render :edit, status: :unprocessable_entity }
         format.json { render json: @node.errors, status: :unprocessable_entity }

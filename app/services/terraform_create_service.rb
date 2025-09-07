@@ -1,4 +1,4 @@
-require 'sshkey'
+require "sshkey"
 
 class TerraformCreateService
   include TerraformCommon
@@ -49,7 +49,7 @@ class TerraformCreateService
         terraform_cmds = [
           "#{command} init -input=false",
           "#{command} plan -input=false -var-file=vars.tfvars -out=tfplan",
-          "#{command} apply -input=false -auto-approve tfplan",
+          "#{command} apply -input=false -auto-approve tfplan"
         ]
 
         terraform_cmds.each do |cmd|

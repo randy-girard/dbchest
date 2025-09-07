@@ -32,9 +32,7 @@ class AnsibleRunService
     key_file.chmod(0600)
     key_file.flush
 
-    env = {
-
-    }
+    env = {}
 
     cmd = [
       "ansible-playbook",
@@ -70,14 +68,14 @@ class AnsibleRunService
     # Detect a task start
     if line =~ /^TASK \[(.+)\]/
       finish_current_task
-      @current_task = { name: $1.strip, status: 'running', details: "" }
+      @current_task = { name: $1.strip, status: "running", details: "" }
       broadcast(@current_task)
     elsif @current_task
       # Detect task result
       case line
-      when /ok:/ then @current_task[:status] = 'success'
-      when /changed:/ then @current_task[:status] = 'changed'
-      when /failed:/ then @current_task[:status] = 'failed'
+      when /ok:/ then @current_task[:status] = "success"
+      when /changed:/ then @current_task[:status] = "changed"
+      when /failed:/ then @current_task[:status] = "failed"
       end
 
       # Append output
