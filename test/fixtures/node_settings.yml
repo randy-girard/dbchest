@@ -2,10 +2,12 @@
 
 one:
   node: one
-  key: MyString
-  value: MyString
+  key: disk_size
+  value: 1
+  provider_type_node_option: one
 
 two:
   node: two
-  key: MyString
-  value: MyString
+  key: disk_size
+  value: 1
+  provider_type_node_option: two

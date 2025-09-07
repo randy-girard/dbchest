@@ -6,43 +6,43 @@ class NodesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should get index" do
-    get nodes_url
+    get cluster_nodes_url(@node.cluster)
     assert_response :success
   end
 
   test "should get new" do
-    get new_node_url
+    get new_cluster_node_url(@node.cluster)
     assert_response :success
   end
 
   test "should create node" do
     assert_difference("Node.count") do
-      post nodes_url, params: { node: { cluster_id: @node.cluster_id, name: @node.name, provider_id: @node.provider_id, terraform_state: @node.terraform_state } }
+      post cluster_nodes_url(@node.cluster), params: { node: { cluster_id: @node.cluster_id, name: @node.name, provider_id: @node.provider_id, terraform_state: @node.terraform_state } }
     end
 
-    assert_redirected_to node_url(Node.last)
+    assert_redirected_to cluster_node_url(Node.last.cluster, Node.last)
   end
 
   test "should show node" do
-    get node_url(@node)
+    get cluster_node_url(@node.cluster, @node)
     assert_response :success
   end
 
   test "should get edit" do
-    get edit_node_url(@node)
+    get edit_cluster_node_url(@node.cluster, @node)
     assert_response :success
   end
 
   test "should update node" do
-    patch node_url(@node), params: { node: { cluster_id: @node.cluster_id, name: @node.name, provider_id: @node.provider_id, terraform_state: @node.terraform_state } }
-    assert_redirected_to node_url(@node)
+    patch cluster_node_url(@node.cluster, @node), params: { node: { cluster_id: @node.cluster_id, name: @node.name, provider_id: @node.provider_id, terraform_state: @node.terraform_state } }
+    assert_redirected_to cluster_node_url(@node.cluster, @node)
   end
 
   test "should destroy node" do
     assert_difference("Node.count", -1) do
-      delete node_url(@node)
+      delete cluster_node_url(@node.cluster, @node)
     end
 
-    assert_redirected_to nodes_url
+    assert_redirected_to cluster_nodes_url(@node.cluster)
   end
 end

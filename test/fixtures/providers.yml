@@ -2,8 +2,8 @@
 
 one:
   name: MyString
-  settings: 
+  provider_type: one
 
 two:
   name: MyString
-  settings: 
+  provider_type: two

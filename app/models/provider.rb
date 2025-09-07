@@ -4,6 +4,9 @@ require 'ostruct'
 class Provider < ApplicationRecord
   belongs_to :provider_type
 
+  # FIXME: We need to make sure this doesn't happen
+  has_many :nodes, dependent: :destroy
+
   has_many :provider_settings, dependent: :destroy
   accepts_nested_attributes_for :provider_settings
 

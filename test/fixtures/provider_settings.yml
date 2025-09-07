@@ -4,8 +4,10 @@ one:
   provider: one
   key: MyString
   value: MyString
+  provider_type_option: one
 
 two:
   provider: two
   key: MyString
   value: MyString
+  provider_type_option: two
