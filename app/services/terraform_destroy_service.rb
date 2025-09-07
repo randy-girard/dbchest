@@ -21,7 +21,7 @@ class TerraformDestroyService
         unless ALLOWED_PROVIDER_KEYS.include?(provider_key)
           raise ArgumentError, "Invalid provider type"
         end
-        
+
         source_dir = Rails.root.join("lib", "terraform", provider_key)
         FileUtils.cp_r("#{source_dir}/.", work_dir)
 
