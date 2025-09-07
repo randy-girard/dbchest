@@ -1,4 +1,6 @@
 module TerraformCommon
+  ALLOWED_PROVIDER_KEYS = %w[aws linode proxmox gcp azure].freeze
+
   private
 
   def command

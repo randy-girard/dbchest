@@ -29,7 +29,12 @@ class TerraformCreateService
         FileUtils.mkdir_p(work_dir)
 
         # Copy Terraform templates into working dir
-        source_dir = Rails.root.join("lib", "terraform", provider_type.key)
+        provider_key = provider_type.key
+        unless ALLOWED_PROVIDER_KEYS.include?(provider_key)
+          raise ArgumentError, "Invalid provider type"
+        end
+
+        source_dir = Rails.root.join("lib", "terraform", provider_key)
         FileUtils.cp_r("#{source_dir}/.", work_dir)
 
         vars = @node.provider.terraform_vars
@@ -56,7 +61,7 @@ class TerraformCreateService
           run_cmd(cmd, work_dir)
         end
 
-        json, status = Open3.capture2("#{command} output -json", chdir: work_dir)
+        json, status = Open3.capture2(command, "output", "-json", chdir: work_dir)
         data = JSON.parse(json)
 
         @node.runtime_config = data
