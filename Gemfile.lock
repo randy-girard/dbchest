@@ -414,7 +414,6 @@ DEPENDENCIES
   importmap-rails
   jbuilder
   kamal
-  net-ssh
   pg
   propshaft
   proxmox-api
