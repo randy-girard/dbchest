@@ -45,8 +45,6 @@ RSpec.describe ClustersController, type: :controller do
         expect(response).to redirect_to(Cluster.last)
       end
     end
-
-
   end
 
   describe "PUT #update" do
@@ -64,8 +62,6 @@ RSpec.describe ClustersController, type: :controller do
         expect(response).to redirect_to(cluster)
       end
     end
-
-
   end
 
   describe "DELETE #destroy" do

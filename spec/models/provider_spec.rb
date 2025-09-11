@@ -14,6 +14,4 @@ RSpec.describe Provider, type: :model do
   describe 'nested attributes' do
     it { should accept_nested_attributes_for(:provider_settings) }
   end
-
-
 end
