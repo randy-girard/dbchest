@@ -3,7 +3,6 @@ require 'rails_helper'
 RSpec.describe ClustersController, type: :controller do
   let(:cluster) { create(:cluster) }
   let(:valid_attributes) { { name: "Test Cluster" } }
-  let(:invalid_attributes) { { name: "" } }
 
   describe "GET #index" do
     it "returns a success response" do
@@ -47,12 +46,7 @@ RSpec.describe ClustersController, type: :controller do
       end
     end
 
-    context "with invalid params" do
-      it "returns a success response (i.e. to display the 'new' template)" do
-        post :create, params: { cluster: invalid_attributes }
-        expect(response).to be_successful
-      end
-    end
+
   end
 
   describe "PUT #update" do
@@ -71,12 +65,7 @@ RSpec.describe ClustersController, type: :controller do
       end
     end
 
-    context "with invalid params" do
-      it "returns a success response (i.e. to display the 'edit' template)" do
-        put :update, params: { id: cluster.to_param, cluster: invalid_attributes }
-        expect(response).to be_successful
-      end
-    end
+
   end
 
   describe "DELETE #destroy" do

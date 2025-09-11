@@ -6,20 +6,20 @@ RSpec.describe "Clusters", type: :system do
   describe "visiting the index" do
     it "displays the clusters page" do
       visit clusters_path
-      expect(page).to have_selector("h1", text: "Clusters")
+      expect(page).to have_selector("h2", text: "Clusters")
     end
   end
 
   describe "creating a cluster" do
     it "allows user to create a new cluster" do
       visit clusters_path
-      click_on "New cluster"
+      click_on "New Cluster"
 
       fill_in "Name", with: "Test Cluster"
       click_on "Create Cluster"
 
       expect(page).to have_text("Cluster was successfully created")
-      click_on "Back"
+      click_on "Back to clusters"
     end
   end
 
@@ -32,7 +32,7 @@ RSpec.describe "Clusters", type: :system do
       click_on "Update Cluster"
 
       expect(page).to have_text("Cluster was successfully updated")
-      click_on "Back"
+      click_on "Back to clusters"
     end
   end
 
