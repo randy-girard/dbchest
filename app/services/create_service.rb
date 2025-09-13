@@ -1,4 +1,6 @@
 class CreateService
+  include Sidekiq::Job
+  
   def initialize
   end
 

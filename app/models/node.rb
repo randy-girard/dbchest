@@ -19,4 +19,12 @@ class Node < ApplicationRecord
       end
     end
   end
+
+  def provision!
+    CreateService.perform_async(id)
+  end
+
+  def deprovision!
+    DestroyService.perform_async(id)
+  end
 end
