@@ -55,7 +55,7 @@ class NodesController < ApplicationController
     @node.deprovision!
 
     respond_to do |format|
-      format.html { redirect_to cluster_nodes_path(@cluster), notice: "Node is being removed.", status: :see_other }
+      format.html { redirect_to cluster_path(@cluster), notice: "Node is being removed.", status: :see_other }
       format.json { head :no_content }
     end
   end
