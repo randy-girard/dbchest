@@ -8,11 +8,11 @@ class AnsibleRunService
     Rails.root.join("lib", "ansible")
   end
 
-  def playbook_path(node)
-    Rails.root.join(ansible_path, node.cluster.cluster_type, "create_node.yml").to_s
+  def playbook_path(node, playbook)
+    Rails.root.join(ansible_path, node.cluster.cluster_type, playbook).to_s
   end
 
-  def perform(node_id)
+  def perform(node_id, playbook, vars: {})
     @node = Node.find_by_id(node_id)
     ip = @node.get_runtime_config_value("ip_address")
     ip_address = IPAddr.new(ip).to_s
@@ -22,6 +22,9 @@ class AnsibleRunService
     hosts = [
       { name: "node-#{@node.id}", ip: ip_address, user: "root" }
     ]
+
+    ansible_binary = `which ansible-playbook`.chomp
+    cmd = [ ansible_binary ]
 
     # Create a temporary inventory file
     inventory = Tempfile.new("ansible_inventory")
@@ -34,6 +37,17 @@ class AnsibleRunService
       inventory.write("#{content.join(" ")}\n")
     end
     inventory.flush
+    cmd += [ "-i", inventory.path.to_s ]
+
+    # Create a temporary vars file
+    if vars.present?
+      varfile = Tempfile.new("ansible_vars")
+      vars.each do |key, value|
+        varfile.write("#{key}: #{value}\n")
+      end
+      varfile.flush
+      cmd += [ "-e", "@#{varfile.path}" ]
+    end
 
     key_file = Tempfile.new("ansible_key")
     key_file.write(@node.ssh_private_key)
@@ -42,13 +56,9 @@ class AnsibleRunService
 
     env = {}
 
-    ansible_binary = `which ansible-playbook`.chomp
-
-    cmd = [
-      ansible_binary,
-      "-i", inventory.path.to_s,
+    cmd += [
       "--private-key", key_file.path.to_s,
-      playbook_path(@node)
+      playbook_path(@node, playbook)
     ]
 
     buffer = ""

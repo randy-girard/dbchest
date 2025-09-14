@@ -1,5 +1,5 @@
 ---
-- name: Create a PostgreSQL user
+- name: Remove PostgreSQL user and clean pg_hba.conf
   hosts: all
   become: true
 
@@ -14,21 +14,17 @@
       set_fact:
         pg_hba_conf: "{{ pg_info.settings.hba_file.setting }}"
 
-    - name: Ensure pg_hba.conf entry exists
+    - name: Remove pg_hba.conf entry for user
       lineinfile:
         path: "{{ pg_hba_conf }}"
-        regexp: "^host\\s+all\\s+{{ username }}\\s+0.0.0.0/0\\s+"
-        line: "host    all    {{ username }}    0.0.0.0/0    scram-sha-256"
-        state: present
-        insertafter: EOF
+        regexp: "^host\\s+all\\s+{{ username }}\\s+0.0.0.0/0\\s+scram-sha-256"
+        state: absent
       notify: Reload PostgreSQL
 
-    - name: Ensure PostgreSQL user is present
+    - name: Ensure PostgreSQL role is absent
       community.postgresql.postgresql_user:
         name: "{{ username }}"
-        password: "{{ password }}"
-        role_attr_flags: SUPERUSER
-        state: present
+        state: absent
       become_user: postgres
 
   handlers:

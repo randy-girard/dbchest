@@ -3,10 +3,15 @@ module ProviderClient
     include ActionView::Helpers::NumberHelper
 
     def exists?(node)
-      node = node.get_runtime_config_value("node")
+      proxmox_node = node.get_runtime_config_value("node")
       vmid = node.get_runtime_config_value("vmid")
 
-      client.nodes[node][vmid]
+      begin
+        client.nodes[proxmox_node].lxc[vmid].status.current.get
+        true
+      rescue => ex
+        false
+      end
     end
 
     def nodes(args)

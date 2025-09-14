@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_10_143635) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_14_135842) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -18,6 +18,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_10_143635) do
     t.string "name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "credentials", force: :cascade do |t|
+    t.bigint "node_id", null: false
+    t.string "username"
+    t.string "password"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["node_id"], name: "index_credentials_on_node_id"
   end
 
   create_table "node_settings", force: :cascade do |t|
@@ -38,6 +47,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_10_143635) do
     t.jsonb "terraform_state", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "runtime_config", default: {}
+    t.string "ssh_private_key"
+    t.string "ssh_public_key"
     t.index ["cluster_id"], name: "index_nodes_on_cluster_id"
     t.index ["provider_id"], name: "index_nodes_on_provider_id"
   end
@@ -89,6 +101,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_10_143635) do
     t.index ["provider_type_id"], name: "index_providers_on_provider_type_id"
   end
 
+  add_foreign_key "credentials", "nodes"
   add_foreign_key "node_settings", "nodes"
   add_foreign_key "node_settings", "provider_type_node_options"
   add_foreign_key "nodes", "clusters"

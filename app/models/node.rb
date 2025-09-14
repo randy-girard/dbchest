@@ -2,6 +2,7 @@ class Node < ApplicationRecord
   belongs_to :cluster
   belongs_to :provider
 
+  has_many :credentials, dependent: :destroy
   has_many :node_settings, dependent: :destroy
   accepts_nested_attributes_for :node_settings
 

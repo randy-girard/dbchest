@@ -9,7 +9,7 @@ class CreateService
     if @node
       TerraformCreateService.new.perform(@node.id)
 
-      AnsibleRunService.new.perform(@node.id)
+      AnsibleRunService.new.perform(@node.id, "create_node.yml")
     end
   end
 end

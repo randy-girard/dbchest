@@ -34,22 +34,51 @@
           <thead>
             <tr>
               <th>Name</th>
-              <th>Status</th> <!-- Optional, if you have statuses -->
               <th>Actions</th>
+              <th>Credentials</th>
             </tr>
           </thead>
           <tbody>
             <% @cluster.nodes.each do |node| %>
               <tr>
                 <td><%= node.name %></td>
-                <td>
-                  <%# Example: status badge, customize as needed %>
-                  <span class="badge bg-success">Active</span>
-                </td>
                 <td class="text-nowrap">
                   <%= link_to "Show", cluster_node_path(@cluster, node), class: "btn btn-sm btn-outline-primary me-1" %>
                   <%= link_to "Edit", edit_cluster_node_path(@cluster, node), class: "btn btn-sm btn-outline-secondary me-1" %>
                   <%= button_to "Delete", cluster_node_path(@cluster, node), method: :delete, data: { confirm: "Are you sure?" }, class: "btn btn-sm btn-danger" %>
+                </td>
+                <td>
+                  <!-- Nodes list card -->
+                  <div class="card">
+                    <div class="card-header">
+                      <h3 class="card-title">Credentials</h3>
+                      <%= link_to "New Credential", new_cluster_node_credential_path(@cluster, node), class: "btn btn-outline-secondary" %>
+                    </div>
+
+                    <div class="table-responsive">
+                      <table class="table table-hover table-striped align-middle">
+                        <thead>
+                          <tr>
+                            <th>Username</th>
+                            <th>Password</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <% node.credentials.each do |credential| %>
+                            <tr>
+                              <td><%= credential.username %></td>
+                              <td><%= credential.password %></td>
+                              <td class="text-nowrap">
+                                <%= link_to "Edit", edit_cluster_node_credential_path(@cluster, node, credential), class: "btn btn-sm btn-outline-secondary me-1" %>
+                                <%= button_to "Delete", cluster_node_credential_path(@cluster, node, credential), method: :delete, data: { confirm: "Are you sure?" }, class: "btn btn-sm btn-danger" %>
+                              </td>
+                            </tr>
+                          <% end %>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </td>
               </tr>
             <% end %>

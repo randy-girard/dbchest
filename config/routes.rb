@@ -12,6 +12,7 @@ Rails.application.routes.draw do
   resources :clusters do
     resources :nodes do
       get :config_partial, on: :collection
+      resources :credentials
     end
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

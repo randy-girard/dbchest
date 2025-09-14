@@ -7,7 +7,7 @@ class TerraformDestroyService
   def perform(node_id)
     @node = Node.find(node_id)
 
-    if @node
+    if @node && @node.exists_in_provider?
       begin
         provider_type = @node.provider.provider_type
 
