@@ -1,6 +1,6 @@
 class DestroyService
   include Sidekiq::Job
-  
+
   def initialize
   end
 

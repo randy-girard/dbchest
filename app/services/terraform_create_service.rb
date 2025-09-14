@@ -42,8 +42,8 @@ class TerraformCreateService
         vars[:name] = @node.name
                            .to_s
                            .downcase
-                           .gsub(/[^a-z0-9]+/, '-')
-                           .gsub(/^-+|-+$/, '')
+                           .gsub(/[^a-z0-9]+/, "-")
+                           .gsub(/^-+|-+$/, "")
 
         @node.node_settings.each do |node_setting|
           vars[node_setting.key] = node_setting.value
