@@ -16,7 +16,7 @@
   pre_tasks:
     - name: Wait for SSH
       ansible.builtin.wait_for_connection:
-        timeout: 300
+        timeout: 30
 
   tasks:
     - name: Gather facts manually after SSH is ready

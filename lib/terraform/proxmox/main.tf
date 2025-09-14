@@ -15,9 +15,9 @@ provider "proxmox" {
 }
 
 resource "proxmox_lxc" "container" {
-  target_node = "pve"
+  target_node = var.node
 
-  hostname     = "randytest"
+  hostname     = var.name
   ostemplate   = "local:vztmpl/ubuntu-20.04-standard_20.04-1_amd64.tar.gz"
   password     = "supersecret"
 
@@ -61,6 +61,10 @@ resource "proxmox_lxc" "container" {
 
 output "vmid" {
   value = proxmox_lxc.container.vmid
+}
+
+output "node" {
+  value = var.node
 }
 
 output "ip_address" {

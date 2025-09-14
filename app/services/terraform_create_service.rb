@@ -39,6 +39,11 @@ class TerraformCreateService
 
         vars = @node.provider.terraform_vars
         vars[:ssh_public_key] = @node.ssh_public_key
+        vars[:name] = @node.name
+                           .to_s
+                           .downcase
+                           .gsub(/[^a-z0-9]+/, '-')
+                           .gsub(/^-+|-+$/, '')
 
         @node.node_settings.each do |node_setting|
           vars[node_setting.key] = node_setting.value
@@ -66,8 +71,6 @@ class TerraformCreateService
 
         @node.runtime_config = data
         @node.save
-
-        vmid = @node.runtime_config.fetch("vmid", {}).fetch("value", nil)
 
         # Save updated state back to DB
         save_state_to_db(work_dir, @node)

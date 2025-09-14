@@ -2,6 +2,13 @@ module ProviderClient
   class Proxmox < ProviderClient::Base
     include ActionView::Helpers::NumberHelper
 
+    def exists?(node)
+      node = node.get_runtime_config_value("node")
+      vmid = node.get_runtime_config_value("vmid")
+
+      client.nodes[node][vmid]
+    end
+
     def nodes(args)
       client.nodes.get.map { |node|
         {
