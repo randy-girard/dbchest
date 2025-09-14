@@ -1,4 +1,8 @@
+require "sidekiq/web"
+
 Rails.application.routes.draw do
+  mount Sidekiq::Web => "/sidekiq"
+
   get "/api/providers/:provider_id" => "api#index", as: :api
 
   resources :providers do

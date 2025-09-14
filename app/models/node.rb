@@ -19,4 +19,24 @@ class Node < ApplicationRecord
       end
     end
   end
+
+  def get_runtime_config_value(key)
+    runtime_config.fetch(key, {}).fetch("value", nil)
+  end
+
+  def provider_api_client
+    provider.api_client
+  end
+
+  def exists_in_provider?
+    provider_api_client.exists?(self)
+  end
+
+  def provision!
+    CreateService.perform_async(id)
+  end
+
+  def deprovision!
+    DestroyService.perform_async(id)
+  end
 end

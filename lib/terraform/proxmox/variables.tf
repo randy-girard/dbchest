@@ -23,6 +23,36 @@ variable "ip_address" {
  description = "IP Address"
 }
 
+variable "name" {
+  type = string
+  description = "Name"
+}
+
+variable "disk_size" {
+  type = string
+  description = "Disk size"
+}
+
+variable "storage" {
+  type = string
+  description = "Storage"
+}
+
+variable "template_storage" {
+  type = string
+  description = "Template Storage"
+}
+
+variable "template_template" {
+  type = string
+  description = "Template template"
+}
+
+variable "node" {
+  type = string
+  description = "Node"
+}
+
 variable "gateway" {
  type = string
  description = "Gateway"

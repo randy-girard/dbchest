@@ -8,22 +8,30 @@ class AnsibleRunService
     Rails.root.join("lib", "ansible")
   end
 
-  def playbook_path
-    Rails.root.join(ansible_path, "playbook.yml").to_s
+  def playbook_path(node)
+    Rails.root.join(ansible_path, node.cluster.cluster_type, "create_node.yml").to_s
   end
 
   def perform(node_id)
     @node = Node.find_by_id(node_id)
+    ip = @node.get_runtime_config_value("ip_address")
+    ip_address = IPAddr.new(ip).to_s
+
+    return if ip_address.nil?
 
     hosts = [
-      { name: "node1", ip: "10.0.0.230", user: "root" }
+      { name: "node-#{@node.id}", ip: ip_address, user: "root" }
     ]
 
     # Create a temporary inventory file
     inventory = Tempfile.new("ansible_inventory")
     inventory.write("[postgres_servers]\n")
     hosts.each do |host|
-      inventory.write("#{host[:ip]} ansible_user=#{host[:user]}\n")
+      content = [
+        host[:ip],
+        "ansible_user=#{host[:user]}"
+      ]
+      inventory.write("#{content.join(" ")}\n")
     end
     inventory.flush
 
@@ -38,7 +46,7 @@ class AnsibleRunService
       "ansible-playbook",
       "-i", inventory.path.to_s,
       "--private-key", key_file.path.to_s,
-      playbook_path
+      playbook_path(@node)
     ]
 
     buffer = ""
@@ -47,7 +55,7 @@ class AnsibleRunService
 
       stdout_err.each do |line|
         line.chomp!
-        puts line # always print to console
+        Rails.logger.info line # always print to console
 
         parse_line(line)
       end

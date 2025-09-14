@@ -14,6 +14,8 @@ module TerraformCommon
   def run_cmd(cmd, dir)
     Open3.popen2e(cmd, chdir: dir) do |stdin, stdout_err, wait_thr|
       stdout_err.each do |line|
+        line.chomp!
+        Rails.logger.info line
         broadcast_log(line)
       end
 
