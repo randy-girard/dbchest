@@ -4,13 +4,37 @@
   <div class="container-xl">
     <div class="row g-2 align-items-center">
       <div class="col">
-        <h2 class="page-title">Providers</h2>
-        <% if notice.present? %>
-          <div class="alert alert-success mt-2"><%= notice %></div>
-        <% end %>
+        <div class="page-pretitle">
+          Infrastructure Management
+        </div>
+        <h2 class="page-title">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v6m0 6v6"/>
+            <path d="m21 12l-6 0m-6 0l-6 0"/>
+          </svg>
+          Providers
+        </h2>
       </div>
       <div class="col-auto ms-auto d-print-none">
-        <%= link_to "New Provider", new_provider_path, class: "btn btn-primary" %>
+        <div class="btn-list">
+          <%= link_to new_provider_path, class: "btn btn-primary d-none d-sm-inline-block" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            New provider
+          <% end %>
+          <%= link_to new_provider_path, class: "btn btn-primary d-sm-none btn-icon", "aria-label" => "Create new provider" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          <% end %>
+        </div>
       </div>
     </div>
   </div>
@@ -18,23 +42,99 @@
 
 <div class="page-body">
   <div class="container-xl">
-    <div class="row row-cards">
-      <% @providers.each do |provider| %>
-        <div class="col-sm-6 col-lg-4">
-          <div class="card">
-            <div class="card-body">
-              <h3 class="card-title"><%= provider.name %></h3>
-              <!-- Optional info -->
-              <p class="text-muted">
-                Type: <%= provider.provider_type.name %>
-              </p>
-              <div class="mt-3">
-                <%= link_to "View", provider, class: "btn btn-outline-primary" %>
+    <% if @providers.any? %>
+      <div class="row row-cards">
+        <% @providers.each do |provider| %>
+          <div class="col-sm-6 col-lg-4">
+            <div class="card">
+              <div class="card-status-top bg-cyan"></div>
+              <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                  <div class="me-3">
+                    <span class="avatar avatar-md" style="background-image: url(https://ui-avatars.com/api/?name=<%= provider.name %>&background=17a2b8&color=fff)"></span>
+                  </div>
+                  <div>
+                    <h3 class="card-title mb-1"><%= provider.name %></h3>
+                    <div class="text-muted small">
+                      <%= provider.provider_type.name %>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <div class="row">
+                    <div class="col-6">
+                      <div class="text-muted small mb-1">Created</div>
+                      <div class="h4"><%= time_ago_in_words(provider.created_at) %> ago</div>
+                    </div>
+                    <div class="col-6">
+                      <div class="text-muted small mb-1">Status</div>
+                      <span class="badge bg-success">Connected</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="progress mb-3">
+                  <div class="progress-bar bg-cyan" style="width: 85%" role="progressbar" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100">
+                    <span class="visually-hidden">85% health</span>
+                  </div>
+                </div>
+
+                <div class="btn-list">
+                  <%= link_to provider, class: "btn btn-outline-primary w-100" do %>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/>
+                      <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"/>
+                    </svg>
+                    View Details
+                  <% end %>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="row align-items-center">
+                  <div class="col">
+                    <div class="btn-list">
+                      <%= link_to edit_provider_path(provider), class: "btn btn-sm btn-outline-secondary" do %>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                          <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/>
+                          <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/>
+                        </svg>
+                        Edit
+                      <% end %>
+                      <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                          Actions
+                        </button>
+                        <ul class="dropdown-menu">
+                          <li><%= link_to "Test Connection", provider_path(provider), class: "dropdown-item" %></li>
+                          <li><%= link_to "View Configuration", provider_path(provider), class: "dropdown-item" %></li>
+                          <li><hr class="dropdown-divider"></li>
+                          <li><%= button_to "Delete", provider, method: :delete, data: { confirm: "Are you sure?" }, class: "dropdown-item text-danger" %></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="empty">
+        <div class="empty-img">
+          <img src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/img/illustrations/undraw_server_down_s4lk.svg" height="128" alt="">
         </div>
-      <% end %>
-    </div>
+        <p class="empty-title">No providers found</p>
+        <p class="empty-subtitle text-muted">
+          Get started by adding your first infrastructure provider to manage your database clusters.
+        </p>
+        <div class="empty-action">
+          <%= link_to "Add your first provider", new_provider_path, class: "btn btn-primary" %>
+        </div>
+      </div>
+    <% end %>
   </div>
 </div>

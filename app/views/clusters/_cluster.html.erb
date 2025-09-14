@@ -1,7 +1,49 @@
-<div id="<%= dom_id cluster %>">
-  <p>
-    <strong>Name:</strong>
-    <%= cluster.name %>
-  </p>
-
+<div id="<%= dom_id cluster %>" class="cluster-details">
+  <div class="row">
+    <div class="col-md-6">
+      <dl class="row">
+        <dt class="col-sm-4">Cluster Name:</dt>
+        <dd class="col-sm-8"><strong><%= cluster.name %></strong></dd>
+        
+        <dt class="col-sm-4">Total Nodes:</dt>
+        <dd class="col-sm-8">
+          <span class="badge bg-primary fs-6"><%= pluralize(cluster.nodes.count, 'node') %></span>
+        </dd>
+        
+        <dt class="col-sm-4">Status:</dt>
+        <dd class="col-sm-8">
+          <span class="badge bg-success">Active</span>
+        </dd>
+      </dl>
+    </div>
+    
+    <div class="col-md-6">
+      <dl class="row">
+        <dt class="col-sm-4">Created:</dt>
+        <dd class="col-sm-8">
+          <%= cluster.created_at.strftime("%B %d, %Y at %I:%M %p") %>
+          <small class="text-muted d-block">(<%= time_ago_in_words(cluster.created_at) %> ago)</small>
+        </dd>
+        
+        <dt class="col-sm-4">Updated:</dt>
+        <dd class="col-sm-8">
+          <%= cluster.updated_at.strftime("%B %d, %Y at %I:%M %p") %>
+          <small class="text-muted d-block">(<%= time_ago_in_words(cluster.updated_at) %> ago)</small>
+        </dd>
+      </dl>
+    </div>
+  </div>
+  
+  <% if cluster.respond_to?(:description) && cluster.description.present? %>
+    <div class="mt-3">
+      <dt>Description:</dt>
+      <dd class="mt-2">
+        <div class="card bg-light">
+          <div class="card-body">
+            <%= simple_format(cluster.description) %>
+          </div>
+        </div>
+      </dd>
+    </div>
+  <% end %>
 </div>

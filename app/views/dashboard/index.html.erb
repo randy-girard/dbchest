@@ -1,0 +1,279 @@
+<% content_for :title, "Dashboard - dbChest" %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <h2 class="page-title">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <rect x="4" y="4" width="6" height="6" rx="1"/>
+            <rect x="14" y="4" width="6" height="6" rx="1"/>
+            <rect x="4" y="14" width="6" height="6" rx="1"/>
+            <rect x="14" y="14" width="6" height="6" rx="1"/>
+          </svg>
+          Dashboard
+        </h2>
+        <p class="text-muted">Welcome to dbChest - Manage your database clusters and providers</p>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <div class="btn-list">
+          <%= link_to new_provider_path, class: "btn btn-primary d-none d-sm-inline-block" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            New Provider
+          <% end %>
+          <%= link_to new_cluster_path, class: "btn btn-primary d-none d-sm-inline-block" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            New Cluster
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <!-- Statistics Cards -->
+    <div class="row row-cards mb-4">
+      <div class="col-sm-6 col-lg-3">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="subheader">Total Providers</div>
+              <div class="ms-auto lh-1">
+                <div class="dropdown">
+                  <a class="dropdown-toggle text-muted" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 30 days</a>
+                </div>
+              </div>
+            </div>
+            <div class="h1 mb-3"><%= @providers_count %></div>
+            <div class="d-flex mb-2">
+              <div class="flex-fill">
+                <div class="progress progress-sm">
+                  <div class="progress-bar bg-primary" style="width: <%= @providers_count > 0 ? 75 : 0 %>%" role="progressbar"></div>
+                </div>
+              </div>
+              <div class="ms-3">
+                <%= link_to providers_path, class: "text-muted" do %>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <polyline points="9,6 15,12 9,18"/>
+                  </svg>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-sm-6 col-lg-3">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="subheader">Total Clusters</div>
+              <div class="ms-auto lh-1">
+                <div class="dropdown">
+                  <a class="dropdown-toggle text-muted" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 30 days</a>
+                </div>
+              </div>
+            </div>
+            <div class="h1 mb-3"><%= @clusters_count %></div>
+            <div class="d-flex mb-2">
+              <div class="flex-fill">
+                <div class="progress progress-sm">
+                  <div class="progress-bar bg-success" style="width: <%= @clusters_count > 0 ? 65 : 0 %>%" role="progressbar"></div>
+                </div>
+              </div>
+              <div class="ms-3">
+                <%= link_to clusters_path, class: "text-muted" do %>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <polyline points="9,6 15,12 9,18"/>
+                  </svg>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-sm-6 col-lg-3">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="subheader">Total Nodes</div>
+              <div class="ms-auto lh-1">
+                <div class="dropdown">
+                  <a class="dropdown-toggle text-muted" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">All time</a>
+                </div>
+              </div>
+            </div>
+            <div class="h1 mb-3"><%= @nodes_count %></div>
+            <div class="d-flex mb-2">
+              <div class="flex-fill">
+                <div class="progress progress-sm">
+                  <div class="progress-bar bg-info" style="width: <%= @nodes_count > 0 ? 85 : 0 %>%" role="progressbar"></div>
+                </div>
+              </div>
+              <div class="ms-3">
+                <span class="text-muted">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 1v6m0 6v6"/>
+                    <path d="m21 12l-6 0m-6 0l-6 0"/>
+                  </svg>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-sm-6 col-lg-3">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="subheader">System Health</div>
+              <div class="ms-auto lh-1">
+                <span class="badge bg-success">Online</span>
+              </div>
+            </div>
+            <div class="h1 mb-3">100%</div>
+            <div class="d-flex mb-2">
+              <div class="flex-fill">
+                <div class="progress progress-sm">
+                  <div class="progress-bar bg-success" style="width: 100%" role="progressbar"></div>
+                </div>
+              </div>
+              <div class="ms-3">
+                <%= link_to "/sidekiq", target: "_blank", class: "text-muted" do %>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <polyline points="9,6 15,12 9,18"/>
+                  </svg>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <rect x="3" y="12" width="6" height="8" rx="1"/>
+                <rect x="9" y="8" width="6" height="12" rx="1"/>
+                <rect x="15" y="4" width="6" height="16" rx="1"/>
+              </svg>
+              Recent Clusters
+            </h3>
+            <div class="card-actions">
+              <%= link_to "View all", clusters_path, class: "btn btn-sm btn-outline-primary" %>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <% if @recent_clusters.any? %>
+              <div class="list-group list-group-flush">
+                <% @recent_clusters.each do |cluster| %>
+                  <div class="list-group-item">
+                    <div class="row align-items-center">
+                      <div class="col-auto">
+                        <span class="avatar avatar-sm" style="background-image: url(https://ui-avatars.com/api/?name=<%= cluster.name %>&background=206bc4&color=fff)"></span>
+                      </div>
+                      <div class="col text-truncate">
+                        <a href="<%= cluster_path(cluster) %>" class="text-reset d-block"><%= cluster.name %></a>
+                        <div class="d-block text-muted text-truncate mt-n1">
+                          <%= pluralize(cluster.nodes.count, 'node') %> • Created <%= time_ago_in_words(cluster.created_at) %> ago
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            <% else %>
+              <div class="empty">
+                <div class="empty-img"><img src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/img/illustrations/undraw_software_engineer_lvl5.svg" height="128" alt="">
+                </div>
+                <p class="empty-title">No clusters yet</p>
+                <p class="empty-subtitle text-muted">
+                  Get started by creating your first database cluster
+                </p>
+                <div class="empty-action">
+                  <%= link_to "Create cluster", new_cluster_path, class: "btn btn-primary" %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v6m0 6v6"/>
+                <path d="m21 12l-6 0m-6 0l-6 0"/>
+              </svg>
+              Recent Providers
+            </h3>
+            <div class="card-actions">
+              <%= link_to "View all", providers_path, class: "btn btn-sm btn-outline-primary" %>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <% if @recent_providers.any? %>
+              <div class="list-group list-group-flush">
+                <% @recent_providers.each do |provider| %>
+                  <div class="list-group-item">
+                    <div class="row align-items-center">
+                      <div class="col-auto">
+                        <span class="avatar avatar-sm" style="background-image: url(https://ui-avatars.com/api/?name=<%= provider.name %>&background=17a2b8&color=fff)"></span>
+                      </div>
+                      <div class="col text-truncate">
+                        <a href="<%= provider_path(provider) %>" class="text-reset d-block"><%= provider.name %></a>
+                        <div class="d-block text-muted text-truncate mt-n1">
+                          <%= provider.provider_type.name %> • Created <%= time_ago_in_words(provider.created_at) %> ago
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            <% else %>
+              <div class="empty">
+                <div class="empty-img"><img src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/img/illustrations/undraw_server_down_s4lk.svg" height="128" alt="">
+                </div>
+                <p class="empty-title">No providers yet</p>
+                <p class="empty-subtitle text-muted">
+                  Add a provider to start managing your infrastructure
+                </p>
+                <div class="empty-action">
+                  <%= link_to "Add provider", new_provider_path, class: "btn btn-primary" %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

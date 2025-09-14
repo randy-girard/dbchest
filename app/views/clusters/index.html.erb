@@ -4,13 +4,37 @@
   <div class="container-xl">
     <div class="row g-2 align-items-center">
       <div class="col">
-        <h2 class="page-title">Clusters</h2>
-        <% if notice.present? %>
-          <div class="alert alert-success mt-2"><%= notice %></div>
-        <% end %>
+        <div class="page-pretitle">
+          Database Management
+        </div>
+        <h2 class="page-title">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <rect x="3" y="12" width="6" height="8" rx="1"/>
+            <rect x="9" y="8" width="6" height="12" rx="1"/>
+            <rect x="15" y="4" width="6" height="16" rx="1"/>
+          </svg>
+          Clusters
+        </h2>
       </div>
       <div class="col-auto ms-auto d-print-none">
-        <%= link_to "New Cluster", new_cluster_path, class: "btn btn-primary" %>
+        <div class="btn-list">
+          <%= link_to new_cluster_path, class: "btn btn-primary d-none d-sm-inline-block" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            New cluster
+          <% end %>
+          <%= link_to new_cluster_path, class: "btn btn-primary d-sm-none btn-icon", "aria-label" => "Create new cluster" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          <% end %>
+        </div>
       </div>
     </div>
   </div>
@@ -18,23 +42,96 @@
 
 <div class="page-body">
   <div class="container-xl">
-    <div class="row row-cards">
-      <% @clusters.each do |cluster| %>
-        <div class="col-sm-6 col-lg-4">
-          <div class="card">
-            <div class="card-body">
-              <h3 class="card-title"><%= cluster.name %></h3>
-              <!-- Optional description or metadata -->
-              <p class="text-muted">
-                <%= truncate(cluster.description, length: 100) if cluster.respond_to?(:description) %>
-              </p>
-              <div class="mt-3">
-                <%= link_to "View", cluster, class: "btn btn-outline-primary" %>
+    <% if @clusters.any? %>
+      <div class="row row-cards">
+        <% @clusters.each do |cluster| %>
+          <div class="col-sm-6 col-lg-4">
+            <div class="card">
+              <div class="card-status-top bg-blue"></div>
+              <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                  <div class="me-3">
+                    <span class="avatar avatar-md" style="background-image: url(https://ui-avatars.com/api/?name=<%= cluster.name %>&background=206bc4&color=fff)"></span>
+                  </div>
+                  <div>
+                    <h3 class="card-title mb-1"><%= cluster.name %></h3>
+                    <div class="text-muted small">
+                      <%= pluralize(cluster.nodes.count, 'node') %>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <div class="row">
+                    <div class="col-6">
+                      <div class="text-muted small mb-1">Created</div>
+                      <div class="h4"><%= time_ago_in_words(cluster.created_at) %> ago</div>
+                    </div>
+                    <div class="col-6">
+                      <div class="text-muted small mb-1">Status</div>
+                      <span class="badge bg-success">Active</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="progress mb-3">
+                  <div class="progress-bar bg-primary" style="width: <%= cluster.nodes.count > 0 ? [cluster.nodes.count * 20, 100].min : 5 %>%" role="progressbar" aria-valuenow="<%= cluster.nodes.count * 20 %>" aria-valuemin="0" aria-valuemax="100">
+                    <span class="visually-hidden"><%= cluster.nodes.count %> nodes</span>
+                  </div>
+                </div>
+
+                <div class="btn-list">
+                  <%= link_to cluster, class: "btn btn-outline-primary w-100" do %>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/>
+                      <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"/>
+                    </svg>
+                    View Details
+                  <% end %>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="row align-items-center">
+                  <div class="col">
+                    <div class="btn-list">
+                      <%= link_to edit_cluster_path(cluster), class: "btn btn-sm btn-outline-secondary" do %>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                          <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/>
+                          <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/>
+                        </svg>
+                        Edit
+                      <% end %>
+                      <%= link_to new_cluster_node_path(cluster), class: "btn btn-sm btn-primary" do %>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                          <line x1="12" y1="5" x2="12" y2="19"/>
+                          <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Add Node
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="empty">
+        <div class="empty-img">
+          <img src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/img/illustrations/undraw_software_engineer_lvl5.svg" height="128" alt="">
         </div>
-      <% end %>
-    </div>
+        <p class="empty-title">No clusters found</p>
+        <p class="empty-subtitle text-muted">
+          Get started by creating your first database cluster to manage your infrastructure.
+        </p>
+        <div class="empty-action">
+          <%= link_to "Create your first cluster", new_cluster_path, class: "btn btn-primary" %>
+        </div>
+      </div>
+    <% end %>
   </div>
 </div>

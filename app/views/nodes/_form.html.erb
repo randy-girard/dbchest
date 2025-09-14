@@ -1,37 +1,117 @@
-<%= form_with(model: [@cluster, node], local: true) do |form| %>
-  <% if node.errors.any? %>
-    <div class="alert alert-danger">
-      <h4><%= pluralize(node.errors.count, "error") %> prohibited this node from being saved:</h4>
-      <ul class="mb-0">
-        <% node.errors.full_messages.each do |message| %>
-          <li><%= message %></li>
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 1v6m0 6v6"/>
+        <path d="m21 12l-6 0m-6 0l-6 0"/>
+      </svg>
+      <%= node.persisted? ? "Update Node" : "Add New Node" %>
+    </h3>
+    <p class="card-subtitle">Configure your database node for cluster "<%= @cluster.name %>"</p>
+  </div>
+
+  <%= form_with(model: [@cluster, node], local: true, class: "card-body") do |form| %>
+    <% if node.errors.any? %>
+      <div class="alert alert-danger alert-dismissible" role="alert">
+        <div class="d-flex">
+          <div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <circle cx="12" cy="12" r="9"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="alert-title">Please fix the following errors:</h4>
+            <ul class="mb-0">
+              <% node.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+        <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+      </div>
+    <% end %>
+
+    <div class="row">
+      <div class="col-md-8">
+        <div class="mb-3">
+          <%= form.label :provider_id, "Infrastructure Provider", class: "form-label required" %>
+          <%= form.collection_select :provider_id, @providers, :id, :name,
+              { prompt: "Select a provider for this node" },
+              class: "form-select #{'is-invalid' if node.errors[:provider_id].any?}",
+              data: { turbo_frame: "config_partial",
+                      controller: "node-config",
+                      action: "change->node-config#change",
+                      cluster_id: @cluster.id,
+                      node_id: @node.id } %>
+          <div class="form-hint">
+            Choose the infrastructure provider where this database node will be deployed.
+          </div>
+          <% if node.errors[:provider_id].any? %>
+            <div class="invalid-feedback">
+              <%= node.errors[:provider_id].first %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="mb-3">
+          <%= form.label :name, "Node Name", class: "form-label required" %>
+          <%= form.text_field :name, class: "form-control #{'is-invalid' if node.errors[:name].any?}", placeholder: "Enter node name", autofocus: true %>
+          <div class="form-hint">
+            Provide a unique name for this database node (e.g., "db-primary", "db-replica-1")
+          </div>
+          <% if node.errors[:name].any? %>
+            <div class="invalid-feedback">
+              <%= node.errors[:name].first %>
+            </div>
+          <% end %>
+        </div>
+
+        <%= turbo_frame_tag "config_partial" do %>
+          <%= render "config_partial", f: form %>
         <% end %>
-      </ul>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card bg-light">
+          <div class="card-body">
+            <h4 class="card-title">Configuration Steps</h4>
+            <div class="mb-2">
+              <ol class="text-muted small mb-0">
+                <li>Select infrastructure provider</li>
+                <li>Set node name and parameters</li>
+                <li>Configure provider-specific settings</li>
+                <li>Add database credentials</li>
+                <li>Deploy the node</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        
+        <% if @providers.empty? %>
+          <div class="card bg-warning-lt mt-3">
+            <div class="card-body">
+              <h4 class="card-title">No Providers Available</h4>
+              <p class="text-muted small">
+                You need to create at least one provider before adding nodes.
+              </p>
+              <%= link_to "Add Provider", new_provider_path, class: "btn btn-warning btn-sm" %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="card-footer bg-transparent mt-auto">
+      <div class="btn-list">
+        <%= link_to "Cancel", cluster_path(@cluster), class: "btn btn-outline-secondary" %>
+        <%= form.submit node.persisted? ? "Update Node" : "Create Node", class: "btn btn-primary ms-auto" %>
+      </div>
     </div>
   <% end %>
-
-  <div class="mb-3">
-    <%= form.label :provider_id, "Provider", class: "form-label" %>
-    <%= form.collection_select :provider_id, @providers, :id, :name,
-        { prompt: "Select Provider" },
-        class: "form-select",
-        data: { turbo_frame: "config_partial",
-                controller: "node-config",
-                action: "change->node-config#change",
-                cluster_id: @cluster.id,
-                node_id: @node.id } %>
-  </div>
-
-  <div class="mb-3">
-    <%= form.label :name, class: "form-label" %>
-    <%= form.text_field :name, class: "form-control", autofocus: true %>
-  </div>
-
-  <%= turbo_frame_tag "config_partial" do %>
-    <%= render "config_partial", f: form %>
-  <% end %>
-
-  <div>
-    <%= form.submit "Save Node", class: "btn btn-primary" %>
-  </div>
-<% end %>
+</div>

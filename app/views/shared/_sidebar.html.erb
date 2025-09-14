@@ -1,11 +1,111 @@
-<nav class="navbar-nav flex-column">
-  <div class="nav-item">
-    <%= link_to "Providers", providers_path, class: "nav-link" %>
-  </div>
-  <div class="nav-item">
-    <%= link_to "Clusters", clusters_path, class: "nav-link" %>
-  </div>
-  <div class="nav-item">
-    <%= link_to "Jobs", "/sidekiq", class: "nav-link", target: "_blank" %>
-  </div>
-</nav>
+<div class="collapse navbar-collapse" id="sidebar-menu">
+  <ul class="navbar-nav pt-lg-3">
+    <li class="nav-item">
+      <%= link_to root_path, class: "nav-link #{'active' if current_page?(root_path)}" do %>
+        <span class="nav-link-icon d-md-none d-lg-inline-block">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <polyline points="5,12 3,12 12,3 21,12 19,12"/>
+            <path d="m5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/>
+            <path d="m9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/>
+          </svg>
+        </span>
+        <span class="nav-link-title">
+          Dashboard
+        </span>
+      <% end %>
+    </li>
+    
+    <li class="nav-item dropdown">
+      <a class="nav-link dropdown-toggle #{'active' if controller_name == 'providers'}" href="#navbar-help" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+        <span class="nav-link-icon d-md-none d-lg-inline-block">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v6m0 6v6"/>
+            <path d="m21 12l-6 0m-6 0l-6 0"/>
+          </svg>
+        </span>
+        <span class="nav-link-title">
+          Providers
+        </span>
+      </a>
+      <div class="dropdown-menu">
+        <div class="dropdown-menu-columns">
+          <div class="dropdown-menu-column">
+            <%= link_to providers_path, class: "dropdown-item" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon dropdown-item-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
+                <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/>
+              </svg>
+              All Providers
+            <% end %>
+            <%= link_to new_provider_path, class: "dropdown-item" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon dropdown-item-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              New Provider
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </li>
+    
+    <li class="nav-item dropdown">
+      <a class="nav-link dropdown-toggle #{'active' if controller_name == 'clusters'}" href="#navbar-clusters" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+        <span class="nav-link-icon d-md-none d-lg-inline-block">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <rect x="3" y="12" width="6" height="8" rx="1"/>
+            <rect x="9" y="8" width="6" height="12" rx="1"/>
+            <rect x="15" y="4" width="6" height="16" rx="1"/>
+          </svg>
+        </span>
+        <span class="nav-link-title">
+          Clusters
+        </span>
+      </a>
+      <div class="dropdown-menu">
+        <div class="dropdown-menu-columns">
+          <div class="dropdown-menu-column">
+            <%= link_to clusters_path, class: "dropdown-item" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon dropdown-item-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
+                <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/>
+              </svg>
+              All Clusters
+            <% end %>
+            <%= link_to new_cluster_path, class: "dropdown-item" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon dropdown-item-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              New Cluster
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </li>
+
+    <li class="nav-item">
+      <%= link_to "/sidekiq", target: "_blank", class: "nav-link" do %>
+        <span class="nav-link-icon d-md-none d-lg-inline-block">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="m12 1v6m0 6v6"/>
+            <path d="m21 12l-6 0m-6 0l-6 0"/>
+          </svg>
+        </span>
+        <span class="nav-link-title">
+          Background Jobs
+        </span>
+      <% end %>
+    </li>
+  </ul>
+</div>
