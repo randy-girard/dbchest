@@ -1,0 +1,28 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Command Injection",
+      "warning_code": 14,
+      "fingerprint": "8712c05f614af520c5ffe2a073a3c93ac7d809a2c8cd04abcbdc2429a99bf8fd",
+      "check_name": "Execute",
+      "message": "Possible command injection",
+      "file": "app/services/ansible_run_service.rb",
+      "line": 55,
+      "link": "https://brakemanscanner.org/docs/warning_types/command_injection/",
+      "code": "Open3.popen2e({}, *[`which ansible-playbook`.chomp, \"-i\", Tempfile.new(\"ansible_inventory\").path.to_s, \"--private-key\", Tempfile.new(\"ansible_key\").path.to_s, playbook_path(Node.find_by_id(node_id))], :chdir => ansible_path.to_s)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "AnsibleRunService",
+        "method": "perform"
+      },
+      "user_input": "Node.find_by_id(node_id)",
+      "confidence": "High",
+      "cwe_id": [
+        77
+      ],
+      "note": ""
+    }
+  ],
+  "brakeman_version": "7.1.0"
+}

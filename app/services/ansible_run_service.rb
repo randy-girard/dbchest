@@ -42,8 +42,10 @@ class AnsibleRunService
 
     env = {}
 
+    ansible_binary = `which ansible-playbook`.chomp
+
     cmd = [
-      "ansible-playbook",
+      ansible_binary,
       "-i", inventory.path.to_s,
       "--private-key", key_file.path.to_s,
       playbook_path(@node)
