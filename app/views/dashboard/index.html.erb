@@ -18,22 +18,36 @@
       </div>
       <div class="col-auto ms-auto d-print-none">
         <div class="btn-list">
-          <%= link_to new_provider_path, class: "btn btn-primary d-none d-sm-inline-block" do %>
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            New Provider
-          <% end %>
-          <%= link_to new_cluster_path, class: "btn btn-primary d-none d-sm-inline-block" do %>
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            New Cluster
-          <% end %>
+          <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Quick Add
+            </button>
+            <ul class="dropdown-menu">
+              <li><%= link_to new_cluster_path, class: "dropdown-item" do %>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <rect x="3" y="12" width="6" height="8" rx="1"/>
+                  <rect x="9" y="8" width="6" height="12" rx="1"/>
+                  <rect x="15" y="4" width="6" height="16" rx="1"/>
+                </svg>
+                New Cluster
+              <% end %></li>
+              <li><%= link_to new_provider_path, class: "dropdown-item" do %>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 1v6m0 6v6"/>
+                  <path d="m21 12l-6 0m-6 0l-6 0"/>
+                </svg>
+                New Provider
+              <% end %></li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

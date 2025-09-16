@@ -30,22 +30,15 @@
               <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/>
               <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/>
             </svg>
-            Edit cluster
+            Edit
           <% end %>
-          <%= link_to new_cluster_node_path(@cluster), class: "btn btn-primary d-none d-sm-inline-block" do %>
+          <%= link_to new_cluster_node_path(@cluster), class: "btn btn-primary" do %>
             <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
               <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
             Add Node
-          <% end %>
-          <%= link_to new_cluster_node_path(@cluster), class: "btn btn-primary d-sm-none btn-icon", "aria-label" => "Add new node" do %>
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
           <% end %>
         </div>
       </div>
@@ -64,16 +57,6 @@
           </div>
           <div class="card-body">
             <%= render @cluster %>
-            <div class="row mt-3">
-              <div class="col-6">
-                <div class="text-muted small">Created</div>
-                <div class="h4"><%= @cluster.created_at.strftime("%B %d, %Y") %></div>
-              </div>
-              <div class="col-6">
-                <div class="text-muted small">Last Updated</div>
-                <div class="h4"><%= @cluster.updated_at.strftime("%B %d, %Y") %></div>
-              </div>
-            </div>
           </div>
           <div class="card-footer">
             <div class="btn-list">

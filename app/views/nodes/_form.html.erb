@@ -9,7 +9,7 @@
       </svg>
       <%= node.persisted? ? "Update Node" : "Add New Node" %>
     </h3>
-    <p class="card-subtitle">Configure your database node for cluster "<%= @cluster.name %>"</p>
+    <p class="card-subtitle">Database node configuration</p>
   </div>
 
   <%= form_with(model: [@cluster, node], local: true, class: "card-body") do |form| %>
