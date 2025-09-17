@@ -118,6 +118,7 @@
             <thead>
               <tr>
                 <th>Node</th>
+                <th>Type</th>
                 <th>Provider</th>
                 <th>Status</th>
                 <th>Credentials</th>
@@ -129,12 +130,30 @@
                 <tr>
                   <td>
                     <div class="d-flex align-items-center">
-                      <span class="avatar avatar-sm me-3" style="background-image: url(https://ui-avatars.com/api/?name=<%= node.name %>&background=28a745&color=fff)"></span>
+                      <span class="avatar avatar-sm me-3" style="background-image: url(https://ui-avatars.com/api/?name=<%= node.name %>&background=<%= node.replica? ? 'ffc107' : '28a745' %>&color=fff)">
+                        <%= node.replica? ? 'R' : 'P' %>
+                      </span>
                       <div>
                         <div class="fw-bold"><%= node.name %></div>
-                        <div class="text-muted small">Created <%= time_ago_in_words(node.created_at) %> ago</div>
+                        <div class="text-muted small">
+                          <% if node.replica? %>
+                            Replica of <%= node.parent_node.name %>
+                          <% else %>
+                            Created <%= time_ago_in_words(node.created_at) %> ago
+                          <% end %>
+                        </div>
                       </div>
                     </div>
+                  </td>
+                  <td>
+                    <% if node.replica? %>
+                      <span class="badge bg-warning">Replica</span>
+                    <% else %>
+                      <span class="badge bg-primary">Primary</span>
+                      <% if node.has_replicas? %>
+                        <small class="text-muted d-block"><%= node.replicas.count %> replica<%= 's' if node.replicas.count != 1 %></small>
+                      <% end %>
+                    <% end %>
                   </td>
                   <td>
                     <% if node.provider.present? %>

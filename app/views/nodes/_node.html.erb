@@ -26,6 +26,19 @@
         <dd class="col-sm-8">
           <span class="badge bg-secondary"><%= pluralize(node.credentials.count, 'credential') %></span>
         </dd>
+        
+        <dt class="col-sm-4">Node Type:</dt>
+        <dd class="col-sm-8">
+          <% if node.replica? %>
+            <span class="badge bg-warning">Replica</span>
+            <small class="text-muted d-block">Replica of <%= node.parent_node.name %></small>
+          <% else %>
+            <span class="badge bg-primary">Primary</span>
+            <% if node.has_replicas? %>
+              <small class="text-muted d-block"><%= pluralize(node.replicas.count, 'replica') %></small>
+            <% end %>
+          <% end %>
+        </dd>
       </dl>
     </div>
     
@@ -92,8 +105,20 @@
             </div>
           </div>
           <div class="col-md-3">
-            <div class="text-muted small">Health Status</div>
-            <div class="fw-bold text-success">Healthy</div>
+            <div class="text-muted small">
+              <% if node.replica? %>
+                Primary Node
+              <% else %>
+                Replicas
+              <% end %>
+            </div>
+            <div class="fw-bold">
+              <% if node.replica? %>
+                <%= link_to node.parent_node.name, [@cluster, node.parent_node], class: "text-decoration-none" %>
+              <% else %>
+                <%= pluralize(node.replicas.count, 'replica') %>
+              <% end %>
+            </div>
           </div>
         </div>
       </div>

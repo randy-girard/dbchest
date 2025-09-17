@@ -1,0 +1,163 @@
+<div class="page-wrapper">
+  <div class="page-header d-print-none">
+    <div class="container-xl">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <div class="page-pretitle">
+            <%= link_to @cluster.name, @cluster %>
+            / <%= link_to @node.name, [@cluster, @node] %>
+          </div>
+          <h2 class="page-title">
+            Add Replica Node
+          </h2>
+        </div>
+        <div class="col-auto ms-auto d-print-none">
+          <div class="btn-list">
+            <%= link_to "Back to Node", [@cluster, @node], class: "btn btn-outline-secondary" %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+    <div class="container-xl">
+      <div class="row">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 1v6m0 6v6"/>
+                  <path d="m21 12l-6 0m-6 0l-6 0"/>
+                </svg>
+                Create Replica for <%= @node.name %>
+              </h3>
+              <p class="card-subtitle">This will create a read-only replica of the primary node</p>
+            </div>
+
+            <%= form_with(model: [@cluster, @replica], url: create_replica_cluster_node_path(@cluster, @node), local: true, class: "card-body") do |form| %>
+              <% if @replica.errors.any? %>
+                <div class="alert alert-danger alert-dismissible" role="alert">
+                  <div class="d-flex">
+                    <div>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <circle cx="12" cy="12" r="9"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 class="alert-title">Please fix the following errors:</h4>
+                      <ul class="mb-0">
+                        <% @replica.errors.full_messages.each do |message| %>
+                          <li><%= message %></li>
+                        <% end %>
+                      </ul>
+                    </div>
+                  </div>
+                  <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+                </div>
+              <% end %>
+
+              <div class="row">
+                <div class="col-md-8">
+                  <div class="mb-3">
+                    <label class="form-label">Primary Node</label>
+                    <div class="form-control-plaintext">
+                      <strong><%= @node.name %></strong> (<%= @node.provider.name %>)
+                    </div>
+                    <div class="form-hint">
+                      The replica will be created as a read-only copy of this primary node.
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <%= form.label :provider_id, "Infrastructure Provider", class: "form-label required" %>
+                    <%= form.collection_select :provider_id, @providers, :id, :name,
+                        { selected: @node.provider_id },
+                        class: "form-select #{'is-invalid' if @replica.errors[:provider_id].any?}",
+                        data: { turbo_frame: "config_partial",
+                                controller: "node-config",
+                                action: "change->node-config#change",
+                                cluster_id: @cluster.id,
+                                node_id: @replica.id } %>
+                    <div class="form-hint">
+                      The replica can be deployed to the same or different provider as the primary node.
+                    </div>
+                    <% if @replica.errors[:provider_id].any? %>
+                      <div class="invalid-feedback">
+                        <%= @replica.errors[:provider_id].first %>
+                      </div>
+                    <% end %>
+                  </div>
+
+                  <div class="mb-3">
+                    <%= form.label :name, "Replica Name", class: "form-label required" %>
+                    <%= form.text_field :name, class: "form-control #{'is-invalid' if @replica.errors[:name].any?}", placeholder: "Enter replica name" %>
+                    <div class="form-hint">
+                      Provide a unique name for this replica node (e.g., "#{@node.name}-replica-1")
+                    </div>
+                    <% if @replica.errors[:name].any? %>
+                      <div class="invalid-feedback">
+                        <%= @replica.errors[:name].first %>
+                      </div>
+                    <% end %>
+                  </div>
+
+                  <%= turbo_frame_tag "config_partial" do %>
+                    <%= render "config_partial", f: form %>
+                  <% end %>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="card bg-light">
+                    <div class="card-body">
+                      <h4 class="card-title">Replica Setup Process</h4>
+                      <div class="mb-2">
+                        <ol class="text-muted small mb-0">
+                          <li>Infrastructure provisioning via Terraform</li>
+                          <li>PostgreSQL installation via Ansible</li>
+                          <li>Configure primary node for replication</li>
+                          <li>Setup replica streaming replication</li>
+                          <li>Start replica synchronization</li>
+                        </ol>
+                      </div>
+                      
+                      <div class="mt-3 p-2 bg-warning-lt rounded">
+                        <small class="text-warning-fg">
+                          <strong>Note:</strong> The replica will be read-only and will automatically sync with the primary node.
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="card bg-info-lt mt-3">
+                    <div class="card-body">
+                      <h4 class="card-title">Primary Node Info</h4>
+                      <div class="text-muted small">
+                        <p><strong>Name:</strong> <%= @node.name %></p>
+                        <p><strong>Provider:</strong> <%= @node.provider.name %></p>
+                        <p><strong>Existing Replicas:</strong> <%= @node.replicas.count %></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-footer bg-transparent mt-auto">
+                <div class="btn-list">
+                  <%= link_to "Cancel", [@cluster, @node], class: "btn btn-outline-secondary" %>
+                  <%= form.submit "Create Replica", class: "btn btn-primary ms-auto" %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

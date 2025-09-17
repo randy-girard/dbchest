@@ -1,7 +1,7 @@
 class NodesController < ApplicationController
   before_action :set_cluster
-  before_action :set_providers, only: %i[ new create edit update ]
-  before_action :set_node, only: %i[ show edit update destroy ]
+  before_action :set_providers, only: %i[ new create edit update add_replica create_replica ]
+  before_action :set_node, only: %i[ show edit update destroy add_replica create_replica ]
 
   # GET /nodes or /nodes.json
   def index
@@ -60,6 +60,47 @@ class NodesController < ApplicationController
     end
   end
 
+  def add_replica
+    unless @node.primary?
+      redirect_to [@cluster, @node], alert: "Cannot create replica of a replica node. Only primary nodes can have replicas." and return
+    end
+
+    @replica = @cluster.nodes.new(
+      parent_node: @node,
+      provider: @node.provider,
+      name: "#{@node.name}-replica-#{@node.replicas.count + 1}"
+    )
+    
+    # Copy settings from parent node instead of using build_node_settings!
+    @node.node_settings.each do |setting|
+      @replica.node_settings.build(
+        provider_type_node_option_id: setting.provider_type_node_option_id,
+        key: setting.key,
+        value: setting.value
+      )
+    end
+  end
+
+  def create_replica
+    unless @node.primary?
+      redirect_to [@cluster, @node], alert: "Cannot create replica of a replica node. Only primary nodes can have replicas." and return
+    end
+
+    @replica = @cluster.nodes.new(replica_params)
+    @replica.parent_node = @node
+
+    respond_to do |format|
+      if @replica.save
+        @replica.provision_replica!
+        format.html { redirect_to [@cluster, @node], notice: "Replica is being created." }
+        format.json { render :show, status: :created, location: [@cluster, @replica] }
+      else
+        format.html { render :add_replica, status: :unprocessable_entity }
+        format.json { render json: @replica.errors, status: :unprocessable_entity }
+      end
+    end
+  end
+
   def config_partial
     @provider = Provider.find(params[:provider_id])
     @node = @cluster.nodes.find_by_id(params[:node_id])
@@ -86,6 +127,16 @@ class NodesController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def node_params
+      params.expect(node: [
+        :provider_id,
+        :name,
+        node_settings_attributes: [
+          [ :id, :provider_type_node_option_id, :key, :value ]
+        ]
+      ])
+    end
+
+    def replica_params
       params.expect(node: [
         :provider_id,
         :name,

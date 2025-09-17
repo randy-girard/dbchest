@@ -12,6 +12,10 @@ Rails.application.routes.draw do
   resources :clusters do
     resources :nodes do
       get :config_partial, on: :collection
+      member do
+        get :add_replica
+        post :create_replica
+      end
       resources :credentials
     end
   end

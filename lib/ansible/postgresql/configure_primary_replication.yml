@@ -1,0 +1,60 @@
+---
+- name: Configure PostgreSQL Primary for Replication
+  hosts: postgres_servers
+  become: yes
+  vars:
+    postgresql_version: "15"
+    postgresql_data_dir: "/var/lib/postgresql/{{ postgresql_version }}/main"
+    postgresql_config_dir: "/etc/postgresql/{{ postgresql_version }}/main"
+
+  tasks:
+    - name: Update postgresql.conf for replication
+      lineinfile:
+        path: "{{ postgresql_config_dir }}/postgresql.conf"
+        regexp: "^#?{{ item.key }}"
+        line: "{{ item.key }} = {{ item.value }}"
+        backup: yes
+      loop:
+        - { key: "wal_level", value: "replica" }
+        - { key: "max_wal_senders", value: "3" }
+        - { key: "wal_keep_size", value: "64MB" }
+        - { key: "archive_mode", value: "on" }
+        - { key: "archive_command", value: "'test ! -f /var/lib/postgresql/archive/%f && cp %p /var/lib/postgresql/archive/%f'" }
+        - { key: "listen_addresses", value: "'*'" }
+      notify: restart postgresql
+
+    - name: Create archive directory
+      file:
+        path: /var/lib/postgresql/archive
+        state: directory
+        owner: postgres
+        group: postgres
+        mode: '0700'
+
+    - name: Create replication user
+      become_user: postgres
+      postgresql_user:
+        name: replicator
+        password: "{{ lookup('password', '/tmp/replicator_pass chars=ascii_letters,digits length=32') }}"
+        role_attr_flags: REPLICATION
+        state: present
+
+    - name: Configure pg_hba.conf for replication
+      lineinfile:
+        path: "{{ postgresql_config_dir }}/pg_hba.conf"
+        line: "host replication replicator {{ replica_ip }}/32 md5"
+        backup: yes
+      notify: restart postgresql
+
+    - name: Allow replica connection in pg_hba.conf
+      lineinfile:
+        path: "{{ postgresql_config_dir }}/pg_hba.conf"
+        line: "host all all {{ replica_ip }}/32 md5"
+        backup: yes
+      notify: restart postgresql
+
+  handlers:
+    - name: restart postgresql
+      systemd:
+        name: postgresql
+        state: restarted

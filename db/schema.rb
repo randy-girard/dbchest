@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_14_135842) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_17_233752) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -50,7 +50,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_14_135842) do
     t.jsonb "runtime_config", default: {}
     t.string "ssh_private_key"
     t.string "ssh_public_key"
+    t.bigint "parent_node_id"
     t.index ["cluster_id"], name: "index_nodes_on_cluster_id"
+    t.index ["parent_node_id"], name: "index_nodes_on_parent_node_id"
     t.index ["provider_id"], name: "index_nodes_on_provider_id"
   end
 
@@ -105,6 +107,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_14_135842) do
   add_foreign_key "node_settings", "nodes"
   add_foreign_key "node_settings", "provider_type_node_options"
   add_foreign_key "nodes", "clusters"
+  add_foreign_key "nodes", "nodes", column: "parent_node_id"
   add_foreign_key "nodes", "providers"
   add_foreign_key "provider_settings", "provider_type_options"
   add_foreign_key "provider_settings", "providers"

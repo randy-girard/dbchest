@@ -1,10 +1,15 @@
 class Node < ApplicationRecord
   belongs_to :cluster
   belongs_to :provider
+  belongs_to :parent_node, class_name: "Node", optional: true
 
   has_many :credentials, dependent: :destroy
   has_many :node_settings, dependent: :destroy
+  has_many :replicas, class_name: "Node", foreign_key: "parent_node_id", dependent: :destroy
   accepts_nested_attributes_for :node_settings
+
+  validates :name, presence: true, uniqueness: { scope: :cluster_id }
+  validate :parent_node_must_be_primary
 
   encrypts :terraform_state,
            :ssh_public_key,
@@ -39,5 +44,29 @@ class Node < ApplicationRecord
 
   def deprovision!
     DestroyService.perform_async(id)
+  end
+
+  def primary?
+    parent_node_id.nil?
+  end
+
+  def replica?
+    parent_node_id.present?
+  end
+
+  def has_replicas?
+    replicas.any?
+  end
+
+  def provision_replica!
+    CreateService.perform_async(id, replica: true)
+  end
+
+  private
+
+  def parent_node_must_be_primary
+    if parent_node.present? && parent_node.parent_node.present?
+      errors.add(:parent_node, "cannot be a replica node. Replicas can only be created from primary nodes.")
+    end
   end
 end

@@ -1,0 +1,84 @@
+---
+- name: Configure PostgreSQL Replica
+  hosts: postgres_servers
+  become: yes
+  vars:
+    postgresql_version: "15"
+    postgresql_data_dir: "/var/lib/postgresql/{{ postgresql_version }}/main"
+    postgresql_config_dir: "/etc/postgresql/{{ postgresql_version }}/main"
+
+  tasks:
+    - name: Stop PostgreSQL service
+      systemd:
+        name: postgresql
+        state: stopped
+
+    - name: Remove existing data directory
+      file:
+        path: "{{ postgresql_data_dir }}"
+        state: absent
+
+    - name: Create data directory
+      file:
+        path: "{{ postgresql_data_dir }}"
+        state: directory
+        owner: postgres
+        group: postgres
+        mode: '0700'
+
+    - name: Take base backup from primary
+      become_user: postgres
+      shell: |
+        PGPASSWORD='{{ lookup("password", "/tmp/replicator_pass chars=ascii_letters,digits length=32") }}' \
+        pg_basebackup -h {{ primary_ip }} -D {{ postgresql_data_dir }} -U replicator -v -P -W
+
+    - name: Create recovery configuration
+      become_user: postgres
+      copy:
+        content: |
+          standby_mode = 'on'
+          primary_conninfo = 'host={{ primary_ip }} port=5432 user=replicator password={{ lookup("password", "/tmp/replicator_pass chars=ascii_letters,digits length=32") }}'
+          trigger_file = '/tmp/postgresql.trigger'
+        dest: "{{ postgresql_data_dir }}/recovery.conf"
+        owner: postgres
+        group: postgres
+        mode: '0600'
+
+    - name: Configure postgresql.conf for replica
+      lineinfile:
+        path: "{{ postgresql_config_dir }}/postgresql.conf"
+        regexp: "^#?{{ item.key }}"
+        line: "{{ item.key }} = {{ item.value }}"
+        backup: yes
+      loop:
+        - { key: "hot_standby", value: "on" }
+        - { key: "max_standby_streaming_delay", value: "30s" }
+        - { key: "wal_receiver_status_interval", value: "10s" }
+        - { key: "hot_standby_feedback", value: "on" }
+
+    - name: Start PostgreSQL service
+      systemd:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    - name: Wait for PostgreSQL to start
+      wait_for:
+        port: 5432
+        host: localhost
+        delay: 5
+        timeout: 30
+
+    - name: Verify replication is working
+      become_user: postgres
+      postgresql_query:
+        db: postgres
+        query: "SELECT client_addr, state FROM pg_stat_replication;"
+      register: replication_status
+      delegate_to: "{{ primary_ip }}"
+      ignore_errors: yes
+
+    - name: Display replication status
+      debug:
+        var: replication_status.query_result
+      when: replication_status is defined
