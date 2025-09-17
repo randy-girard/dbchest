@@ -10,28 +10,34 @@ class CreateService
       TerraformCreateService.new.perform(@node.id)
 
       if replica && @node.replica?
-        # First install PostgreSQL on the replica node
+        # Install PostgreSQL on the replica node (already replica-ready)
         AnsibleRunService.new.perform(@node.id, "create_node.yml")
         
-        # Get primary node IP address for configuration
-        primary_ip = @node.parent_node.get_runtime_config_value("ip_address")
+        # Get primary node and ensure replication password exists
+        primary_node = @node.parent_node
+        replication_password = primary_node.ensure_replication_password!
+        
+        # Get IP addresses
+        primary_ip = primary_node.get_runtime_config_value("ip_address")
         replica_ip = @node.get_runtime_config_value("ip_address")
         
-        # Configure the primary node for replication
-        AnsibleRunService.new.perform(@node.parent_node.id, "configure_primary_replication.yml", 
+        # Add replica-specific configuration to primary node (replication user & pg_hba.conf entries)
+        AnsibleRunService.new.perform(primary_node.id, "configure_primary_replication.yml", 
           vars: { 
             replica_ip: replica_ip,
-            replica_node_name: @node.name
+            replica_node_name: @node.name,
+            replication_password: replication_password
           })
         
         # Configure the replica node to follow the primary
         AnsibleRunService.new.perform(@node.id, "configure_replica.yml", 
           vars: { 
             primary_ip: primary_ip,
-            primary_node_name: @node.parent_node.name
+            primary_node_name: primary_node.name,
+            replication_password: replication_password
           })
       else
-        # Standard node creation
+        # Standard node creation (now replica-ready by default)
         AnsibleRunService.new.perform(@node.id, "create_node.yml")
       end
     end

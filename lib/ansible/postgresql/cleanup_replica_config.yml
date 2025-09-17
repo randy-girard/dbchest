@@ -1,0 +1,31 @@
+---
+- name: Remove Replica-Specific Configuration from Primary
+  hosts: postgres_servers
+  become: yes
+  vars:
+    postgresql_version: "15"
+    postgresql_config_dir: "/etc/postgresql/{{ postgresql_version }}/main"
+
+  tasks:
+    - name: Remove replica-specific pg_hba.conf entry for replication
+      lineinfile:
+        path: "{{ postgresql_config_dir }}/pg_hba.conf"
+        line: "host replication replicator {{ replica_ip }}/32 md5"
+        state: absent
+        backup: yes
+      notify: reload postgresql
+
+    - name: Remove replica-specific pg_hba.conf entry for regular connections
+      lineinfile:
+        path: "{{ postgresql_config_dir }}/pg_hba.conf"
+        line: "host all all {{ replica_ip }}/32 md5"
+        state: absent
+        backup: yes
+      notify: reload postgresql
+
+  handlers:
+    - name: reload postgresql
+      become_user: postgres
+      postgresql_query:
+        db: postgres
+        query: "SELECT pg_reload_conf()"

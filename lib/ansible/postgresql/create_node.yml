@@ -69,13 +69,32 @@
         group: postgres
         mode: '0700'
 
-    - name: Allow remote connections in postgresql.conf
+    - name: Configure PostgreSQL for replication (postgresql.conf)
       lineinfile:
         path: /etc/postgresql/{{ postgresql_version }}/main/postgresql.conf
-        regexp: '^#?listen_addresses\s*='
-        line: "listen_addresses = '*'"
+        regexp: "^#?{{ item.key }}"
+        line: "{{ item.key }} = {{ item.value }}"
         state: present
+      loop:
+        - { key: "listen_addresses", value: "'*'" }
+        - { key: "wal_level", value: "replica" }
+        - { key: "max_wal_senders", value: "3" }
+        - { key: "wal_keep_size", value: "64MB" }
+        - { key: "archive_mode", value: "on" }
+        - { key: "archive_command", value: "'test ! -f /var/lib/postgresql/archive/%f && cp %p /var/lib/postgresql/archive/%f'" }
+        - { key: "hot_standby", value: "on" }
+        - { key: "max_standby_streaming_delay", value: "30s" }
+        - { key: "wal_receiver_status_interval", value: "10s" }
+        - { key: "hot_standby_feedback", value: "on" }
       notify: Restart PostgreSQL
+
+    - name: Create archive directory
+      file:
+        path: /var/lib/postgresql/archive
+        state: directory
+        owner: postgres
+        group: postgres
+        mode: '0700'
 
     - name: Allow remote connections in pg_hba.conf
       lineinfile:

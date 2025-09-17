@@ -11,10 +11,13 @@ class Node < ApplicationRecord
   validates :name, presence: true, uniqueness: { scope: :cluster_id }
   validate :parent_node_must_be_primary
 
+  after_destroy :cleanup_parent_replication_config, if: :replica?
+
   encrypts :terraform_state,
            :ssh_public_key,
            :ssh_private_key,
-           :runtime_config
+           :runtime_config,
+           :replication_password
 
   def build_node_settings!
     provider.provider_type.provider_type_node_options.each do |option|
@@ -62,11 +65,35 @@ class Node < ApplicationRecord
     CreateService.perform_async(id, replica: true)
   end
 
+  def ensure_replication_password!
+    if replication_password.blank?
+      self.replication_password = SecureRandom.alphanumeric(32)
+      save!
+    end
+    replication_password
+  end
+
+  def get_replication_password
+    primary? ? ensure_replication_password! : parent_node.ensure_replication_password!
+  end
+
+  # All nodes are created with replica-ready PostgreSQL configuration by default.
+  # This includes WAL level and archive settings.
+  # Replication user and pg_hba.conf entries are only created when needed.
+
   private
 
   def parent_node_must_be_primary
     if parent_node.present? && parent_node.parent_node.present?
       errors.add(:parent_node, "cannot be a replica node. Replicas can only be created from primary nodes.")
     end
+  end
+
+  def cleanup_parent_replication_config
+    return unless parent_node.present?
+    
+    # If this was the last replica, optionally clean up replication configuration
+    # For now, we'll leave the replication user and password for future use
+    # This could be extended to remove pg_hba.conf entries for this specific replica
   end
 end

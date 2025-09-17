@@ -29,7 +29,7 @@
     - name: Take base backup from primary
       become_user: postgres
       shell: |
-        PGPASSWORD='{{ lookup("password", "/tmp/replicator_pass chars=ascii_letters,digits length=32") }}' \
+        PGPASSWORD='{{ replication_password }}' \
         pg_basebackup -h {{ primary_ip }} -D {{ postgresql_data_dir }} -U replicator -v -P -W
 
     - name: Create recovery configuration
@@ -37,14 +37,14 @@
       copy:
         content: |
           standby_mode = 'on'
-          primary_conninfo = 'host={{ primary_ip }} port=5432 user=replicator password={{ lookup("password", "/tmp/replicator_pass chars=ascii_letters,digits length=32") }}'
+          primary_conninfo = 'host={{ primary_ip }} port=5432 user=replicator password={{ replication_password }}'
           trigger_file = '/tmp/postgresql.trigger'
         dest: "{{ postgresql_data_dir }}/recovery.conf"
         owner: postgres
         group: postgres
         mode: '0600'
 
-    - name: Configure postgresql.conf for replica
+    - name: Verify replica configuration in postgresql.conf (should already be set)
       lineinfile:
         path: "{{ postgresql_config_dir }}/postgresql.conf"
         regexp: "^#?{{ item.key }}"

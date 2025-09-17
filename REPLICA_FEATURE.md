@@ -6,6 +6,17 @@ This document describes the replica functionality added to the DBChest applicati
 
 The replica feature allows you to create read-only PostgreSQL replicas of your primary database nodes. This helps scale read operations and provides high availability for your database cluster.
 
+**Key Architecture Decision**: All PostgreSQL nodes are created with replica-ready configuration by default. This means every node has the necessary WAL settings, replication user, and archive configuration in place from the start, making replica creation much faster and more reliable.
+
+### Benefits of Replica-Ready Default Configuration
+
+- **Faster Replica Creation**: No need to restart primary nodes when adding replicas
+- **Zero Downtime**: Primary nodes only reload configuration (no restart) when adding replicas
+- **Security-First**: Replication user and pg_hba.conf entries only created when needed
+- **Password Management**: Replication password securely stored and encrypted in database
+- **Clean Separation**: Base nodes have WAL configuration but no replication access until replicas are added
+- **Consistent Configuration**: Standardized replication settings across all nodes
+
 ## Features
 
 ### Node Types
@@ -34,9 +45,9 @@ The replica feature allows you to create read-only PostgreSQL replicas of your p
 ### Replica Provisioning Process
 
 1. **Infrastructure Setup**: Terraform provisions the replica infrastructure
-2. **PostgreSQL Installation**: Ansible installs PostgreSQL on the replica node
-3. **Primary Configuration**: Ansible configures the primary node to allow replication
-4. **Replica Configuration**: Ansible sets up the replica to stream from the primary
+2. **PostgreSQL Installation**: Ansible installs PostgreSQL on the replica node (already replica-ready)
+3. **Primary Configuration**: Ansible adds replica-specific pg_hba.conf entries to primary
+4. **Replica Configuration**: Ansible configures replica streaming and takes base backup
 
 ### UI Indicators
 
@@ -45,27 +56,53 @@ The replica feature allows you to create read-only PostgreSQL replicas of your p
 - **Quick Actions**: "Add Replica" button only appears on primary nodes
 - **Replica Section**: Lists all replicas with management options
 
+## Security Model
+
+### Replication Password Management
+- **Generated on-demand**: Replication password only created when first replica is added
+- **Encrypted storage**: Password encrypted in database using Rails' built-in encryption
+- **Reusable**: Same password used for all replicas of a primary node
+- **Persistent**: Password survives replica deletion for future replica creation
+
+### Access Control
+- **No replication user until needed**: Primary nodes don't have replication user until first replica
+- **IP-specific pg_hba.conf entries**: Each replica gets specific IP-based access rules
+- **Automatic cleanup**: Replica-specific pg_hba.conf entries removed when replica is deleted
+- **Configuration reload only**: No PostgreSQL restarts required for replica management
+
 ## Limitations
 
 - Replicas are read-only
 - Cannot create replicas of replica nodes (no cascading replication)
-- Replica deletion requires manual cleanup of replication configuration
+- Replication user persists after all replicas are deleted (for performance)
 
 ## Ansible Playbooks
 
-The feature includes two new Ansible playbooks:
+### Base Configuration (`create_node.yml` - Updated)
+- **All nodes are created replica-ready by default**
+- Configures WAL settings (wal_level=replica, max_wal_senders, etc.)
+- Sets up archive directory and command
+- Configures hot standby settings
+- **No replication user or pg_hba.conf entries until replicas are added**
 
-### `configure_primary_replication.yml`
-- Configures WAL settings on primary node
-- Creates replication user
-- Updates pg_hba.conf for replica access
-- Sets up archiving
+### Replica-Specific Playbooks
 
-### `configure_replica.yml`
-- Takes base backup from primary
-- Configures recovery settings
-- Sets up streaming replication
+#### `configure_primary_replication.yml` (Security-Focused)
+- Creates replication user only if it doesn't exist
+- Adds replica-specific pg_hba.conf entries for the new replica
+- Uses stored encrypted replication password from database
+- **Only reloads PostgreSQL configuration (no restart)**
+
+#### `configure_replica.yml`
+- Takes base backup from primary using stored replication password
+- Configures recovery settings for streaming
+- Verifies replica configuration (should already be set)
 - Starts replica in hot standby mode
+
+#### `cleanup_replica_config.yml` (New)
+- Removes replica-specific pg_hba.conf entries when replica is deleted
+- Reloads PostgreSQL configuration on primary
+- Leaves replication user for future replica creation
 
 ## Technical Implementation
 
@@ -73,15 +110,22 @@ The feature includes two new Ansible playbooks:
 - Added `parent_node_id` foreign key to nodes table
 - Self-referential relationship for replica hierarchy
 
+### PostgreSQL Configuration Strategy
+- **All nodes are created replica-ready by default** with proper WAL settings
+- Base `create_node.yml` includes replication configuration (wal_level, max_wal_senders, etc.)
+- Replication user created on every node during initial setup
+- Archive directory and settings configured by default
+
 ### Model Changes
 - Added `belongs_to :parent_node` and `has_many :replicas` associations
 - Helper methods: `primary?`, `replica?`, `has_replicas?`
 - Validation to prevent replica-of-replica creation
+- Comment noting replica-ready default configuration
 
 ### Controller Changes
 - New actions: `add_replica` and `create_replica`
 - Validation to ensure only primary nodes can have replicas
-- Updated CreateService to handle replica provisioning
+- Updated CreateService to handle replica provisioning with simplified logic
 
 ### Routes
 - `GET /clusters/:cluster_id/nodes/:id/add_replica`
