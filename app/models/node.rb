@@ -30,18 +30,92 @@ class Node < ApplicationRecord
   end
 
   def get_runtime_config_value(key)
-    runtime_config.fetch(key, {}).fetch("value", nil)
+    config_entry = runtime_config.fetch(key, {})
+    
+    # Handle both direct values and Terraform output format
+    if config_entry.is_a?(Hash) && config_entry.key?("value")
+      # Terraform output format: {"sensitive" => false, "type" => "string", "value" => "actual_value"}
+      config_entry.fetch("value", nil)
+    elsif config_entry.is_a?(String)
+      # Direct string value
+      config_entry
+    else
+      # Other formats or nil
+      config_entry
+    end
   end
 
   def get_ip_address
-    ip_with_subnet = get_runtime_config_value("ip_address")
-    return nil if ip_with_subnet.nil?
+    # First, let's see what's in the runtime_config
+    Rails.logger.debug "Node #{id}: Full runtime_config: #{runtime_config.inspect}"
     
-    # Use IPAddr to properly handle IP with or without subnet notation
-    IPAddr.new(ip_with_subnet).to_s
-  rescue IPAddr::InvalidAddressError
-    # Fallback to simple string splitting if IPAddr fails
-    ip_with_subnet.split('/').first
+    ip_with_subnet = get_runtime_config_value("ip_address")
+    
+    # Debug logging to help identify the issue
+    Rails.logger.debug "Node #{id}: ip_with_subnet from runtime_config: #{ip_with_subnet.inspect}"
+    Rails.logger.debug "Node #{id}: ip_with_subnet.nil? = #{ip_with_subnet.nil?}, ip_with_subnet.blank? = #{ip_with_subnet.blank?}"
+    
+    if ip_with_subnet.nil? || ip_with_subnet.blank?
+      Rails.logger.warn "Node #{id}: No IP address found in runtime_config, checking alternative sources"
+      
+      # Try to get from other runtime config keys that might contain the IP
+      alternative_keys = %w[public_ip private_ip ipv4_address external_ip internal_ip vm_ip]
+      alternative_keys.each do |key|
+        alt_ip = get_runtime_config_value(key)
+        if alt_ip.present?
+          Rails.logger.debug "Node #{id}: Found IP in alternative key '#{key}': #{alt_ip}"
+          ip_with_subnet = alt_ip
+          break
+        end
+      end
+      
+      # For Proxmox LXC containers, try to extract IP from network interfaces
+      if ip_with_subnet.blank?
+        network_interfaces = get_runtime_config_value("network_interfaces")
+        if network_interfaces.present? && network_interfaces.is_a?(Array)
+          Rails.logger.debug "Node #{id}: Checking network interfaces: #{network_interfaces.inspect}"
+          network_interfaces.each do |interface|
+            if interface.is_a?(Hash) && interface["ip"].present?
+              ip_with_subnet = interface["ip"]
+              Rails.logger.debug "Node #{id}: Found IP in network interface: #{ip_with_subnet}"
+              break
+            end
+          end
+        end
+      end
+      
+      # If still no IP found, return nil which will cause the caller to handle appropriately
+      return nil if ip_with_subnet.blank?
+    end
+    
+    # Clean up the IP address
+    ip_part = ip_with_subnet.to_s.strip.split('/').first
+    
+    # Validate it's a proper IP address
+    begin
+      IPAddr.new(ip_part)
+      Rails.logger.debug "Node #{id}: Successfully validated IP address: #{ip_part}"
+      return ip_part
+    rescue IPAddr::InvalidAddressError => e
+      Rails.logger.error "Node #{id}: Invalid IP address '#{ip_part}': #{e.message}"
+      
+      # If it looks like a hostname, try to resolve it
+      if ip_part.match?(/^[a-zA-Z]/)
+        begin
+          require 'resolv'
+          resolved_ip = Resolv.getaddress(ip_part)
+          Rails.logger.info "Node #{id}: Resolved hostname '#{ip_part}' to IP: #{resolved_ip}"
+          return resolved_ip
+        rescue Resolv::ResolvError => resolve_error
+          Rails.logger.error "Node #{id}: Failed to resolve hostname '#{ip_part}': #{resolve_error.message}"
+        end
+      end
+      
+      # Last resort: return the cleaned value even if it's invalid
+      # This will help us see exactly what's being passed to Ansible
+      Rails.logger.warn "Node #{id}: Returning potentially invalid IP: '#{ip_part}'"
+      return ip_part
+    end
   end
 
   def provider_api_client

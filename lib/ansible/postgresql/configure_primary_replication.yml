@@ -18,6 +18,12 @@
     - name: Set PostgreSQL paths
       set_fact:
         postgresql_hba_file: "{{ pg_hba_file.stdout.strip() }}"
+
+    - name: Validate replica_ip is not empty
+      fail:
+        msg: "replica_ip variable is empty or undefined. Cannot configure pg_hba.conf"
+      when: replica_ip is undefined or replica_ip == ""
+
     - name: Check if replication user exists
       become_user: postgres
       postgresql_query:

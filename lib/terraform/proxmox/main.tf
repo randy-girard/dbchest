@@ -70,3 +70,7 @@ output "node" {
 output "ip_address" {
   value = var.ip_address
 }
+
+output "network_interfaces" {
+  value = proxmox_lxc.container.network
+}

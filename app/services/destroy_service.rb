@@ -12,10 +12,13 @@ class DestroyService
     if @node.replica? && @node.parent_node.present?
       replica_ip = @node.get_ip_address
       if replica_ip.present?
+        Rails.logger.info "Cleaning up pg_hba.conf entries for replica IP: #{replica_ip}"
         AnsibleRunService.new.perform(@node.parent_node.id, "cleanup_replica_config.yml", 
           vars: { 
             replica_ip: replica_ip
           })
+      else
+        Rails.logger.warn "Skipping pg_hba.conf cleanup for replica node #{@node.id}: no IP address found"
       end
     end
 
