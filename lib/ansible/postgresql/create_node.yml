@@ -1,4 +1,7 @@
 ---
+# PostgreSQL Installation and Configuration
+# This playbook dynamically detects PostgreSQL configuration paths using SHOW commands
+# for maximum portability across different installations and versions
 - name: Install PostgreSQL
   hosts: all
   become: yes
@@ -69,9 +72,43 @@
         group: postgres
         mode: '0700'
 
+    - name: Ensure PostgreSQL is running
+      service:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    - name: Get PostgreSQL configuration file path
+      become_user: postgres
+      shell: |
+        psql -t -P format=unaligned -c 'SHOW config_file;'
+      register: pg_config_file
+      changed_when: false
+
+    - name: Get PostgreSQL data directory path
+      become_user: postgres
+      shell: |
+        psql -t -P format=unaligned -c 'SHOW data_directory;'
+      register: pg_data_directory
+      changed_when: false
+
+    - name: Get PostgreSQL hba_file path
+      become_user: postgres
+      shell: |
+        psql -t -P format=unaligned -c 'SHOW hba_file;'
+      register: pg_hba_file
+      changed_when: false
+
+    - name: Set PostgreSQL paths
+      set_fact:
+        postgresql_config_file: "{{ pg_config_file.stdout.strip() }}"
+        postgresql_config_dir: "{{ pg_config_file.stdout.strip() | dirname }}"
+        postgresql_data_dir: "{{ pg_data_directory.stdout.strip() }}"
+        postgresql_hba_file: "{{ pg_hba_file.stdout.strip() }}"
+
     - name: Configure PostgreSQL for replication (postgresql.conf)
       lineinfile:
-        path: /etc/postgresql/{{ postgresql_version }}/main/postgresql.conf
+        path: "{{ postgresql_config_file }}"
         regexp: "^#?{{ item.key }}"
         line: "{{ item.key }} = {{ item.value }}"
         state: present
@@ -98,16 +135,10 @@
 
     - name: Allow remote connections in pg_hba.conf
       lineinfile:
-        path: /etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf
+        path: "{{ postgresql_hba_file }}"
         line: "host all all 0.0.0.0/0 md5"
         state: present
       notify: Restart PostgreSQL
-
-    - name: Ensure PostgreSQL is running
-      service:
-        name: postgresql
-        state: started
-        enabled: yes
 
     - name: Set postgres password
       become: yes

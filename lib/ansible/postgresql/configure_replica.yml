@@ -1,13 +1,31 @@
 ---
+# Configure PostgreSQL Replica Node
+# Dynamically detects configuration and data directory paths
 - name: Configure PostgreSQL Replica
   hosts: postgres_servers
   become: yes
   vars:
     postgresql_version: "15"
-    postgresql_data_dir: "/var/lib/postgresql/{{ postgresql_version }}/main"
-    postgresql_config_dir: "/etc/postgresql/{{ postgresql_version }}/main"
 
   tasks:
+    - name: Get PostgreSQL configuration file path
+      become_user: postgres
+      shell: |
+        psql -t -P format=unaligned -c 'SHOW config_file;'
+      register: pg_config_file
+      changed_when: false
+
+    - name: Get PostgreSQL data directory path
+      become_user: postgres
+      shell: |
+        psql -t -P format=unaligned -c 'SHOW data_directory;'
+      register: pg_data_directory
+      changed_when: false
+
+    - name: Set PostgreSQL paths
+      set_fact:
+        postgresql_config_file: "{{ pg_config_file.stdout.strip() }}"
+        postgresql_data_dir: "{{ pg_data_directory.stdout.strip() }}"
     - name: Stop PostgreSQL service
       systemd:
         name: postgresql
@@ -46,7 +64,7 @@
 
     - name: Verify replica configuration in postgresql.conf (should already be set)
       lineinfile:
-        path: "{{ postgresql_config_dir }}/postgresql.conf"
+        path: "{{ postgresql_config_file }}"
         regexp: "^#?{{ item.key }}"
         line: "{{ item.key }} = {{ item.value }}"
         backup: yes

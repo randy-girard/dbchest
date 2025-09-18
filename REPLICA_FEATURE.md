@@ -16,6 +16,7 @@ The replica feature allows you to create read-only PostgreSQL replicas of your p
 - **Password Management**: Replication password securely stored and encrypted in database
 - **Clean Separation**: Base nodes have WAL configuration but no replication access until replicas are added
 - **Consistent Configuration**: Standardized replication settings across all nodes
+- **Dynamic Path Detection**: Playbooks automatically detect PostgreSQL configuration paths for maximum portability
 
 ## Features
 
@@ -80,10 +81,12 @@ The replica feature allows you to create read-only PostgreSQL replicas of your p
 
 ### Base Configuration (`create_node.yml` - Updated)
 - **All nodes are created replica-ready by default**
+- **Dynamically detects PostgreSQL configuration paths** using PostgreSQL's SHOW commands
 - Configures WAL settings (wal_level=replica, max_wal_senders, etc.)
 - Sets up archive directory and command
 - Configures hot standby settings
 - **No replication user or pg_hba.conf entries until replicas are added**
+- **Portable across different PostgreSQL installations and versions**
 
 ### Replica-Specific Playbooks
 
@@ -112,9 +115,11 @@ The replica feature allows you to create read-only PostgreSQL replicas of your p
 
 ### PostgreSQL Configuration Strategy
 - **All nodes are created replica-ready by default** with proper WAL settings
+- **Dynamic path detection** using PostgreSQL's `SHOW config_file`, `SHOW hba_file`, and `SHOW data_directory`
 - Base `create_node.yml` includes replication configuration (wal_level, max_wal_senders, etc.)
-- Replication user created on every node during initial setup
+- Replication user only created when first replica is added
 - Archive directory and settings configured by default
+- **Portable across different PostgreSQL installations** (apt, yum, compiled, Docker, etc.)
 
 ### Model Changes
 - Added `belongs_to :parent_node` and `has_many :replicas` associations

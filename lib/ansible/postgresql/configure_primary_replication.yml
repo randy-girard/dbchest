@@ -1,12 +1,23 @@
 ---
+# Configure Primary Node for Replication
+# Dynamically detects pg_hba.conf path for portability
 - name: Configure PostgreSQL Primary for Specific Replica
   hosts: postgres_servers
   become: yes
   vars:
     postgresql_version: "15"
-    postgresql_config_dir: "/etc/postgresql/{{ postgresql_version }}/main"
 
   tasks:
+    - name: Get PostgreSQL hba_file path
+      become_user: postgres
+      shell: |
+        psql -t -P format=unaligned -c 'SHOW hba_file;'
+      register: pg_hba_file
+      changed_when: false
+
+    - name: Set PostgreSQL paths
+      set_fact:
+        postgresql_hba_file: "{{ pg_hba_file.stdout.strip() }}"
     - name: Check if replication user exists
       become_user: postgres
       postgresql_query:
@@ -26,14 +37,14 @@
 
     - name: Add replica-specific pg_hba.conf entry for replication
       lineinfile:
-        path: "{{ postgresql_config_dir }}/pg_hba.conf"
+        path: "{{ postgresql_hba_file }}"
         line: "host replication replicator {{ replica_ip }}/32 md5"
         backup: yes
       notify: reload postgresql
 
     - name: Add replica-specific pg_hba.conf entry for regular connections
       lineinfile:
-        path: "{{ postgresql_config_dir }}/pg_hba.conf"
+        path: "{{ postgresql_hba_file }}"
         line: "host all all {{ replica_ip }}/32 md5"
         backup: yes
       notify: reload postgresql
