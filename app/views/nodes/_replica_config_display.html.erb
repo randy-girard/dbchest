@@ -1,0 +1,82 @@
+<%= turbo_frame_tag "config_partial" do %>
+  <div class="mb-4">
+    <h3 class="mb-3">Replica Configuration</h3>
+    <p class="text-muted">Configure settings for this replica. Values are pre-populated from the primary node but can be modified as needed:</p>
+    
+    <%
+      # Network settings should start blank, others pre-filled from parent
+      network_settings = %w[ip_address gateway network subnet cidr]
+    %>
+
+  <% if @replica.node_settings.any? %>
+    <% @replica.node_settings.each do |replica_setting| %>
+      <% parent_setting = @node.node_settings.find { |ps| ps.key == replica_setting.key } %>
+      <div class="mb-3">
+        <%= f.fields_for :node_settings, replica_setting do |ns| %>
+          <%= ns.hidden_field :provider_type_node_option_id %>
+          <%= ns.hidden_field :key %>
+          
+          <div class="row">
+            <div class="col-md-8">
+              <%= ns.label :value, replica_setting.provider_type_node_option.label, class: "form-label #{'required' if replica_setting.provider_type_node_option.required?}" %>
+              <%= render "nodes/node_settings/#{replica_setting.node.provider.provider_type.key}/#{replica_setting.key}", f: ns %>
+            </div>
+            <div class="col-md-4">
+              <% if parent_setting && !network_settings.include?(replica_setting.key) %>
+                <label class="form-label text-muted">Primary Value</label>
+                <div class="form-control-plaintext small">
+                  <% if replica_setting.provider_type_node_option.key.include?('password') || replica_setting.provider_type_node_option.key.include?('secret') %>
+                    <span class="text-muted">••••••••</span>
+                  <% elsif parent_setting.value.present? %>
+                    <code><%= parent_setting.value %></code>
+                  <% else %>
+                    <span class="text-muted">Not set</span>
+                  <% end %>
+                </div>
+              <% elsif network_settings.include?(replica_setting.key) %>
+                <label class="form-label text-muted">Note</label>
+                <div class="form-control-plaintext small text-info">
+                  <i class="fas fa-info-circle"></i> Network settings should be unique for this replica
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="alert alert-info">
+      <div class="d-flex">
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <circle cx="12" cy="12" r="9"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <div>
+          No provider-specific settings available. Select a provider to see configuration options.
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="mt-3">
+    <div class="alert alert-success">
+      <div class="d-flex">
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <path d="M9 12l2 2 4-4"/>
+            <circle cx="12" cy="12" r="9"/>
+          </svg>
+        </div>
+        <div>
+          <strong>Flexible Deployment:</strong> This replica can be deployed to any provider with any configuration. It will automatically connect back to the primary node for replication.
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+<% end %>

@@ -72,15 +72,15 @@ class NodesController < ApplicationController
     )
     @providers = Provider.all
     
-    # Build editable network settings for the replica
+    # Build initial settings for the default provider (parent's provider)
+    @replica.build_node_settings!
+    
+    # Pre-populate with parent values, except for network settings
     network_settings = %w[ip_address gateway network subnet cidr]
-    @node.node_settings.includes(:provider_type_node_option).each do |setting|
-      if network_settings.include?(setting.key)
-        @replica.node_settings.build(
-          provider_type_node_option: setting.provider_type_node_option,
-          key: setting.key,
-          value: "" # Start with empty value for user to fill
-        )
+    @node.node_settings.includes(:provider_type_node_option).each do |parent_setting|
+      replica_setting = @replica.node_settings.find { |rs| rs.key == parent_setting.key }
+      if replica_setting && !network_settings.include?(parent_setting.key)
+        replica_setting.value = parent_setting.value
       end
     end
   end
@@ -95,37 +95,13 @@ class NodesController < ApplicationController
 
     respond_to do |format|
       if @replica.save
-        # Handle settings - network settings come from form, others inherited from parent
-        network_settings = %w[ip_address gateway network subnet cidr]
-        user_provided_keys = @replica.node_settings.map(&:key)
-        
-        # Copy non-network settings from parent node
-        @node.node_settings.each do |setting|
-          unless user_provided_keys.include?(setting.key)
-            @replica.node_settings.create!(
-              provider_type_node_option_id: setting.provider_type_node_option_id,
-              key: setting.key,
-              value: setting.value
-            )
-          end
-        end
+        # All settings now come from the form - no need to copy from parent
 
         @replica.provision_replica!
         format.html { redirect_to [@cluster, @node], notice: "Replica is being created." }
         format.json { render :show, status: :created, location: [@cluster, @replica] }
       else
         @providers = Provider.all
-        # Rebuild network settings if validation failed
-        network_settings = %w[ip_address gateway network subnet cidr]
-        @node.node_settings.includes(:provider_type_node_option).each do |setting|
-          if network_settings.include?(setting.key) && !@replica.node_settings.any? { |ns| ns.key == setting.key }
-            @replica.node_settings.build(
-              provider_type_node_option: setting.provider_type_node_option,
-              key: setting.key,
-              value: ""
-            )
-          end
-        end
         format.html { render :add_replica, status: :unprocessable_entity }
         format.json { render json: @replica.errors, status: :unprocessable_entity }
       end
@@ -135,11 +111,35 @@ class NodesController < ApplicationController
   def config_partial
     @provider = Provider.find(params[:provider_id])
     @node = @cluster.nodes.find_by_id(params[:node_id])
+    
     if @node == nil
-      @node = @cluster.nodes.new(provider: @provider)
-      @node.build_node_settings!
+      if params[:parent_node_id].present?
+        # This is a replica being created
+        parent_node = @cluster.nodes.find(params[:parent_node_id])
+        @replica = @cluster.nodes.new(provider: @provider, parent_node: parent_node)
+        
+        # Build all settings for the selected provider
+        @replica.build_node_settings!
+        
+        # Pre-populate with parent values, except for network settings
+        network_settings = %w[ip_address gateway network subnet cidr]
+        parent_node.node_settings.includes(:provider_type_node_option).each do |parent_setting|
+          replica_setting = @replica.node_settings.find { |rs| rs.key == parent_setting.key }
+          if replica_setting && !network_settings.include?(parent_setting.key)
+            replica_setting.value = parent_setting.value
+          end
+        end
+        
+        render "nodes/replica_config_display"
+      else
+        # Regular new node
+        @node = @cluster.nodes.new(provider: @provider)
+        @node.build_node_settings!
+        render "nodes/config_partial"
+      end
+    else
+      render "nodes/config_partial"
     end
-    render "nodes/config_partial"
   end
 
   private

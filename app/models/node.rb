@@ -33,6 +33,17 @@ class Node < ApplicationRecord
     runtime_config.fetch(key, {}).fetch("value", nil)
   end
 
+  def get_ip_address
+    ip_with_subnet = get_runtime_config_value("ip_address")
+    return nil if ip_with_subnet.nil?
+    
+    # Use IPAddr to properly handle IP with or without subnet notation
+    IPAddr.new(ip_with_subnet).to_s
+  rescue IPAddr::InvalidAddressError
+    # Fallback to simple string splitting if IPAddr fails
+    ip_with_subnet.split('/').first
+  end
+
   def provider_api_client
     provider.api_client
   end
@@ -62,7 +73,7 @@ class Node < ApplicationRecord
   end
 
   def provision_replica!
-    CreateService.perform_async(id, replica: true)
+    CreateService.perform_async(id, true)
   end
 
   def ensure_replication_password!

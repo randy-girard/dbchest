@@ -10,7 +10,7 @@ class DestroyService
 
     # If this is a replica, clean up the primary's pg_hba.conf entries
     if @node.replica? && @node.parent_node.present?
-      replica_ip = @node.get_runtime_config_value("ip_address")
+      replica_ip = @node.get_ip_address
       if replica_ip.present?
         AnsibleRunService.new.perform(@node.parent_node.id, "cleanup_replica_config.yml", 
           vars: { 

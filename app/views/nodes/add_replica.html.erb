@@ -84,7 +84,8 @@
                                 controller: "node-config",
                                 action: "change->node-config#change",
                                 cluster_id: @cluster.id,
-                                node_id: @replica.id } %>
+                                node_id: nil,
+                                parent_node_id: @node.id } %>
                     <div class="form-hint">
                       The replica can be deployed to the same or different provider as the primary node.
                     </div>
@@ -109,7 +110,7 @@
                   </div>
 
                   <%= turbo_frame_tag "config_partial" do %>
-                    <%= render "config_partial", f: form %>
+                    <%= render "replica_config_display", f: form %>
                   <% end %>
                 </div>
 
