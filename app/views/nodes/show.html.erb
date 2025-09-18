@@ -54,7 +54,11 @@
           <div class="card-footer">
             <div class="btn-list">
               <%= link_to "Back to cluster", cluster_path(@cluster), class: "btn btn-outline-secondary" %>
-              <%= button_to "Delete node", [@cluster, @node], method: :delete, data: { confirm: "Are you sure you want to delete this node? This action cannot be undone." }, class: "btn btn-danger ms-auto" %>
+              <% if @node.has_replicas? %>
+                <%= link_to "Delete node", confirm_destroy_cluster_node_path(@cluster, @node), class: "btn btn-danger ms-auto" %>
+              <% else %>
+                <%= button_to "Delete node", [@cluster, @node], method: :delete, data: { confirm: "Are you sure you want to delete this node? This action cannot be undone." }, class: "btn btn-danger ms-auto" %>
+              <% end %>
             </div>
           </div>
         </div>

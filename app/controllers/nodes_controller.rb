@@ -1,7 +1,7 @@
 class NodesController < ApplicationController
   before_action :set_cluster
   before_action :set_providers, only: %i[ new create edit update add_replica create_replica ]
-  before_action :set_node, only: %i[ show edit update destroy add_replica create_replica ]
+  before_action :set_node, only: %i[ show edit update destroy confirm_destroy add_replica create_replica ]
 
   # GET /nodes or /nodes.json
   def index
@@ -50,12 +50,59 @@ class NodesController < ApplicationController
     end
   end
 
+  # GET /nodes/1/confirm_destroy
+  def confirm_destroy
+    @replicas = @node.replicas
+  end
+
   # DELETE /nodes/1 or /nodes/1.json
   def destroy
+    replica_action = params[:replica_action]
+    
+    if @node.has_replicas? && replica_action.blank?
+      redirect_to confirm_destroy_cluster_node_path(@cluster, @node), alert: "This node has replicas. Please specify what to do with them." and return
+    end
+    
+    # Handle replicas based on user choice
+    if @node.has_replicas?
+      case replica_action
+      when 'delete_all'
+        # Delete all replicas first
+        @node.replicas.each(&:deprovision!)
+        notice_msg = "Node and all #{@node.replicas.count} replica(s) are being removed."
+      when 'promote_first'
+        # Promote first replica to primary
+        first_replica = @node.replicas.first
+        if first_replica
+          # Detach first replica (make it primary)
+          first_replica.update!(parent_node: nil)
+          
+          # Attach other replicas to the promoted node
+          remaining_replicas = @node.replicas.reload.reject { |r| r.id == first_replica.id }
+          remaining_replicas.each do |replica|
+            replica.update!(parent_node: first_replica)
+          end
+          
+          notice_msg = "Node removed. #{first_replica.name} promoted to primary with #{remaining_replicas.count} replica(s)."
+        else
+          notice_msg = "Node removed. No replicas were available for promotion."
+        end
+      when 'detach_all'
+        # Detach all replicas (make them primaries)
+        replica_count = @node.replicas.count
+        @node.replicas.each do |replica|
+          replica.update!(parent_node: nil)
+        end
+        notice_msg = "Node removed. #{replica_count} replica(s) converted to independent primary nodes."
+      end
+    else
+      notice_msg = "Node is being removed."
+    end
+    
     @node.deprovision!
 
     respond_to do |format|
-      format.html { redirect_to cluster_path(@cluster), notice: "Node is being removed.", status: :see_other }
+      format.html { redirect_to cluster_path(@cluster), notice: notice_msg, status: :see_other }
       format.json { head :no_content }
     end
   end

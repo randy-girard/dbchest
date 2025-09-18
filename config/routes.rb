@@ -15,6 +15,7 @@ Rails.application.routes.draw do
       member do
         get :add_replica
         post :create_replica
+        get :confirm_destroy
       end
       resources :credentials
     end
