@@ -70,14 +70,18 @@ class NodesController < ApplicationController
       provider: @node.provider,
       name: "#{@node.name}-replica-#{@node.replicas.count + 1}"
     )
+    @providers = Provider.all
     
-    # Copy settings from parent node instead of using build_node_settings!
-    @node.node_settings.each do |setting|
-      @replica.node_settings.build(
-        provider_type_node_option_id: setting.provider_type_node_option_id,
-        key: setting.key,
-        value: setting.value
-      )
+    # Build editable network settings for the replica
+    network_settings = %w[ip_address gateway network subnet cidr]
+    @node.node_settings.includes(:provider_type_node_option).each do |setting|
+      if network_settings.include?(setting.key)
+        @replica.node_settings.build(
+          provider_type_node_option: setting.provider_type_node_option,
+          key: setting.key,
+          value: "" # Start with empty value for user to fill
+        )
+      end
     end
   end
 
@@ -91,10 +95,37 @@ class NodesController < ApplicationController
 
     respond_to do |format|
       if @replica.save
+        # Handle settings - network settings come from form, others inherited from parent
+        network_settings = %w[ip_address gateway network subnet cidr]
+        user_provided_keys = @replica.node_settings.map(&:key)
+        
+        # Copy non-network settings from parent node
+        @node.node_settings.each do |setting|
+          unless user_provided_keys.include?(setting.key)
+            @replica.node_settings.create!(
+              provider_type_node_option_id: setting.provider_type_node_option_id,
+              key: setting.key,
+              value: setting.value
+            )
+          end
+        end
+
         @replica.provision_replica!
         format.html { redirect_to [@cluster, @node], notice: "Replica is being created." }
         format.json { render :show, status: :created, location: [@cluster, @replica] }
       else
+        @providers = Provider.all
+        # Rebuild network settings if validation failed
+        network_settings = %w[ip_address gateway network subnet cidr]
+        @node.node_settings.includes(:provider_type_node_option).each do |setting|
+          if network_settings.include?(setting.key) && !@replica.node_settings.any? { |ns| ns.key == setting.key }
+            @replica.node_settings.build(
+              provider_type_node_option: setting.provider_type_node_option,
+              key: setting.key,
+              value: ""
+            )
+          end
+        end
         format.html { render :add_replica, status: :unprocessable_entity }
         format.json { render json: @replica.errors, status: :unprocessable_entity }
       end
@@ -138,10 +169,10 @@ class NodesController < ApplicationController
 
     def replica_params
       params.expect(node: [
-        :provider_id,
+        :provider_id, 
         :name,
         node_settings_attributes: [
-          [ :id, :provider_type_node_option_id, :key, :value ]
+          [:id, :provider_type_node_option_id, :key, :value]
         ]
       ])
     end
