@@ -48,19 +48,34 @@
       become_user: postgres
       shell: |
         PGPASSWORD='{{ replication_password }}' \
-        pg_basebackup -h {{ primary_ip }} -D {{ postgresql_data_dir }} -U replicator -v -P -W
+        pg_basebackup -h {{ primary_ip }} -D {{ postgresql_data_dir }} -U replicator -v -P -W -R
 
-    - name: Create recovery configuration
+    - name: Remove any old recovery.conf file (not used in PostgreSQL 12+)
+      file:
+        path: "{{ postgresql_data_dir }}/recovery.conf"
+        state: absent
+
+    - name: Verify standby.signal file was created by pg_basebackup -R
+      stat:
+        path: "{{ postgresql_data_dir }}/standby.signal"
+      register: standby_signal_check
+
+    - name: Create standby.signal file if not created by pg_basebackup
       become_user: postgres
-      copy:
-        content: |
-          standby_mode = 'on'
-          primary_conninfo = 'host={{ primary_ip }} port=5432 user=replicator password={{ replication_password }}'
-          trigger_file = '/tmp/postgresql.trigger'
-        dest: "{{ postgresql_data_dir }}/recovery.conf"
+      file:
+        path: "{{ postgresql_data_dir }}/standby.signal"
+        state: touch
         owner: postgres
         group: postgres
         mode: '0600'
+      when: not standby_signal_check.stat.exists
+
+    - name: Add promote trigger file setting to postgresql.conf
+      lineinfile:
+        path: "{{ postgresql_config_file }}"
+        regexp: "^#?promote_trigger_file"
+        line: "promote_trigger_file = '/tmp/postgresql.trigger'"
+        backup: yes
 
     - name: Verify replica configuration in postgresql.conf (should already be set)
       lineinfile:
