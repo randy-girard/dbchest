@@ -31,6 +31,8 @@ class NodesController < ApplicationController
         format.html { redirect_to [ @cluster, @node ], notice: "Node was successfully created." }
         format.json { render :show, status: :created, location: [ @cluster, @node ] }
       else
+        # Build node settings if they don't exist (for dynamic dropdown repopulation)
+        @node.build_node_settings! if @node.node_settings.empty?
         format.html { render :new, status: :unprocessable_entity }
         format.json { render json: @node.errors, status: :unprocessable_entity }
       end
@@ -149,6 +151,18 @@ class NodesController < ApplicationController
         format.json { render :show, status: :created, location: [@cluster, @replica] }
       else
         @providers = Provider.all
+        # Ensure node settings are built for the failed replica
+        if @replica.node_settings.empty?
+          @replica.build_node_settings!
+          # Re-populate with parent values, except for network settings
+          network_settings = %w[ip_address gateway network subnet cidr]
+          @node.node_settings.includes(:provider_type_node_option).each do |parent_setting|
+            replica_setting = @replica.node_settings.find { |rs| rs.key == parent_setting.key }
+            if replica_setting && !network_settings.include?(parent_setting.key)
+              replica_setting.value = parent_setting.value
+            end
+          end
+        end
         format.html { render :add_replica, status: :unprocessable_entity }
         format.json { render json: @replica.errors, status: :unprocessable_entity }
       end
@@ -164,8 +178,6 @@ class NodesController < ApplicationController
         # This is a replica being created
         parent_node = @cluster.nodes.find(params[:parent_node_id])
         @replica = @cluster.nodes.new(provider: @provider, parent_node: parent_node)
-        
-        # Build all settings for the selected provider
         @replica.build_node_settings!
         
         # Pre-populate with parent values, except for network settings
@@ -185,6 +197,19 @@ class NodesController < ApplicationController
         render "nodes/config_partial"
       end
     else
+      # Existing node - rebuild settings for the new provider while preserving existing values
+      existing_values = @node.node_settings.map { |ns| [ns.key, ns.value] }.to_h
+      @node.provider = @provider
+      @node.node_settings.clear
+      @node.build_node_settings!
+      
+      # Restore existing values where they match new provider options
+      @node.node_settings.each do |ns|
+        if existing_values.key?(ns.key)
+          ns.value = existing_values[ns.key]
+        end
+      end
+      
       render "nodes/config_partial"
     end
   end

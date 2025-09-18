@@ -28,7 +28,10 @@ export default class extends Controller {
     }
 
     // Initial reload if deps already filled (e.g. failed save rerender)
-    this.reloadIfDependenciesFilled()
+    // Use a small delay to ensure all form elements are properly initialized
+    setTimeout(() => {
+      this.reloadIfDependenciesFilled()
+    }, 50)
 
   }
 
@@ -93,11 +96,17 @@ export default class extends Controller {
       if (match) {
         this.element.value = candidateValue
         match.selected = true
+        // Trigger change event to ensure dependent dropdowns reload
+        this.element.dispatchEvent(new Event('change', { bubbles: true }))
       }
     }
 
     this.element.disabled = false
-    this.reloadChildren()
+    
+    // Use a small delay for children to ensure parent value is properly set
+    setTimeout(() => {
+      this.reloadChildren()
+    }, 10)
   }
 
   showLoadingOption() {

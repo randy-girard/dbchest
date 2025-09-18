@@ -79,6 +79,7 @@
                     <%= form.label :provider_id, "Infrastructure Provider", class: "form-label required" %>
                     <%= form.collection_select :provider_id, @providers, :id, :name,
                         { selected: @node.provider_id },
+                        id: "node_provider_id",
                         class: "form-select #{'is-invalid' if @replica.errors[:provider_id].any?}",
                         data: { turbo_frame: "config_partial",
                                 controller: "node-config",
