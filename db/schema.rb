@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_17_235257) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_20_010048) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -52,9 +52,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_17_235257) do
     t.string "ssh_public_key"
     t.bigint "parent_node_id"
     t.string "replication_password"
+    t.string "status", default: "pending"
     t.index ["cluster_id"], name: "index_nodes_on_cluster_id"
     t.index ["parent_node_id"], name: "index_nodes_on_parent_node_id"
     t.index ["provider_id"], name: "index_nodes_on_provider_id"
+    t.index ["status"], name: "index_nodes_on_status"
   end
 
   create_table "provider_settings", force: :cascade do |t|

@@ -1,0 +1,101 @@
+<% content_for :title, "ActionCable Test - #{@node.name}" %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <h2 class="page-title">ActionCable Test: <%= @node.name %></h2>
+        <p class="text-muted">Test ActionCable broadcasts from web interface (works with async adapter)</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Node Info</h3>
+          </div>
+          <div class="card-body">
+            <dl class="row">
+              <dt class="col-5">Node ID:</dt>
+              <dd class="col-7"><%= @node.id %></dd>
+              <dt class="col-5">Name:</dt>
+              <dd class="col-7"><%= @node.name %></dd>
+              <dt class="col-5">Cluster:</dt>
+              <dd class="col-7"><%= @node.cluster.name %> (ID: <%= @node.cluster_id %>)</dd>
+              <dt class="col-5">Current Status:</dt>
+              <dd class="col-7">
+                <span class="<%= node_status_badge_class(@node) %>"><%= node_status_display(@node) %></span>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Quick Links</h3>
+          </div>
+          <div class="card-body">
+            <div class="btn-list">
+              <%= link_to "View Node", cluster_node_path(@node.cluster, @node), class: "btn btn-primary" %>
+              <%= link_to "View Cluster", cluster_path(@node.cluster), class: "btn btn-outline-primary" %>
+            </div>
+            <hr>
+            <p class="text-muted small">
+              💡 <strong>Tip:</strong> Open the node or cluster page in another tab to watch live updates!
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">ActionCable Status Tests</h3>
+      </div>
+      <div class="card-body">
+        
+        <div class="alert alert-info">
+          <h4>🧪 Test ActionCable Broadcasting</h4>
+          <p>These buttons trigger status updates from within the Rails server process, which works with the <code>async</code> ActionCable adapter.</p>
+          <p><strong>Expected behavior:</strong> Status changes should appear immediately on node/cluster pages via ActionCable WebSocket.</p>
+        </div>
+        
+        <div class="row">
+          <% @test_statuses.each_with_index do |test, index| %>
+            <div class="col-md-4 mb-3">
+              <%= form_with url: test_actioncable_update_path(@node), method: :post, local: true, class: "d-grid" do |f| %>
+                <%= f.hidden_field :status, value: test[:status] %>
+                <%= f.hidden_field :message, value: test[:message] %>
+                <%= f.submit "#{index + 1}. #{test[:status].humanize}", 
+                    class: "btn btn-outline-primary", 
+                    title: test[:message] %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+        
+        <hr>
+        
+        <div class="alert alert-warning">
+          <h5>🔍 Debugging Info</h5>
+          <p><strong>ActionCable Streams for this node:</strong></p>
+          <ul class="mb-0">
+            <li><code>node_status_updates</code> (general)</li>
+            <li><code>node_status_<%= @node.id %></code> (this node)</li>
+            <li><code>cluster_<%= @node.cluster_id %>_node_status</code> (cluster)</li>
+          </ul>
+        </div>
+        
+      </div>
+    </div>
+    
+  </div>
+</div>

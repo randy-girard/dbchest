@@ -22,14 +22,26 @@ export default class extends Controller {
       // Store current form values before turbo replaces content
       const currentValues = this.getCurrentFormValues()
       
-      Turbo.visit(url, { 
-        frame: "config_partial",
-        action: "replace"
-      }).then(() => {
+      fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/vnd.turbo-stream.html, text/html, application/xhtml+xml',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.text())
+      .then(html => {
+        // Update the config partial frame
+        document.getElementById("config_partial").innerHTML = html
+        
         // After the new content loads, restore any matching values
         setTimeout(() => {
           this.restoreFormValues(currentValues)
         }, 100)
+      })
+      .catch(error => {
+        console.error('Error loading config partial:', error)
+        document.getElementById("config_partial").innerHTML = '<div class="alert alert-danger">Error loading configuration options</div>'
       })
     } else {
       document.getElementById("config_partial").innerHTML = ""

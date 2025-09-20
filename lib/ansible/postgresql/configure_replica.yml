@@ -101,17 +101,3 @@
         host: localhost
         delay: 5
         timeout: 30
-
-    - name: Verify replication is working
-      become_user: postgres
-      postgresql_query:
-        db: postgres
-        query: "SELECT client_addr, state FROM pg_stat_replication;"
-      register: replication_status
-      delegate_to: "{{ primary_ip }}"
-      ignore_errors: yes
-
-    - name: Display replication status
-      debug:
-        var: replication_status.query_result
-      when: replication_status is defined

@@ -233,3 +233,21 @@
     flex-wrap: wrap !important;
   }
 }
+
+/* Node Status Live Updates */
+.node-status-notification {
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.badge {
+  transition: all 0.3s ease-in-out;
+}
+
+.status-message {
+  transition: opacity 0.3s ease-in-out;
+}
+
+.status-message:empty {
+  display: none !important;
+}

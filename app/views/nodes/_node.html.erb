@@ -19,12 +19,13 @@
         
         <dt class="col-sm-4">Status:</dt>
         <dd class="col-sm-8">
-          <span class="badge bg-success">Active</span>
+          <%= node_status_badge(node) %>
+          <%= node_status_message_area(node, class: 'mt-1') %>
         </dd>
 
         <dt class="col-sm-4">Credentials:</dt>
         <dd class="col-sm-8">
-          <span class="badge bg-secondary"><%= pluralize(node.credentials.count, 'credential') %></span>
+          <span class="badge bg-dark"><%= pluralize(node.credentials.count, 'credential') %></span>
         </dd>
         
         <dt class="col-sm-4">Node Type:</dt>

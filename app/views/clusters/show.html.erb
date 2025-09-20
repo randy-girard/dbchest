@@ -113,7 +113,7 @@
       </div>
 
       <% if @cluster.nodes.any? %>
-        <div class="table-responsive">
+        <div class="table-responsive" data-controller="node-status" data-node-status-cluster-id-value="<%= @cluster.id %>">
           <table class="table table-hover align-middle">
             <thead>
               <tr>
@@ -127,7 +127,7 @@
             </thead>
             <tbody>
               <% @cluster.nodes.each do |node| %>
-                <tr>
+                <tr data-node-row-id="<%= node.id %>">
                   <td>
                     <div class="d-flex align-items-center">
                       <span class="avatar avatar-sm me-3" style="background-image: url(https://ui-avatars.com/api/?name=<%= node.name %>&background=<%= node.replica? ? 'ffc107' : '28a745' %>&color=fff)">
@@ -163,10 +163,21 @@
                     <% end %>
                   </td>
                   <td>
-                    <span class="badge bg-success">Active</span>
+                    <div>
+                      <span class="<%= node_status_badge_class(node) %>" 
+                            data-node-id="<%= node.id %>" 
+                            data-node-status="<%= node.id %>">
+                        <%= node_status_display(node) %>
+                      </span>
+                      <div class="small text-muted mt-1" 
+                           data-node-status-message="<%= node.id %>" 
+                           style="display: none;">
+                        <span class="status-message-text"></span>
+                      </div>
+                    </div>
                   </td>
                   <td>
-                    <span class="badge bg-secondary"><%= pluralize(node.credentials.count, 'credential') %></span>
+                    <span class="badge bg-dark"><%= pluralize(node.credentials.count, 'credential') %></span>
                   </td>
                   <td>
                     <div class="btn-list flex-nowrap text-end">

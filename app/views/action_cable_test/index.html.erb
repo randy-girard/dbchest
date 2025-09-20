@@ -1,0 +1,156 @@
+<% content_for :title, "ActionCable Test" %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <h2 class="page-title">ActionCable Test Page</h2>
+        <p class="text-muted">Test real-time node status updates</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl" data-controller="node-status" data-node-status-node-id-value="<%= @node.id %>" data-node-status-cluster-id-value="<%= @node.cluster_id %>">
+    
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Test Node Status</h3>
+          </div>
+          <div class="card-body">
+            <dl class="row">
+              <dt class="col-sm-4">Node:</dt>
+              <dd class="col-sm-8"><strong><%= @node.name %></strong> (ID: <%= @node.id %>)</dd>
+              
+              <dt class="col-sm-4">Cluster:</dt>
+              <dd class="col-sm-8">ID: <%= @node.cluster_id %></dd>
+              
+              <dt class="col-sm-4">Current Status:</dt>
+              <dd class="col-sm-8">
+                <%= node_status_badge(@node) %>
+                <%= node_status_message_area(@node, class: 'mt-1') %>
+              </dd>
+            </dl>
+            
+            <div class="mt-4">
+              <button type="button" class="btn btn-primary" onclick="triggerBroadcast()">
+                🔊 Test Broadcast
+              </button>
+              <button type="button" class="btn btn-outline-secondary" onclick="window.debugActionCable()">
+                🔍 Debug ActionCable
+              </button>
+              <button type="button" class="btn btn-outline-info" onclick="testController()">
+                🎮 Test Controller
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Console Output</h3>
+          </div>
+          <div class="card-body">
+            <div id="console-output" style="background: #f8f9fa; padding: 1rem; border-radius: 4px; font-family: monospace; height: 300px; overflow-y: auto;">
+              <div>Open browser console (F12) to see ActionCable messages...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Messages -->
+    <div class="alert alert-info mt-4" data-node-status-message="<%= @node.id %>" style="display: none;">
+      <div class="d-flex">
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <circle cx="12" cy="12" r="9"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+            <polyline points="11,12 12,12 12,16 13,16"/>
+          </svg>
+        </div>
+        <div class="status-message-text">
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<script>
+  // Override console.log to also show in page
+  const consoleOutput = document.getElementById('console-output');
+  const originalLog = console.log;
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  
+  function addToPageConsole(message, type = 'log') {
+    const timestamp = new Date().toLocaleTimeString();
+    const div = document.createElement('div');
+    div.style.marginBottom = '4px';
+    div.innerHTML = `<span style="color: #666;">[${timestamp}]</span> <span style="color: ${type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'black'};">${message}</span>`;
+    consoleOutput.appendChild(div);
+    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+  }
+  
+  console.log = function(...args) {
+    originalLog.apply(console, args);
+    addToPageConsole(args.join(' '), 'log');
+  };
+  
+  console.error = function(...args) {
+    originalError.apply(console, args);
+    addToPageConsole('ERROR: ' + args.join(' '), 'error');
+  };
+  
+  console.warn = function(...args) {
+    originalWarn.apply(console, args);
+    addToPageConsole('WARN: ' + args.join(' '), 'warn');
+  };
+
+  // Test functions
+  async function triggerBroadcast() {
+    console.log("🔊 Triggering test broadcast...");
+    try {
+      const response = await fetch(`/action_cable_test/<%= @node.id %>/broadcast`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        }
+      });
+      
+      const data = await response.json();
+      console.log("✅ Broadcast response:", data);
+    } catch (error) {
+      console.error("❌ Broadcast error:", error);
+    }
+  }
+  
+  function testController() {
+    const controller = window.nodeController || window.getNodeStatusController();
+    if (controller) {
+      console.log("🎮 Testing controller connection...");
+      controller.testConnection();
+    } else {
+      console.error("❌ No controller found");
+    }
+  }
+
+  // Auto-run diagnostics
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log("🚀 ActionCable Test Page Loaded");
+    setTimeout(() => {
+      console.log("🔍 Running automatic diagnostics...");
+      if (window.debugActionCable) {
+        window.debugActionCable();
+      }
+    }, 1000);
+  });
+</script>

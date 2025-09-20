@@ -17,17 +17,27 @@
 </div>
 
 <div class="page-body">
-  <div class="container-xl">
+  <div class="container-xl" data-controller="node-status" data-node-status-cluster-id-value="<%= @cluster.id %>">
     <div class="row row-cards">
       <% @nodes.each do |node| %>
-        <div class="col-sm-6 col-lg-4">
+        <div class="col-sm-6 col-lg-4" data-node-row-id="<%= node.id %>">
           <div class="card">
             <div class="card-body">
-              <h3 class="card-title"><%= node.name %></h3>
-              <!-- You can render more node attributes here -->
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h3 class="card-title mb-0"><%= node.name %></h3>
+                <%= node_status_badge(node) %>
+              </div>
               <p class="text-muted">
-                <%= truncate(node.description, length: 100) if node.respond_to?(:description) %>
+                <% if node.replica? %>
+                  Replica of <%= node.parent_node.name %>
+                <% else %>
+                  Primary node
+                  <% if node.has_replicas? %>
+                    (<%= pluralize(node.replicas.count, 'replica') %>)
+                  <% end %>
+                <% end %>
               </p>
+              <%= node_status_message_area(node, class: 'mb-2') %>
               <div class="mt-3">
                 <%= link_to "View", [@cluster, node], class: "btn btn-outline-primary" %>
               </div>

@@ -19,7 +19,21 @@ Rails.application.routes.draw do
       end
       resources :credentials
     end
+    # Status API for ActionCable fallback
+    get 'nodes/status', to: 'nodes_status#index'
   end
+  
+  # Individual node status API
+  get 'nodes/:id/status', to: 'nodes_status#show', as: :node_status
+  
+  # ActionCable test routes (development/testing)
+  get 'action_cable_test', to: 'action_cable_test#index'
+  post 'action_cable_test/:id/broadcast', to: 'action_cable_test#broadcast_test'
+  
+  # Web-based ActionCable testing (works with async adapter)
+  get 'test_actioncable/:node_id', to: 'test_action_cable#show', as: :test_actioncable_node
+  post 'test_actioncable/:node_id/update_status', to: 'test_action_cable#update_status', as: :test_actioncable_update
+  
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
@@ -29,6 +43,9 @@ Rails.application.routes.draw do
   # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+
+  # ActionCable routes
+  mount ActionCable.server => '/cable'
 
   # Defines the root path route ("/")
   root "dashboard#index"

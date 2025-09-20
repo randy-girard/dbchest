@@ -146,10 +146,3 @@
       postgresql_user:
         name: postgres
         password: "{{ postgres_password }}"
-
-    - name: Create a test database
-      become: yes
-      become_user: postgres
-      postgresql_db:
-        name: testdb
-        state: present

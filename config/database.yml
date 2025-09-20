@@ -2,11 +2,27 @@ default: &default
   url: <%= ENV["DATABASE_URL"] %>
   pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
 
-development:
+cable: &cable
   <<: *default
+  migrations_paths: db/cable_migrate
+
+development:
+  primary:
+    <<: *default
+  cable:
+    <<: *cable
+    url: <%= ENV['DATABASE_URL']&.+('_cable') %>
 
 test:
-  <<: *default
+  primary:
+    <<: *default
+  cable:
+    <<: *cable
+    url: <%= ENV['DATABASE_URL']&.+('_cable') %>
 
 production:
-  <<: *default
+  primary:
+    <<: *default
+  cable:
+    <<: *cable
+    url: <%= ENV['DATABASE_URL']&.+('_cable') %>

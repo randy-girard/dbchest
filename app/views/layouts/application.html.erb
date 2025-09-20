@@ -7,6 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
+    <%= action_cable_meta_tag %>
 
     <%= yield :head %>
 
@@ -19,6 +20,110 @@
 
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
+    
+    <% if Rails.env.development? %>
+      <script>
+        // Debug ActionCable in development
+        window.debugActionCable = function() {
+          console.log("=== ActionCable Debug Info ===");
+          console.log("ActionCable available:", typeof ActionCable !== 'undefined');
+          console.log("createConsumer available:", typeof createConsumer !== 'undefined');
+          console.log("WebSocket support:", typeof WebSocket !== 'undefined');
+          console.log("Current URL:", window.location.href);
+          
+          // Extract ActionCable URL from meta tag
+          const cableMeta = document.querySelector('meta[name="action-cable-url"]');
+          console.log("ActionCable URL:", cableMeta ? cableMeta.content : 'Not found');
+          
+          // Find all node status controllers
+          const controllers = document.querySelectorAll('[data-controller*="node-status"]');
+          console.log("Node status controllers found:", controllers.length);
+          controllers.forEach((el, i) => {
+            console.log(`Controller ${i}:`, {
+              element: el,
+              nodeId: el.getAttribute('data-node-status-node-id-value'),
+              clusterId: el.getAttribute('data-node-status-cluster-id-value')
+            });
+          });
+          
+          // Find all status elements
+          const statusElements = document.querySelectorAll('[data-node-status]');
+          console.log("Status elements found:", statusElements.length);
+          statusElements.forEach((el, i) => {
+            console.log(`Status element ${i}:`, {
+              element: el,
+              nodeId: el.getAttribute('data-node-status'),
+              currentText: el.textContent,
+              classes: el.className
+            });
+          });
+        };
+        
+        // Helper to get the node status controller
+        window.getNodeStatusController = function() {
+          const element = document.querySelector('[data-controller*="node-status"]');
+          if (element && element.stimulusController) {
+            return element.stimulusController;
+          }
+          
+          // Try using Stimulus application
+          if (window.Stimulus && window.Stimulus.controllers) {
+            for (let controller of window.Stimulus.controllers) {
+              if (controller.identifier === 'node-status') {
+                return controller;
+              }
+            }
+          }
+          
+          // Fallback - try to find via application
+          if (window.application) {
+            try {
+              return window.application.getControllerForElementAndIdentifier(element, 'node-status');
+            } catch (e) {
+              console.warn("Could not get controller:", e);
+            }
+          }
+          
+          console.error("Node status controller not found");
+          return null;
+        };
+        
+        // Test ActionCable availability
+        window.testActionCableImport = function() {
+          console.log("=== Testing ActionCable Import ===");
+          console.log("ActionCable global:", typeof ActionCable);
+          console.log("createConsumer global:", typeof createConsumer);
+          
+          if (typeof ActionCable !== 'undefined') {
+            console.log("✅ ActionCable is available");
+            try {
+              const testConsumer = ActionCable.createConsumer();
+              console.log("✅ Can create consumer:", testConsumer);
+            } catch (e) {
+              console.error("❌ Cannot create consumer:", e);
+            }
+          } else {
+            console.error("❌ ActionCable not available globally");
+          }
+        };
+
+        // Auto-run on page load in development
+        document.addEventListener('DOMContentLoaded', function() {
+          console.log("🔍 Running ActionCable diagnostics...");
+          window.debugActionCable();
+          window.testActionCableImport();
+          
+          // Make controller available globally for testing
+          setTimeout(() => {
+            window.nodeController = window.getNodeStatusController();
+            if (window.nodeController) {
+              console.log("🎮 Node controller available at window.nodeController");
+              console.log("💡 Try: nodeController.testConnection() or nodeController.testBroadcast()");
+            }
+          }, 2000);
+        });
+      </script>
+    <% end %>
   </head>
 
   <body class="layout-sidebar">

@@ -20,7 +20,7 @@
             <path d="m21 12l-6 0m-6 0l-6 0"/>
           </svg>
           <%= @node.name %>
-          <span class="badge bg-success ms-2">Active</span>
+          <%= node_status_badge(@node, class: 'ms-2') %>
         </h2>
       </div>
       <div class="col-auto ms-auto d-print-none">
@@ -40,7 +40,7 @@
 </div>
 
 <div class="page-body">
-  <div class="container-xl">
+  <div class="container-xl" data-controller="node-status" data-node-status-node-id-value="<%= @node.id %>" data-node-status-cluster-id-value="<%= @cluster.id %>">
     <div class="row">
       <!-- Node Information -->
       <div class="col-lg-8">
@@ -59,6 +59,22 @@
               <% else %>
                 <%= button_to "Delete node", [@cluster, @node], method: :delete, data: { confirm: "Are you sure you want to delete this node? This action cannot be undone." }, class: "btn btn-danger ms-auto" %>
               <% end %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div class="alert alert-info mt-4" data-node-status-message="<%= @node.id %>" style="display: none;">
+          <div class="d-flex">
+            <div>
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <circle cx="12" cy="12" r="9"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                <polyline points="11,12 12,12 12,16 13,16"/>
+              </svg>
+            </div>
+            <div class="status-message-text">
             </div>
           </div>
         </div>
@@ -235,10 +251,10 @@
                 </thead>
                 <tbody>
                   <% @node.replicas.each do |replica| %>
-                    <tr>
+                    <tr data-node-row-id="<%= replica.id %>">
                       <td>
                         <div class="d-flex align-items-center">
-                          <span class="avatar avatar-sm me-3 bg-secondary">R</span>
+                          <span class="avatar avatar-sm me-3 bg-dark">R</span>
                           <div>
                             <div class="fw-bold"><%= replica.name %></div>
                             <div class="text-muted small">Read replica</div>
@@ -251,7 +267,18 @@
                         </span>
                       </td>
                       <td>
-                        <span class="badge bg-success">Active</span>
+                        <div>
+                          <span class="<%= node_status_badge_class(replica) %>" 
+                                data-node-id="<%= replica.id %>" 
+                                data-node-status="<%= replica.id %>">
+                            <%= node_status_display(replica) %>
+                          </span>
+                          <div class="small text-muted mt-1" 
+                               data-node-status-message="<%= replica.id %>" 
+                               style="display: none;">
+                            <span class="status-message-text"></span>
+                          </div>
+                        </div>
                       </td>
                       <td>
                         <div class="text-muted">

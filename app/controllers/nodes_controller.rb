@@ -2,6 +2,7 @@ class NodesController < ApplicationController
   before_action :set_cluster
   before_action :set_providers, only: %i[ new create edit update add_replica create_replica ]
   before_action :set_node, only: %i[ show edit update destroy confirm_destroy add_replica create_replica ]
+  before_action :check_node_destruction_status, only: %i[ show edit update add_replica create_replica ]
 
   # GET /nodes or /nodes.json
   def index
@@ -28,7 +29,7 @@ class NodesController < ApplicationController
     respond_to do |format|
       if @node.save
         @node.provision!
-        format.html { redirect_to [ @cluster, @node ], notice: "Node was successfully created." }
+        format.html { redirect_to [ @cluster, @node ], notice: "Node was successfully created and is being provisioned." }
         format.json { render :show, status: :created, location: [ @cluster, @node ] }
       else
         # Build node settings if they don't exist (for dynamic dropdown repopulation)
@@ -216,6 +217,18 @@ class NodesController < ApplicationController
 
   private
     # Use callbacks to share common setup or constraints between actions.
+    def check_node_destruction_status
+      if @node&.status == 'destroying'
+        redirect_to cluster_path(@cluster), 
+                    alert: "Node '#{@node.name}' is currently being destroyed and cannot be accessed."
+        return
+      elsif @node&.status == 'destroyed'
+        redirect_to cluster_path(@cluster), 
+                    alert: "Node '#{@node.name}' has been destroyed and is no longer available."
+        return
+      end
+    end
+    
     def set_providers
       @providers = Provider.all
     end

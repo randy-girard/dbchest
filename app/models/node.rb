@@ -11,6 +11,26 @@ class Node < ApplicationRecord
   validates :name, presence: true, uniqueness: { scope: :cluster_id }
   validate :parent_node_must_be_primary
 
+  # Status constants
+  STATUSES = {
+    'pending' => 'Pending',
+    'provisioning' => 'Provisioning',
+    'configuring' => 'Configuring', 
+    'active' => 'Active',
+    'error' => 'Error',
+    'destroying' => 'Destroying',
+    'destroyed' => 'Destroyed'
+  }.freeze
+
+  validates :status, inclusion: { in: STATUSES.keys }
+
+  # Ensure status is set
+  before_validation :set_default_status
+  
+  # Broadcast status changes
+  after_create :broadcast_initial_status
+  after_update :broadcast_status_change, if: :saved_change_to_status?
+
   after_destroy :cleanup_parent_replication_config, if: :replica?
 
   encrypts :terraform_state,
@@ -166,7 +186,52 @@ class Node < ApplicationRecord
   # This includes WAL level and archive settings.
   # Replication user and pg_hba.conf entries are only created when needed.
 
+  # Status management methods
+  def update_status!(new_status, message = nil)
+    Rails.logger.info "Updating node #{id} status from '#{status}' to '#{new_status}': #{message}"
+    
+    if update!(status: new_status)
+      Rails.logger.info "Node #{id} status successfully updated to '#{new_status}'"
+      broadcast_status_update(message)
+    else
+      Rails.logger.error "Failed to update node #{id} status to '#{new_status}': #{errors.full_messages.join(', ')}"
+    end
+  rescue => e
+    Rails.logger.error "Error updating node #{id} status: #{e.message}"
+    raise e
+  end
+
+  def status_display
+    STATUSES[status] || status&.humanize || 'Unknown'
+  end
+
+  def status_badge_class
+    case status
+    when 'active'
+      'bg-success'
+    when 'provisioning', 'configuring'
+      'bg-warning'
+    when 'error'
+      'bg-danger'
+    when 'destroying'
+      'bg-info'
+    when 'destroyed'
+      'bg-dark'
+    else
+      'bg-primary'
+    end
+  end
+
+  # Ensure we have a status value, fallback for existing nodes
+  def status
+    read_attribute(:status) || 'pending'
+  end
+
   private
+
+  def set_default_status
+    self.status = 'pending' if status.blank?
+  end
 
   def parent_node_must_be_primary
     if parent_node.present? && parent_node.parent_node.present?
@@ -180,5 +245,45 @@ class Node < ApplicationRecord
     # If this was the last replica, optionally clean up replication configuration
     # For now, we'll leave the replication user and password for future use
     # This could be extended to remove pg_hba.conf entries for this specific replica
+  end
+
+  def broadcast_initial_status
+    broadcast_status_update("Node created")
+  end
+
+  def broadcast_status_change
+    broadcast_status_update
+  end
+
+  def broadcast_status_update(message = nil)
+    data = {
+      id: id,
+      status: status,
+      status_display: status_display,
+      status_badge_class: status_badge_class,
+      name: name,
+      message: message,
+      updated_at: updated_at.iso8601
+    }
+
+    Rails.logger.info "🔊 Broadcasting node status update for node #{id}: #{status} - #{message}"
+    Rails.logger.debug "📦 Broadcast data: #{data.inspect}"
+    
+    # Broadcast to all subscribers
+    ActionCable.server.broadcast("node_status_updates", data)
+    Rails.logger.info "✅ Broadcasted to stream: node_status_updates"
+    
+    # Broadcast to specific node subscribers
+    ActionCable.server.broadcast("node_status_#{id}", data)
+    Rails.logger.info "✅ Broadcasted to stream: node_status_#{id}"
+    
+    # Broadcast to cluster subscribers
+    ActionCable.server.broadcast("cluster_#{cluster_id}_node_status", data)
+    Rails.logger.info "✅ Broadcasted to stream: cluster_#{cluster_id}_node_status"
+    
+    Rails.logger.info "🎯 Total streams broadcasted to: 3"
+  rescue => e
+    Rails.logger.error "Error broadcasting node status update: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
   end
 end
