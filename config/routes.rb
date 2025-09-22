@@ -26,6 +26,9 @@ Rails.application.routes.draw do
   # Individual node status API
   get 'nodes/:id/status', to: 'nodes_status#show', as: :node_status
   
+  # Cloud-init callback API
+  post 'nodes/:id/status_callback', to: 'node_status_callbacks#update', as: :node_status_callback
+  
   # ActionCable test routes (development/testing)
   get 'action_cable_test', to: 'action_cable_test#index'
   post 'action_cable_test/:id/broadcast', to: 'action_cable_test#broadcast_test'

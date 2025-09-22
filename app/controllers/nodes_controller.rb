@@ -111,8 +111,12 @@ class NodesController < ApplicationController
   end
 
   def add_replica
-    unless @node.primary?
-      redirect_to [@cluster, @node], alert: "Cannot create replica of a replica node. Only primary nodes can have replicas." and return
+    unless @node.can_create_replicas?
+      if @node.replica?
+        redirect_to [@cluster, @node], alert: "Cannot create replica of a replica node. Only primary nodes can have replicas." and return
+      elsif !@node.active?
+        redirect_to [@cluster, @node], alert: "Cannot create replica from a non-active primary node. The primary node must be active before creating replicas." and return
+      end
     end
 
     @replica = @cluster.nodes.new(
@@ -136,8 +140,12 @@ class NodesController < ApplicationController
   end
 
   def create_replica
-    unless @node.primary?
-      redirect_to [@cluster, @node], alert: "Cannot create replica of a replica node. Only primary nodes can have replicas." and return
+    unless @node.can_create_replicas?
+      if @node.replica?
+        redirect_to [@cluster, @node], alert: "Cannot create replica of a replica node. Only primary nodes can have replicas." and return
+      elsif !@node.active?
+        redirect_to [@cluster, @node], alert: "Cannot create replica from a non-active primary node. The primary node must be active before creating replicas." and return
+      end
     end
 
     @replica = @cluster.nodes.new(replica_params)
@@ -174,44 +182,49 @@ class NodesController < ApplicationController
     @provider = Provider.find(params[:provider_id])
     @node = @cluster.nodes.find_by_id(params[:node_id])
     
-    if @node == nil
-      if params[:parent_node_id].present?
-        # This is a replica being created
-        parent_node = @cluster.nodes.find(params[:parent_node_id])
-        @replica = @cluster.nodes.new(provider: @provider, parent_node: parent_node)
-        @replica.build_node_settings!
+    respond_to do |format|
+      if @node == nil
+        if params[:parent_node_id].present?
+          # This is a replica being created
+          parent_node = @cluster.nodes.find(params[:parent_node_id])
+          @replica = @cluster.nodes.new(provider: @provider, parent_node: parent_node)
+          @replica.build_node_settings!
+          
+          # Pre-populate with parent values, except for network settings
+          network_settings = %w[ip_address gateway network subnet cidr]
+          parent_node.node_settings.includes(:provider_type_node_option).each do |parent_setting|
+            replica_setting = @replica.node_settings.find { |rs| rs.key == parent_setting.key }
+            if replica_setting && !network_settings.include?(parent_setting.key)
+              replica_setting.value = parent_setting.value
+            end
+          end
+          
+          format.html { render "nodes/replica_config_display", layout: false if request.xhr? }
+          format.turbo_stream { render "nodes/replica_config_display" }
+        else
+          # Regular new node
+          @node = @cluster.nodes.new(provider: @provider)
+          @node.build_node_settings!
+          format.html { render "nodes/config_partial", layout: false if request.xhr? }
+          format.turbo_stream { render "nodes/config_partial" }
+        end
+      else
+        # Existing node - rebuild settings for the new provider while preserving existing values
+        existing_values = @node.node_settings.map { |ns| [ns.key, ns.value] }.to_h
+        @node.provider = @provider
+        @node.node_settings.clear
+        @node.build_node_settings!
         
-        # Pre-populate with parent values, except for network settings
-        network_settings = %w[ip_address gateway network subnet cidr]
-        parent_node.node_settings.includes(:provider_type_node_option).each do |parent_setting|
-          replica_setting = @replica.node_settings.find { |rs| rs.key == parent_setting.key }
-          if replica_setting && !network_settings.include?(parent_setting.key)
-            replica_setting.value = parent_setting.value
+        # Restore existing values where they match new provider options
+        @node.node_settings.each do |ns|
+          if existing_values.key?(ns.key)
+            ns.value = existing_values[ns.key]
           end
         end
         
-        render "nodes/replica_config_display"
-      else
-        # Regular new node
-        @node = @cluster.nodes.new(provider: @provider)
-        @node.build_node_settings!
-        render "nodes/config_partial"
+        format.html { render "nodes/config_partial", layout: false if request.xhr? }
+        format.turbo_stream { render "nodes/config_partial" }
       end
-    else
-      # Existing node - rebuild settings for the new provider while preserving existing values
-      existing_values = @node.node_settings.map { |ns| [ns.key, ns.value] }.to_h
-      @node.provider = @provider
-      @node.node_settings.clear
-      @node.build_node_settings!
-      
-      # Restore existing values where they match new provider options
-      @node.node_settings.each do |ns|
-        if existing_values.key?(ns.key)
-          ns.value = existing_values[ns.key]
-        end
-      end
-      
-      render "nodes/config_partial"
     end
   end
 

@@ -14,6 +14,9 @@ class AnsibleRunService
 
   def perform(node_id, playbook, vars: {})
     @node = Node.find_by_id(node_id)
+    @node_id = node_id
+    @playbook_name = playbook
+    
     ip = @node.get_runtime_config_value("ip_address")
     ip_address = IPAddr.new(ip).to_s
 
@@ -112,6 +115,21 @@ class AnsibleRunService
     # Send JSON to ActionCable or any other system
     payload = task.to_json
     ActionCable.server.broadcast("ansible", payload)
+    
+    # In development, also broadcast to console channel for debugging
+    if Rails.env.development?
+      console_data = {
+        timestamp: Time.current.strftime("%H:%M:%S"),
+        event_type: 'ansible_task',
+        node_id: @node_id,
+        task_name: task["name"],
+        status: task["status"],
+        details: task["details"],
+        playbook: @playbook_name
+      }
+      ActionCable.server.broadcast("development_console", console_data)
+    end
+    
     # Optionally output to console
     puts payload
   end

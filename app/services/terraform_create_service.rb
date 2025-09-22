@@ -1,4 +1,5 @@
 require "sshkey"
+require "base64"
 
 class TerraformCreateService
   include TerraformCommon
@@ -39,6 +40,7 @@ class TerraformCreateService
 
         vars = @node.provider.terraform_vars
         vars[:ssh_public_key] = @node.ssh_public_key
+        vars[:ssh_private_key] = @node.ssh_private_key
         vars[:name] = @node.name
                            .to_s
                            .downcase
@@ -48,6 +50,11 @@ class TerraformCreateService
         @node.node_settings.each do |node_setting|
           vars[node_setting.key] = node_setting.value
         end
+
+        # Generate cloud-init user data and base64 encode it
+        is_replica = @node.replica?
+        cloud_init_script = CloudInitService.new.generate_user_data(@node.id, is_replica)
+        vars[:cloud_init_user_data] = Base64.strict_encode64(cloud_init_script)
 
         # Load state from DB into work dir
         load_state_from_db(work_dir, @node)

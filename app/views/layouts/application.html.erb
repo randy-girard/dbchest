@@ -62,21 +62,26 @@
         // Helper to get the node status controller
         window.getNodeStatusController = function() {
           const element = document.querySelector('[data-controller*="node-status"]');
-          if (element && element.stimulusController) {
-            return element.stimulusController;
-          }
-          
-          // Try using Stimulus application
-          if (window.Stimulus && window.Stimulus.controllers) {
-            for (let controller of window.Stimulus.controllers) {
-              if (controller.identifier === 'node-status') {
-                return controller;
+          if (element && window.application) {
+            console.log("Found node status element:", element);
+            
+            // Wait for Stimulus to fully register the controller
+            const checkController = () => {
+              try {
+                return window.application.getControllerForElementAndIdentifier(element, 'node-status');
+              } catch (e) {
+                return null;
               }
+            };
+            
+            let controller = checkController();
+            if (!controller) {
+              // Try a few more times with delay
+              setTimeout(() => {
+                controller = checkController();
+              }, 100);
             }
-          }
-          
-          // Fallback - try to find via application
-          if (window.application) {
+            
             try {
               return window.application.getControllerForElementAndIdentifier(element, 'node-status');
             } catch (e) {
@@ -84,11 +89,9 @@
             }
           }
           
-          console.error("Node status controller not found");
+          // Don't log error if we're on a page that doesn't have the controller
           return null;
-        };
-        
-        // Test ActionCable availability
+        };        // Test ActionCable availability
         window.testActionCableImport = function() {
           console.log("=== Testing ActionCable Import ===");
           console.log("ActionCable global:", typeof ActionCable);
@@ -113,12 +116,17 @@
           window.debugActionCable();
           window.testActionCableImport();
           
-          // Make controller available globally for testing
+          // Make controller available globally for testing (only if node-status element exists)
           setTimeout(() => {
-            window.nodeController = window.getNodeStatusController();
-            if (window.nodeController) {
-              console.log("🎮 Node controller available at window.nodeController");
-              console.log("💡 Try: nodeController.testConnection() or nodeController.testBroadcast()");
+            const nodeStatusElement = document.querySelector('[data-controller*="node-status"]');
+            if (nodeStatusElement) {
+              window.nodeController = window.getNodeStatusController();
+              if (window.nodeController) {
+                console.log("🎮 Node controller available at window.nodeController");
+                console.log("💡 Try: nodeController.testConnection() or nodeController.testBroadcast()");
+              }
+            } else {
+              console.log("📄 No node status controller on this page - skipping initialization");
             }
           }, 2000);
         });
@@ -173,5 +181,10 @@
         <%= yield %>
       </div>
     </div>
+
+    <% if Rails.env.development? %>
+      <!-- Development Console for monitoring background jobs -->
+      <div data-controller="development-console"></div>
+    <% end %>
   </body>
 </html>

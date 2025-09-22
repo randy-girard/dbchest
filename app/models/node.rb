@@ -162,8 +162,16 @@ class Node < ApplicationRecord
     parent_node_id.present?
   end
 
+  def active?
+    status == 'active'
+  end
+
   def has_replicas?
     replicas.any?
+  end
+
+  def can_create_replicas?
+    primary? && active?
   end
 
   def provision_replica!
@@ -281,7 +289,19 @@ class Node < ApplicationRecord
     ActionCable.server.broadcast("cluster_#{cluster_id}_node_status", data)
     Rails.logger.info "✅ Broadcasted to stream: cluster_#{cluster_id}_node_status"
     
-    Rails.logger.info "🎯 Total streams broadcasted to: 3"
+    # In development, also broadcast to console channel for debugging
+    if Rails.env.development?
+      console_data = data.merge({
+        timestamp: Time.current.strftime("%H:%M:%S"),
+        node_name: name,
+        cluster_id: cluster_id,
+        event_type: 'node_status_update'
+      })
+      ActionCable.server.broadcast("development_console", console_data)
+      Rails.logger.debug "🖥️  Broadcasted to development console: #{console_data.inspect}"
+    end
+    
+    Rails.logger.info "🎯 Total streams broadcasted to: #{Rails.env.development? ? 4 : 3}"
   rescue => e
     Rails.logger.error "Error broadcasting node status update: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")

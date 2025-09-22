@@ -224,17 +224,47 @@
               </div>
               <% if @node.primary? %>
                 <div class="col-auto">
-                  <%= link_to add_replica_cluster_node_path(@cluster, @node), class: "btn btn-primary btn-sm" do %>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                      <line x1="12" y1="5" x2="12" y2="19"/>
-                      <line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                    Add Replica
+                  <% if @node.can_create_replicas? %>
+                    <%= link_to add_replica_cluster_node_path(@cluster, @node), class: "btn btn-primary btn-sm" do %>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                      </svg>
+                      Add Replica
+                    <% end %>
+                  <% else %>
+                    <button class="btn btn-primary btn-sm" disabled title="Primary node must be active before creating replicas">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                      </svg>
+                      Add Replica
+                    </button>
                   <% end %>
                 </div>
               <% end %>
             </div>
+            
+            <% if @node.primary? && !@node.can_create_replicas? %>
+              <div class="alert alert-info mt-3" role="alert">
+                <div class="d-flex">
+                  <div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                      <circle cx="12" cy="12" r="9"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/>
+                      <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 class="alert-title">Replica Creation Unavailable</h4>
+                    <div class="text-muted">This primary node must be <strong>active</strong> before replicas can be created. Current status: <span class="badge <%= @node.status_badge_class %>"><%= @node.status_display %></span></div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
           </div>
           
           <% if @node.primary? && @node.replicas.any? %>
@@ -417,20 +447,38 @@
                 Add Credential
               <% end %>
               <% if @node.primary? %>
-                <%= link_to add_replica_cluster_node_path(@cluster, @node), class: "btn btn-secondary w-100" do %>
-                  <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                    <path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/>
-                    <path d="M12 2l0 2"/>
-                    <path d="M12 20l0 2"/>
-                    <path d="M4.93 4.93l1.41 1.41"/>
-                    <path d="M17.66 17.66l1.41 1.41"/>
-                    <path d="M2 12l2 0"/>
-                    <path d="M20 12l2 0"/>
-                    <path d="M6.34 17.66l-1.41 1.41"/>
-                    <path d="M19.07 4.93l-1.41 1.41"/>
-                  </svg>
-                  Add Replica
+                <% if @node.can_create_replicas? %>
+                  <%= link_to add_replica_cluster_node_path(@cluster, @node), class: "btn btn-secondary w-100" do %>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                      <path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/>
+                      <path d="M12 2l0 2"/>
+                      <path d="M12 20l0 2"/>
+                      <path d="M4.93 4.93l1.41 1.41"/>
+                      <path d="M17.66 17.66l1.41 1.41"/>
+                      <path d="M2 12l2 0"/>
+                      <path d="M20 12l2 0"/>
+                      <path d="M6.34 17.66l-1.41 1.41"/>
+                      <path d="M19.07 4.93l-1.41 1.41"/>
+                    </svg>
+                    Add Replica
+                  <% end %>
+                <% else %>
+                  <button class="btn btn-secondary w-100" disabled title="Primary node must be active before creating replicas">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                      <path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/>
+                      <path d="M12 2l0 2"/>
+                      <path d="M12 20l0 2"/>
+                      <path d="M4.93 4.93l1.41 1.41"/>
+                      <path d="M17.66 17.66l1.41 1.41"/>
+                      <path d="M2 12l2 0"/>
+                      <path d="M20 12l2 0"/>
+                      <path d="M6.34 17.66l-1.41 1.41"/>
+                      <path d="M19.07 4.93l-1.41 1.41"/>
+                    </svg>
+                    Add Replica (Node must be active)
+                  </button>
                 <% end %>
               <% end %>
             </div>

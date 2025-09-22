@@ -24,12 +24,10 @@
       notify: Reload PostgreSQL
 
     - name: Ensure PostgreSQL user is present
-      community.postgresql.postgresql_user:
-        name: "{{ username }}"
-        password: "{{ password }}"
-        role_attr_flags: SUPERUSER
-        state: present
       become_user: postgres
+      shell: |
+        psql -c "CREATE USER {{ username }} WITH SUPERUSER PASSWORD '{{ password }}';" postgres || 
+        psql -c "ALTER USER {{ username }} PASSWORD '{{ password }}';" postgres
 
   handlers:
     - name: Reload PostgreSQL

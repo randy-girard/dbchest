@@ -26,25 +26,30 @@
 
     - name: Check if replication user exists
       become_user: postgres
-      postgresql_query:
-        db: postgres
-        query: "SELECT 1 FROM pg_roles WHERE rolname='replicator'"
-      register: replication_user_exists
-      ignore_errors: yes
+      shell: |
+        psql -t -A -c "SELECT COUNT(*) FROM pg_roles WHERE rolname='replication';" postgres
+      register: replication_user_check
+      changed_when: false
 
     - name: Create replication user if it doesn't exist
       become_user: postgres
-      postgresql_user:
-        name: replicator
-        password: "{{ replication_password }}"
-        role_attr_flags: REPLICATION
-        state: present
-      when: replication_user_exists.query_result | length == 0
+      shell: |
+        psql -c "CREATE ROLE replication WITH REPLICATION LOGIN CONNECTION LIMIT 10 PASSWORD '{{ replication_password }}';" postgres
+      when: replication_user_check.stdout.strip() == "0"
+      ignore_errors: yes
 
     - name: Add replica-specific pg_hba.conf entry for replication
       lineinfile:
         path: "{{ postgresql_hba_file }}"
-        line: "host replication replicator {{ replica_ip }}/32 md5"
+        line: "# Replication from {{ replica_node_name }} ({{ replica_ip }})"
+        backup: yes
+      notify: reload postgresql
+
+    - name: Add replication host entry for specific replica
+      lineinfile:
+        path: "{{ postgresql_hba_file }}"
+        line: "host    replication     replication     {{ replica_ip }}/32          md5"
+        insertafter: "# Replication from {{ replica_node_name }}"
         backup: yes
       notify: reload postgresql
 
@@ -58,6 +63,5 @@
   handlers:
     - name: reload postgresql
       become_user: postgres
-      postgresql_query:
-        db: postgres
-        query: "SELECT pg_reload_conf()"
+      shell: |
+        psql -c "SELECT pg_reload_conf();" postgres

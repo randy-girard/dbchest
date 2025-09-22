@@ -22,10 +22,9 @@
       notify: Reload PostgreSQL
 
     - name: Ensure PostgreSQL role is absent
-      community.postgresql.postgresql_user:
-        name: "{{ username }}"
-        state: absent
       become_user: postgres
+      shell: |
+        psql -c "DROP USER IF EXISTS {{ username }};" postgres
 
   handlers:
     - name: Reload PostgreSQL

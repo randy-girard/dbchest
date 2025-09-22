@@ -27,6 +27,7 @@ class TerraformDestroyService
 
         vars = @node.provider.terraform_vars
         vars[:ssh_public_key] = @node.ssh_public_key
+        vars[:ssh_private_key] = @node.ssh_private_key
         vars[:name] = @node.name
                            .to_s
                            .downcase

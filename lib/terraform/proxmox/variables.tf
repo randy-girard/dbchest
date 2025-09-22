@@ -57,3 +57,15 @@ variable "gateway" {
  type = string
  description = "Gateway"
 }
+
+variable "cloud_init_user_data" {
+  type = string
+  description = "Cloud-init user data script"
+  default = ""
+}
+
+variable "ssh_private_key" {
+  type = string
+  description = "SSH Private Key for provisioning"
+  sensitive = true
+}

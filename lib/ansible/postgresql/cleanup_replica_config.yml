@@ -43,6 +43,5 @@
   handlers:
     - name: reload postgresql
       become_user: postgres
-      postgresql_query:
-        db: postgres
-        query: "SELECT pg_reload_conf()"
+      shell: |
+        psql -c "SELECT pg_reload_conf();" postgres

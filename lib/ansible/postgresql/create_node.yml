@@ -143,6 +143,5 @@
     - name: Set postgres password
       become: yes
       become_user: postgres
-      postgresql_user:
-        name: postgres
-        password: "{{ postgres_password }}"
+      shell: |
+        psql -c "ALTER USER postgres PASSWORD '{{ postgres_password }}';" postgres

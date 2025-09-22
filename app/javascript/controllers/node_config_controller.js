@@ -25,26 +25,41 @@ export default class extends Controller {
       fetch(url, {
         method: 'GET',
         headers: {
-          'Accept': 'text/vnd.turbo-stream.html, text/html, application/xhtml+xml',
-          'X-Requested-With': 'XMLHttpRequest'
+          'Accept': 'text/html',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded'
         }
       })
-      .then(response => response.text())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        return response.text()
+      })
       .then(html => {
         // Update the config partial frame
-        document.getElementById("config_partial").innerHTML = html
-        
-        // After the new content loads, restore any matching values
-        setTimeout(() => {
-          this.restoreFormValues(currentValues)
-        }, 100)
+        const frame = document.getElementById("config_partial")
+        if (frame) {
+          frame.innerHTML = html
+          
+          // After the new content loads, restore any matching values
+          setTimeout(() => {
+            this.restoreFormValues(currentValues)
+          }, 100)
+        }
       })
       .catch(error => {
         console.error('Error loading config partial:', error)
-        document.getElementById("config_partial").innerHTML = '<div class="alert alert-danger">Error loading configuration options</div>'
+        const frame = document.getElementById("config_partial")
+        if (frame) {
+          frame.innerHTML = '<div class="alert alert-danger">Error loading configuration options</div>'
+        }
       })
     } else {
-      document.getElementById("config_partial").innerHTML = ""
+      const frame = document.getElementById("config_partial")
+      if (frame) {
+        frame.innerHTML = ""
+      }
     }
   }
 
