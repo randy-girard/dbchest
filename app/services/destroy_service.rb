@@ -18,7 +18,8 @@ class DestroyService
         @node.update_status!('destroying', 'Cleaning up replication configuration...')
         AnsibleRunService.new.perform(@node.parent_node.id, "cleanup_replica_config.yml", 
           vars: { 
-            replica_ip: replica_ip
+            replica_ip: replica_ip,
+            postgresql_version: @node.parent_node.database_type_version&.version || '15'
           })
       else
         Rails.logger.warn "Skipping pg_hba.conf cleanup for replica node #{@node.id}: no IP address found"

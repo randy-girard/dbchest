@@ -59,19 +59,27 @@ class CloudInitService
   def primary_setup_commands
     # Generate replication password for this primary node
     replication_password = @node.ensure_replication_password!
+    version_num = @node.database_type_version&.version || '15'
     
     <<~SCRIPT
       # Configure PostgreSQL for replication readiness
-      log "Configuring PostgreSQL for replication readiness..."
-      callback "configuring" "Configuring PostgreSQL for replication readiness..."
+      log "Configuring PostgreSQL #{version_num} for replication readiness..."
+      callback "configuring" "Configuring PostgreSQL #{version_num} for replication readiness..."
+
+      # Verify PostgreSQL version directory exists
+      if [[ ! -d "/etc/postgresql/#{version_num}" ]]; then
+        log "ERROR: PostgreSQL #{version_num} configuration directory not found"
+        callback "error" "PostgreSQL #{version_num} not properly installed - cannot configure replication"
+        exit 1
+      fi
 
       # Configure PostgreSQL settings for replication
-      echo "wal_level = replica" >> /etc/postgresql/*/main/postgresql.conf
-      echo "max_wal_senders = 10" >> /etc/postgresql/*/main/postgresql.conf
-      echo "max_replication_slots = 10" >> /etc/postgresql/*/main/postgresql.conf
-      echo "archive_mode = on" >> /etc/postgresql/*/main/postgresql.conf
-      echo "archive_command = 'test ! -f /var/lib/postgresql/archive/%f && cp %p /var/lib/postgresql/archive/%f'" >> /etc/postgresql/*/main/postgresql.conf
-      echo "listen_addresses = '*'" >> /etc/postgresql/*/main/postgresql.conf
+      echo "wal_level = replica" >> /etc/postgresql/#{version_num}/main/postgresql.conf
+      echo "max_wal_senders = 10" >> /etc/postgresql/#{version_num}/main/postgresql.conf
+      echo "max_replication_slots = 10" >> /etc/postgresql/#{version_num}/main/postgresql.conf
+      echo "archive_mode = on" >> /etc/postgresql/#{version_num}/main/postgresql.conf
+      echo "archive_command = 'test ! -f /var/lib/postgresql/archive/%f && cp %p /var/lib/postgresql/archive/%f'" >> /etc/postgresql/#{version_num}/main/postgresql.conf
+      echo "listen_addresses = '*'" >> /etc/postgresql/#{version_num}/main/postgresql.conf
 
       # Create archive directory
       mkdir -p /var/lib/postgresql/archive
@@ -148,6 +156,13 @@ class CloudInitService
     replication_password = primary_node.ensure_replication_password!
     replica_node_name = @node.name
     slot_name = @node.name.downcase.gsub(/[^a-z0-9_]/, '_')
+    
+    # Get version info for both nodes
+    replica_version = @node.database_type_version&.version || '15'
+    primary_version = primary_node.database_type_version&.version || '15'
+    
+    # Determine replication method
+    replication_method = @node.replication_method_for(primary_node) || 'streaming'
 
     <<~SCRIPT
       # Full replica setup including replication configuration
@@ -157,9 +172,20 @@ class CloudInitService
       # Stop PostgreSQL if it's running
       systemctl stop postgresql || true
 
-            # Clear existing data directory
+      # Verify PostgreSQL version directory exists
+      if [[ ! -d "/var/lib/postgresql/#{replica_version}" ]]; then
+        log "ERROR: PostgreSQL #{replica_version} data directory not found"
+        callback "error" "PostgreSQL #{replica_version} not properly installed - cannot configure replica"
+        exit 1
+      fi
+      
+      # Clear existing data directory using expected version
       systemctl stop postgresql
-      rm -rf /var/lib/postgresql/*/main/*
+      rm -rf /var/lib/postgresql/#{replica_version}/main/*
+      
+      log "Replica version: #{replica_version}, Primary version: #{primary_version}"
+      log "Replication method: #{replication_method}"
+      callback "configuring" "Setting up #{replication_method} replication between versions #{primary_version} -> #{replica_version}"
 
       # Test connectivity to primary before proceeding
       log "Testing connection to primary #{primary_ip}..."
@@ -207,15 +233,15 @@ class CloudInitService
       callback "configuring" "Creating base backup from primary..."
 
       # Create base backup with progress monitoring
-      # Find the PostgreSQL version directory dynamically
-      PG_VERSION=$(ls /var/lib/postgresql/ | grep -E '^[0-9]+$' | head -1)
+      # Use the expected PostgreSQL version for this replica
+      PG_VERSION="#{replica_version}"
 
-      log "Starting pg_basebackup from primary..."
+      log "Starting pg_basebackup from primary (#{primary_version}) to replica (#{replica_version})..."
       callback "configuring" "Starting pg_basebackup - initializing backup..."
 
       # Run pg_basebackup with progress monitoring from the postgres home directory
       # Note: Removed -W flag to use .pgpass file instead of prompting for password
-      sudo -u postgres bash -c "cd /var/lib/postgresql && pg_basebackup -h #{primary_ip} -D /var/lib/postgresql/$PG_VERSION/main -U replication -v -P -R" 2>&1 | while IFS= read -r line; do
+      sudo -u postgres bash -c "cd /var/lib/postgresql && pg_basebackup -h #{primary_ip} -D /var/lib/postgresql/#{replica_version}/main -U replication -v -P -R" 2>&1 | while IFS= read -r line; do
         log "pg_basebackup: $line"
         
         # Send ALL output to frontend for debugging - we'll filter later
@@ -243,8 +269,7 @@ class CloudInitService
 
       # The -R flag above should create postgresql.auto.conf with standby settings
       # But let's ensure the replica configuration is correct
-      PG_VERSION=$(ls /var/lib/postgresql/ | grep -E '^[0-9]+$' | head -1)
-      sudo -u postgres bash -c "cat >> /var/lib/postgresql/$PG_VERSION/main/postgresql.auto.conf << EOF
+      sudo -u postgres bash -c "cat >> /var/lib/postgresql/#{replica_version}/main/postgresql.auto.conf << EOF
 primary_conninfo = 'host=#{primary_ip} port=5432 user=replication password=#{replication_password} application_name=#{replica_node_name}'
 primary_slot_name = '#{slot_name}'
 EOF"
@@ -253,8 +278,8 @@ EOF"
       callback "configuring" "Setting proper file permissions..."
 
       # Set proper ownership
-      chown -R postgres:postgres /var/lib/postgresql/$PG_VERSION/main
-      chmod 700 /var/lib/postgresql/$PG_VERSION/main
+      chown -R postgres:postgres /var/lib/postgresql/#{replica_version}/main
+      chmod 700 /var/lib/postgresql/#{replica_version}/main
 
       # Start PostgreSQL as replica
       log "Starting PostgreSQL replica..."
@@ -328,8 +353,12 @@ EOF"
   end
 
   def postgresql_install_script
+    db_version = @node.database_type_version
+    install_command = db_version&.install_command || 'DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib'
+    version_num = db_version&.version || '15'
+    
     <<~SCRIPT
-      # Install PostgreSQL
+      # Install Database
       log "Installing basic dependencies..."
       callback "configuring" "Installing basic dependencies..."
 
@@ -337,21 +366,34 @@ EOF"
       apt-get update
       DEBIAN_FRONTEND=noninteractive apt-get install -y curl wget gnupg lsb-release ca-certificates netcat-openbsd
 
-      log "Installing PostgreSQL..."
-      callback "configuring" "Installing PostgreSQL..."
+      log "Installing #{db_version&.display_name || 'PostgreSQL'}..."
+      callback "configuring" "Installing #{db_version&.display_name || 'PostgreSQL'}..."
 
-      # For Ubuntu 20.04 (focal), use default repositories with PostgreSQL 12/13
-      # This is more reliable than the PostgreSQL APT repository which doesn't support focal
-      log "Updating package lists..."
-      callback "configuring" "Updating package lists..."
-      apt-get update
-
-      log "Installing PostgreSQL from Ubuntu repositories..."
-      callback "configuring" "Installing PostgreSQL and dependencies..."
-      DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib python3-psycopg2
+      # Use the version-specific installation command
+      log "Running version-specific installation for PostgreSQL #{version_num}..."
+      callback "configuring" "Running PostgreSQL #{version_num} installation..."
+      
+      # Execute installation command and handle any errors
+      if ! (
+        #{install_command}
+      ); then
+        log "ERROR: PostgreSQL #{version_num} installation failed"
+        callback "error" "PostgreSQL #{version_num} installation failed. Check system compatibility and requirements."
+        exit 1
+      fi
+      
+      # Install additional dependencies
+      DEBIAN_FRONTEND=noninteractive apt-get install -y python3-psycopg2
 
       log "Configuring PostgreSQL..."
       callback "configuring" "Configuring PostgreSQL..."
+
+      # Verify the expected version was installed
+      if [[ ! -d "/etc/postgresql/#{version_num}" ]]; then
+        log "ERROR: PostgreSQL #{version_num} was not installed properly"
+        callback "error" "PostgreSQL #{version_num} installation failed - version directory not found"
+        exit 1
+      fi
 
       # Set postgres user password (generate a random one)
       POSTGRES_PASSWORD=$(openssl rand -base64 32)
@@ -362,10 +404,10 @@ EOF"
       chown postgres:postgres /var/lib/postgresql/.dbchest_password
       chmod 600 /var/lib/postgresql/.dbchest_password
 
-      # Configure PostgreSQL to listen on all addresses
-      sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" /etc/postgresql/*/main/postgresql.conf
+      # Configure PostgreSQL to listen on all addresses (using expected version)
+      sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" /etc/postgresql/#{version_num}/main/postgresql.conf
 
-      log "PostgreSQL installation completed"
+      log "PostgreSQL #{version_num} installation completed successfully"
     SCRIPT
   end
 
@@ -377,7 +419,8 @@ EOF"
       local message="$2"
 
       # Escape JSON special characters in the message
-      escaped_message=$(echo "$message" | sed 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\\t/\\\\t/g; s/\\n/\\\\n/g; s/\\r/\\\\r/g')
+      # Convert newlines to spaces to avoid JSON issues, then escape other characters
+      escaped_message=$(printf '%s' "$message" | tr '\\n\\r' '  ' | sed 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\\t/\\\\t/g')
 
       # Check if curl is available before trying to use it
       if command -v curl >/dev/null 2>&1; then

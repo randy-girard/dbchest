@@ -122,7 +122,8 @@ class NodesController < ApplicationController
     @replica = @cluster.nodes.new(
       parent_node: @node,
       provider: @node.provider,
-      name: "#{@node.name}-replica-#{@node.replicas.count + 1}"
+      name: "#{@node.name}-replica-#{@node.replicas.count + 1}",
+      database_type_version: @node.database_type_version
     )
     @providers = Provider.all
     
@@ -150,6 +151,7 @@ class NodesController < ApplicationController
 
     @replica = @cluster.nodes.new(replica_params)
     @replica.parent_node = @node
+    @replica.database_type_version = @node.database_type_version
 
     respond_to do |format|
       if @replica.save
@@ -244,6 +246,7 @@ class NodesController < ApplicationController
     
     def set_providers
       @providers = Provider.all
+      @available_versions = @cluster.available_versions
     end
 
     def set_cluster
@@ -259,6 +262,7 @@ class NodesController < ApplicationController
       params.expect(node: [
         :provider_id,
         :name,
+        :database_type_version_id,
         node_settings_attributes: [
           [ :id, :provider_type_node_option_id, :key, :value ]
         ]

@@ -8,7 +8,8 @@ class DestroyCredentialsService
     @credential = Credential.find(credential_id)
     if @credential
       vars = {
-        username: @credential.username
+        username: @credential.username,
+        postgresql_version: @credential.node.database_type_version&.version || '15'
       }
       AnsibleRunService.new.perform(@credential.node_id, "destroy_user.yml", vars: vars)
     end

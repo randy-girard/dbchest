@@ -5,7 +5,7 @@
   hosts: postgres_servers
   become: yes
   vars:
-    postgresql_version: "15"
+    postgresql_version: "{{ postgresql_version | default('15') }}"
 
   tasks:
     - name: Get PostgreSQL hba_file path

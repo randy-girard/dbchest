@@ -2,6 +2,7 @@ class Node < ApplicationRecord
   belongs_to :cluster
   belongs_to :provider
   belongs_to :parent_node, class_name: "Node", optional: true
+  belongs_to :database_type_version
 
   has_many :credentials, dependent: :destroy
   has_many :node_settings, dependent: :destroy
@@ -10,12 +11,14 @@ class Node < ApplicationRecord
 
   validates :name, presence: true, uniqueness: { scope: :cluster_id }
   validate :parent_node_must_be_primary
+  validate :database_type_version_matches_cluster
+  validate :replica_version_matches_primary
 
   # Status constants
   STATUSES = {
     'pending' => 'Pending',
     'provisioning' => 'Provisioning',
-    'configuring' => 'Configuring', 
+    'configuring' => 'Configuring',
     'active' => 'Active',
     'error' => 'Error',
     'destroying' => 'Destroying',
@@ -24,9 +27,10 @@ class Node < ApplicationRecord
 
   validates :status, inclusion: { in: STATUSES.keys }
 
-  # Ensure status is set
+  # Ensure status and database version are set
   before_validation :set_default_status
-  
+  before_validation :set_default_database_type_version, on: :create
+
   # Broadcast status changes
   after_create :broadcast_initial_status
   after_update :broadcast_status_change, if: :saved_change_to_status?
@@ -51,7 +55,7 @@ class Node < ApplicationRecord
 
   def get_runtime_config_value(key)
     config_entry = runtime_config.fetch(key, {})
-    
+
     # Handle both direct values and Terraform output format
     if config_entry.is_a?(Hash) && config_entry.key?("value")
       # Terraform output format: {"sensitive" => false, "type" => "string", "value" => "actual_value"}
@@ -68,16 +72,16 @@ class Node < ApplicationRecord
   def get_ip_address
     # First, let's see what's in the runtime_config
     Rails.logger.debug "Node #{id}: Full runtime_config: #{runtime_config.inspect}"
-    
+
     ip_with_subnet = get_runtime_config_value("ip_address")
-    
+
     # Debug logging to help identify the issue
     Rails.logger.debug "Node #{id}: ip_with_subnet from runtime_config: #{ip_with_subnet.inspect}"
     Rails.logger.debug "Node #{id}: ip_with_subnet.nil? = #{ip_with_subnet.nil?}, ip_with_subnet.blank? = #{ip_with_subnet.blank?}"
-    
+
     if ip_with_subnet.nil? || ip_with_subnet.blank?
       Rails.logger.warn "Node #{id}: No IP address found in runtime_config, checking alternative sources"
-      
+
       # Try to get from other runtime config keys that might contain the IP
       alternative_keys = %w[public_ip private_ip ipv4_address external_ip internal_ip vm_ip]
       alternative_keys.each do |key|
@@ -88,7 +92,7 @@ class Node < ApplicationRecord
           break
         end
       end
-      
+
       # For Proxmox LXC containers, try to extract IP from network interfaces
       if ip_with_subnet.blank?
         network_interfaces = get_runtime_config_value("network_interfaces")
@@ -103,14 +107,14 @@ class Node < ApplicationRecord
           end
         end
       end
-      
+
       # If still no IP found, return nil which will cause the caller to handle appropriately
       return nil if ip_with_subnet.blank?
     end
-    
+
     # Clean up the IP address
     ip_part = ip_with_subnet.to_s.strip.split('/').first
-    
+
     # Validate it's a proper IP address
     begin
       IPAddr.new(ip_part)
@@ -118,7 +122,7 @@ class Node < ApplicationRecord
       return ip_part
     rescue IPAddr::InvalidAddressError => e
       Rails.logger.error "Node #{id}: Invalid IP address '#{ip_part}': #{e.message}"
-      
+
       # If it looks like a hostname, try to resolve it
       if ip_part.match?(/^[a-zA-Z]/)
         begin
@@ -130,7 +134,7 @@ class Node < ApplicationRecord
           Rails.logger.error "Node #{id}: Failed to resolve hostname '#{ip_part}': #{resolve_error.message}"
         end
       end
-      
+
       # Last resort: return the cleaned value even if it's invalid
       # This will help us see exactly what's being passed to Ansible
       Rails.logger.warn "Node #{id}: Returning potentially invalid IP: '#{ip_part}'"
@@ -174,6 +178,37 @@ class Node < ApplicationRecord
     primary? && active?
   end
 
+  # Database version-related methods
+  def database_version
+    database_type_version&.version
+  end
+
+  def database_type_name
+    database_type_version&.database_type&.name
+  end
+
+  def database_type_slug
+    database_type_version&.database_type&.slug
+  end
+
+  def supports_logical_replication?
+    database_type_version&.supports_logical_replication? || false
+  end
+
+  def supports_streaming_replication?
+    database_type_version&.supports_streaming_replication? || false
+  end
+
+  def replication_method_for(target_node)
+    return nil unless database_type_version.present? && target_node&.database_type_version.present?
+
+    database_type_version.replication_method_for_cross_version(target_node.database_type_version)
+  end
+
+  def available_database_versions
+    cluster&.available_versions || []
+  end
+
   def provision_replica!
     CreateService.perform_async(id, true)
   end
@@ -197,10 +232,19 @@ class Node < ApplicationRecord
   # Status management methods
   def update_status!(new_status, message = nil)
     Rails.logger.info "Updating node #{id} status from '#{status}' to '#{new_status}': #{message}"
-    
+
     if update!(status: new_status)
       Rails.logger.info "Node #{id} status successfully updated to '#{new_status}'"
       broadcast_status_update(message)
+
+      if Rails.env.development?
+        console_data = {
+          timestamp: Time.current.strftime("%H:%M:%S"),
+          event_type: 'node_update_status',
+          message: message
+        }
+        ActionCable.server.broadcast("development_console", console_data)
+      end
     else
       Rails.logger.error "Failed to update node #{id} status to '#{new_status}': #{errors.full_messages.join(', ')}"
     end
@@ -241,15 +285,43 @@ class Node < ApplicationRecord
     self.status = 'pending' if status.blank?
   end
 
+  def set_default_database_type_version
+    return if database_type_version.present? || cluster.blank?
+
+    # For replica nodes, use the same version as the parent node for compatibility
+    if parent_node.present? && parent_node.database_type_version.present?
+      self.database_type_version = parent_node.database_type_version
+    else
+      # For primary nodes, set to cluster's default version
+      self.database_type_version = cluster.default_version
+    end
+  end
+
   def parent_node_must_be_primary
     if parent_node.present? && parent_node.parent_node.present?
       errors.add(:parent_node, "cannot be a replica node. Replicas can only be created from primary nodes.")
     end
   end
 
+  def database_type_version_matches_cluster
+    return unless database_type_version.present? && cluster.present?
+
+    unless database_type_version.database_type == cluster.database_type
+      errors.add(:database_type_version, "must match the cluster's database type (#{cluster.database_type_name})")
+    end
+  end
+
+  def replica_version_matches_primary
+    return unless replica? && parent_node.present? && database_type_version.present? && parent_node.database_type_version.present?
+
+    unless database_type_version == parent_node.database_type_version
+      errors.add(:database_type_version, "must match the primary node's version (#{parent_node.database_type_version.display_name}) for proper replication compatibility")
+    end
+  end
+
   def cleanup_parent_replication_config
     return unless parent_node.present?
-    
+
     # If this was the last replica, optionally clean up replication configuration
     # For now, we'll leave the replication user and password for future use
     # This could be extended to remove pg_hba.conf entries for this specific replica
@@ -276,19 +348,19 @@ class Node < ApplicationRecord
 
     Rails.logger.info "🔊 Broadcasting node status update for node #{id}: #{status} - #{message}"
     Rails.logger.debug "📦 Broadcast data: #{data.inspect}"
-    
+
     # Broadcast to all subscribers
     ActionCable.server.broadcast("node_status_updates", data)
     Rails.logger.info "✅ Broadcasted to stream: node_status_updates"
-    
+
     # Broadcast to specific node subscribers
     ActionCable.server.broadcast("node_status_#{id}", data)
     Rails.logger.info "✅ Broadcasted to stream: node_status_#{id}"
-    
+
     # Broadcast to cluster subscribers
     ActionCable.server.broadcast("cluster_#{cluster_id}_node_status", data)
     Rails.logger.info "✅ Broadcasted to stream: cluster_#{cluster_id}_node_status"
-    
+
     # In development, also broadcast to console channel for debugging
     if Rails.env.development?
       console_data = data.merge({
@@ -300,7 +372,7 @@ class Node < ApplicationRecord
       ActionCable.server.broadcast("development_console", console_data)
       Rails.logger.debug "🖥️  Broadcasted to development console: #{console_data.inspect}"
     end
-    
+
     Rails.logger.info "🎯 Total streams broadcasted to: #{Rails.env.development? ? 4 : 3}"
   rescue => e
     Rails.logger.error "Error broadcasting node status update: #{e.message}"

@@ -1,0 +1,23 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  database_type: one
+  version: MyString
+  install_command: MyText
+  config_template: MyText
+  default_port: 1
+  service_name: MyString
+  data_directory_pattern: MyString
+  config_file_pattern: MyString
+  is_default: false
+
+two:
+  database_type: two
+  version: MyString
+  install_command: MyText
+  config_template: MyText
+  default_port: 1
+  service_name: MyString
+  data_directory_pattern: MyString
+  config_file_pattern: MyString
+  is_default: false

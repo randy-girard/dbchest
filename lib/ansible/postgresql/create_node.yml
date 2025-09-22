@@ -6,7 +6,7 @@
   hosts: all
   become: yes
   vars:
-    postgresql_version: 15
+    postgresql_version: "{{ postgresql_version | default('15') }}"
     postgres_password: "mysecurepassword"
 
   handlers:

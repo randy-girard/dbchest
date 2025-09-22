@@ -26,7 +26,8 @@ class ReplicaConfigurationService
         replica_node_name: @replica_node.name,
         replica_ip: replica_ip,
         replication_password: replication_password,
-        replication_slot_name: slot_name
+        replication_slot_name: slot_name,
+        postgresql_version: @primary_node.database_type_version&.version || '15'
       })
   end
   
@@ -66,7 +67,8 @@ class ReplicaConfigurationService
       vars: {
         primary_ip: primary_ip,
         primary_node_name: @primary_node.name,
-        replication_password: replication_password
+        replication_password: replication_password,
+        postgresql_version: @replica_node.database_type_version&.version || '15'
       })
   end
 end

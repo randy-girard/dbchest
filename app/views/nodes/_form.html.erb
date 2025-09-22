@@ -73,6 +73,53 @@
           <% end %>
         </div>
 
+        <div class="mb-3">
+          <%= form.label :database_type_version_id, "Database Version", class: "form-label required" %>
+          <%= form.collection_select :database_type_version_id, 
+                                   @available_versions, 
+                                   :id, 
+                                   :display_name, 
+                                   { prompt: "Select a #{@cluster.database_type_name} version" }, 
+                                   { class: "form-select #{'is-invalid' if node.errors[:database_type_version].any?}",
+                                     data: { action: "change->node-config#versionChange" } } %>
+          <div class="form-hint">
+            Choose the specific version of <%= @cluster.database_type_name %> for this node
+            <% if @cluster.supports_mixed_versions? %>
+              <br><small class="text-muted">Note: Mixed versions are supported with logical replication</small>
+            <% end %>
+          </div>
+          
+          <!-- Compatibility warnings -->
+          <% @available_versions.each do |version| %>
+            <% if version.compatibility_notes.any? %>
+              <div class="alert alert-warning mt-2" style="display: none;" data-version-id="<%= version.id %>">
+                <div class="d-flex">
+                  <div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                      <path d="M10.24 3.957l-8.422 14.06a1.989 1.989 0 0 0 1.7 2.983h16.845a1.989 1.989 0 0 0 1.7-2.983l-8.423-14.06a1.989 1.989 0 0 0-3.4 0z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/>
+                      <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 class="alert-title">Compatibility Warning</h4>
+                    <% version.compatibility_notes.each do |note| %>
+                      <div><%= note %></div>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          <% end %>
+          
+          <% if node.errors[:database_type_version].any? %>
+            <div class="invalid-feedback">
+              <%= node.errors[:database_type_version].first %>
+            </div>
+          <% end %>
+        </div>
+
         <%= turbo_frame_tag "config_partial" do %>
           <%= render "config_partial", f: form %>
         <% end %>

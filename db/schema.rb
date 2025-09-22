@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_20_010048) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_22_145401) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -18,6 +18,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_20_010048) do
     t.string "name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "database_type_id", null: false
+    t.index ["database_type_id"], name: "index_clusters_on_database_type_id"
   end
 
   create_table "credentials", force: :cascade do |t|
@@ -27,6 +29,32 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_20_010048) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["node_id"], name: "index_credentials_on_node_id"
+  end
+
+  create_table "database_type_versions", force: :cascade do |t|
+    t.bigint "database_type_id", null: false
+    t.string "version", null: false
+    t.text "install_command", null: false
+    t.text "config_template"
+    t.integer "default_port", null: false
+    t.string "service_name", null: false
+    t.string "data_directory_pattern"
+    t.string "config_file_pattern"
+    t.boolean "is_default", default: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["database_type_id", "version"], name: "index_db_type_versions_on_type_and_version", unique: true
+    t.index ["database_type_id"], name: "index_database_type_versions_on_database_type_id"
+    t.index ["is_default"], name: "index_database_type_versions_on_is_default"
+  end
+
+  create_table "database_types", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_database_types_on_name", unique: true
+    t.index ["slug"], name: "index_database_types_on_slug", unique: true
   end
 
   create_table "node_settings", force: :cascade do |t|
@@ -53,7 +81,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_20_010048) do
     t.bigint "parent_node_id"
     t.string "replication_password"
     t.string "status", default: "pending"
+    t.bigint "database_type_version_id", null: false
     t.index ["cluster_id"], name: "index_nodes_on_cluster_id"
+    t.index ["database_type_version_id"], name: "index_nodes_on_database_type_version_id"
     t.index ["parent_node_id"], name: "index_nodes_on_parent_node_id"
     t.index ["provider_id"], name: "index_nodes_on_provider_id"
     t.index ["status"], name: "index_nodes_on_status"
@@ -106,10 +136,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_20_010048) do
     t.index ["provider_type_id"], name: "index_providers_on_provider_type_id"
   end
 
+  add_foreign_key "clusters", "database_types"
   add_foreign_key "credentials", "nodes"
+  add_foreign_key "database_type_versions", "database_types"
   add_foreign_key "node_settings", "nodes"
   add_foreign_key "node_settings", "provider_type_node_options"
   add_foreign_key "nodes", "clusters"
+  add_foreign_key "nodes", "database_type_versions"
   add_foreign_key "nodes", "nodes", column: "parent_node_id"
   add_foreign_key "nodes", "providers"
   add_foreign_key "provider_settings", "provider_type_options"

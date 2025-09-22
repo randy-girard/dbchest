@@ -2,6 +2,12 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
+  static targets = ["versionSelect"]
+
+  connect() {
+    // Show compatibility warning for initially selected version
+    this.toggleVersionWarning()
+  }
   change(event) {
     const providerId = event.target.value
     const clusterId = event.target.dataset.clusterId
@@ -59,6 +65,27 @@ export default class extends Controller {
       const frame = document.getElementById("config_partial")
       if (frame) {
         frame.innerHTML = ""
+      }
+    }
+  }
+
+  versionChange(event) {
+    this.toggleVersionWarning()
+  }
+
+  toggleVersionWarning() {
+    // Hide all version warnings first
+    const allWarnings = this.element.querySelectorAll('[data-version-id]')
+    allWarnings.forEach(warning => {
+      warning.style.display = 'none'
+    })
+
+    // Show warning for selected version if it has one
+    const versionSelect = this.element.querySelector('[name*="database_type_version_id"]')
+    if (versionSelect && versionSelect.value) {
+      const warning = this.element.querySelector(`[data-version-id="${versionSelect.value}"]`)
+      if (warning) {
+        warning.style.display = 'block'
       }
     }
   }

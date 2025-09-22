@@ -73,6 +73,10 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
   private
 
   def generate_primary_configuration_playbook(replication_password)
+    # Get database version information
+    primary_version = @primary_node.database_type_version&.version || '15'
+    replica_version = @replica_node.database_type_version&.version || '15'
+    
     <<~YAML
       ---
       - name: Configure PostgreSQL primary for replication from specific replica
@@ -82,6 +86,8 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
           replica_ip: "#{@replica_ip}"
           replica_name: "#{@replica_node.name}"
           replication_password: "#{replication_password}"
+          postgresql_version: "#{primary_version}"
+          replica_postgresql_version: "#{replica_version}"
         
         tasks:
           - name: Validate replica_ip is not empty

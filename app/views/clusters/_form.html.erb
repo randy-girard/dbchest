@@ -43,11 +43,29 @@
           <%= form.label :name, class: "form-label required" %>
           <%= form.text_field :name, class: "form-control #{'is-invalid' if cluster.errors[:name].any?}", placeholder: "Enter cluster name", autofocus: true %>
           <div class="form-hint">
-            Choose a descriptive name for your database cluster (e.g., "Production MySQL", "Dev PostgreSQL")
+            Choose a descriptive name for your database cluster (e.g., "Production PostgreSQL", "Dev MySQL")
           </div>
           <% if cluster.errors[:name].any? %>
             <div class="invalid-feedback">
               <%= cluster.errors[:name].first %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="mb-3">
+          <%= form.label :database_type_id, "Database Type", class: "form-label required" %>
+          <%= form.collection_select :database_type_id, 
+                                   @database_types, 
+                                   :id, 
+                                   :name, 
+                                   { prompt: "Select a database type" }, 
+                                   { class: "form-select #{'is-invalid' if cluster.errors[:database_type].any?}" } %>
+          <div class="form-hint">
+            Choose the type of database for this cluster (PostgreSQL, MySQL, etc.)
+          </div>
+          <% if cluster.errors[:database_type].any? %>
+            <div class="invalid-feedback">
+              <%= cluster.errors[:database_type].first %>
             </div>
           <% end %>
         </div>

@@ -9,7 +9,7 @@ export default class extends Controller {
   }
 
   connect() {
-    console.log("NodeStatus controller connected with values:", {
+    console.log("🎯 NodeStatus controller CONNECTING with values:", {
       nodeId: this.nodeIdValue,
       clusterId: this.clusterIdValue,
       hasNodeIdValue: this.hasNodeIdValue,
@@ -33,6 +33,7 @@ export default class extends Controller {
   }
 
   initializeActionCable() {
+    console.log("🚀 Initializing ActionCable...")
     // Check if ActionCable is available
     if (typeof ActionCable === 'undefined' && typeof createConsumer === 'undefined') {
       console.error("❌ ActionCable not available! Using polling fallback")
@@ -244,6 +245,11 @@ export default class extends Controller {
     if (data.status === 'destroyed') {
       this.removeNodeFromTable(nodeId)
     }
+    
+    // Handle error status - highlight the node and stop polling for this node
+    if (data.status === 'error') {
+      console.log(`Node ${nodeId} is in error state: ${data.message}`)
+    }
   }
 
   disableNodeButtons(nodeId) {
@@ -267,6 +273,8 @@ export default class extends Controller {
       console.log(`Disabled ${buttons.length} buttons for node ${nodeId}`)
     }
   }
+
+
 
   removeNodeFromTable(nodeId) {
     // Find the container for this node (table row or card)

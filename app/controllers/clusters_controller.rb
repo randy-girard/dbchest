@@ -13,10 +13,12 @@ class ClustersController < ApplicationController
   # GET /clusters/new
   def new
     @cluster = Cluster.new
+    @database_types = DatabaseType.joins(:database_type_versions).distinct.order(:name)
   end
 
   # GET /clusters/1/edit
   def edit
+    @database_types = DatabaseType.joins(:database_type_versions).distinct.order(:name)
   end
 
   # POST /clusters or /clusters.json
@@ -65,6 +67,6 @@ class ClustersController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def cluster_params
-      params.expect(cluster: [ :name ])
+      params.expect(cluster: [ :name, :database_type_id ])
     end
 end
