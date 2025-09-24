@@ -4,7 +4,7 @@ class NodeSetting < ApplicationRecord
 
   validates :key, uniqueness: { scope: [ :node, :provider_type_node_option ] }
 
-  validates :value, presence: true, if: ->(record) { record.provider_type_node_option.required? }
+  validates :value, presence: true, if: ->(record) { record.provider_type_node_option&.required? }
 
   encrypts :value
 end

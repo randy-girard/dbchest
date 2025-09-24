@@ -1,5 +1,6 @@
 FactoryBot.define do
   factory :cluster do
-    name { "Test Cluster" }
+    sequence(:name) { |n| "Test Cluster #{n}" }
+    association :database_type
   end
 end

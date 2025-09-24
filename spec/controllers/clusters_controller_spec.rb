@@ -1,8 +1,9 @@
 require 'rails_helper'
 
 RSpec.describe ClustersController, type: :controller do
+  let(:database_type) { create(:database_type) }
   let(:cluster) { create(:cluster) }
-  let(:valid_attributes) { { name: "Test Cluster" } }
+  let(:valid_attributes) { { name: "Test Cluster", database_type_id: database_type.id } }
 
   describe "GET #index" do
     it "returns a success response" do

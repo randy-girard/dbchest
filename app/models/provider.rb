@@ -11,15 +11,17 @@ class Provider < ApplicationRecord
   accepts_nested_attributes_for :provider_settings
 
   validates :name, presence: true
-  validates :provider_type_id, inclusion: { in: ProviderType.pluck(:id) }
+  validate :provider_type_exists
 
   def build_provider_settings!
     provider_type.provider_type_options.each do |option|
-      unless provider_settings.exists?(key: option.key)
+      existing_setting = provider_settings.find { |ps| ps.key == option.key }
+      unless existing_setting
         self.provider_settings.build(
           provider_type_option_id: option.id,
           label: option.label,
-          key: option.key)
+          key: option.key,
+          value: 'placeholder')
       end
     end
   end
@@ -44,6 +46,16 @@ class Provider < ApplicationRecord
     case provider_type.key
     when "proxmox"
       ProviderClient::Proxmox.new(provider_settings_object)
+    end
+  end
+
+  private
+
+  def provider_type_exists
+    return if provider_type_id.blank?
+
+    unless ProviderType.exists?(provider_type_id)
+      errors.add(:provider_type_id, 'is not included in the list')
     end
   end
 end
