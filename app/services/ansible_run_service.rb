@@ -1,4 +1,5 @@
 require "open3"
+require_relative 'database_service_factory'
 
 class AnsibleRunService
   def initialize
@@ -9,7 +10,10 @@ class AnsibleRunService
   end
 
   def playbook_path(node, playbook)
-    Rails.root.join(ansible_path, node.cluster.cluster_type, playbook).to_s
+    database_type_handler = node.database_type_handler
+    return Rails.root.join(ansible_path, "postgresql", playbook).to_s unless database_type_handler
+    
+    Rails.root.join(ansible_path, node.database_type_slug, playbook).to_s
   end
 
   def perform(node_id, playbook, vars: {})

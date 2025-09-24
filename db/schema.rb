@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_22_145401) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_22_182244) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -82,6 +82,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_22_145401) do
     t.string "replication_password"
     t.string "status", default: "pending"
     t.bigint "database_type_version_id", null: false
+    t.string "root_password"
     t.index ["cluster_id"], name: "index_nodes_on_cluster_id"
     t.index ["database_type_version_id"], name: "index_nodes_on_database_type_version_id"
     t.index ["parent_node_id"], name: "index_nodes_on_parent_node_id"

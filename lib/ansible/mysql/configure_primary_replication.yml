@@ -1,0 +1,38 @@
+---
+# Configure MySQL Primary for Replication
+- name: Configure MySQL Primary for Replication
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Create replication user
+      mysql_user:
+        name: replication
+        password: "{{ replication_password }}"
+        priv: "*.*:REPLICATION SLAVE"
+        host: "%"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        state: present
+
+    - name: Configure primary settings if not already set
+      blockinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        marker: "# {mark} PRIMARY CONFIG"
+        block: |
+          server-id = 1
+          log-bin = mysql-bin
+          binlog-format = ROW
+          gtid-mode = ON
+          enforce-gtid-consistency = ON
+        create: yes
+
+    - name: Restart MySQL to apply configuration
+      systemd:
+        name: mysql
+        state: restarted
+
+    - name: Verify MySQL is running
+      service:
+        name: mysql
+        state: started

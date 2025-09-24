@@ -1,0 +1,31 @@
+---
+# MySQL Replica Cleanup
+- name: Cleanup MySQL Replica Configuration
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Stop replication
+      mysql_replication:
+        mode: stopslave
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+      ignore_errors: yes
+
+    - name: Reset replica configuration
+      mysql_replication:
+        mode: resetslaveall
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+      ignore_errors: yes
+
+    - name: Remove replica configuration from MySQL config
+      blockinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        marker: "# {mark} REPLICA CONFIG"
+        state: absent
+
+    - name: Restart MySQL
+      systemd:
+        name: mysql
+        state: restarted

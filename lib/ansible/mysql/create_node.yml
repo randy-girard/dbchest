@@ -1,0 +1,67 @@
+---
+# MySQL Installation and Configuration
+- name: Install MySQL
+  hosts: all
+  become: yes
+  vars:
+    mysql_version: "{{ mysql_version | default('8.0') }}"
+    mysql_root_password: "mysecurepassword"
+
+  handlers:
+    - name: Restart MySQL
+      service:
+        name: mysql
+        state: restarted
+
+  gather_facts: no
+  pre_tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 30
+
+  tasks:
+    - name: Gather facts manually after SSH is ready
+      ansible.builtin.setup:
+
+    - name: Ensure prerequisites are installed
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - wget
+          - gnupg
+        state: present
+        update_cache: yes
+
+    - name: Install MySQL packages
+      apt:
+        name:
+          - "mysql-server-{{ mysql_version }}"
+          - mysql-client
+          - python3-pymysql
+        state: present
+
+    - name: Ensure MySQL is running
+      service:
+        name: mysql
+        state: started
+        enabled: yes
+
+    - name: Set MySQL root password
+      mysql_user:
+        name: root
+        password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        state: present
+
+    - name: Create MySQL configuration file
+      template:
+        src: my.cnf.j2
+        dest: /etc/mysql/mysql.conf.d/mysqld.cnf
+        backup: yes
+      notify: Restart MySQL
+
+    - name: Ensure MySQL is running after configuration
+      service:
+        name: mysql
+        state: started

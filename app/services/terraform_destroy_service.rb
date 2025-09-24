@@ -16,6 +16,10 @@ class TerraformDestroyService
         work_dir = Rails.root.join("tmp", "terraform_runs", run_id)
         FileUtils.mkdir_p(work_dir)
 
+        # Set up dedicated Terraform log file
+        terraform_log_path = terraform_log_file_path(@node.id, run_id)
+        Rails.logger.info "Terraform destroy logs will be written to: #{terraform_log_path}"
+
         # Copy Terraform templates into working dir
         provider_key = provider_type.key
         unless ALLOWED_PROVIDER_KEYS.include?(provider_key)
@@ -52,18 +56,25 @@ class TerraformDestroyService
         ]
 
         terraform_cmds.each do |cmd|
-          run_cmd(cmd, work_dir)
+          run_cmd(cmd, work_dir, terraform_log_path)
         end
 
         # Save updated state back to DB (should be empty or updated)
         @node.terraform_state = nil
         @node.save
 
+        Rails.logger.info "Terraform destroy completed. Full logs available at: #{terraform_log_path}"
+        
         # save_state_to_db(work_dir, @node)
-
-      ensure
-        # Clean up working directory
+        
+        # Clean up working directory only on success
         FileUtils.rm_rf(work_dir) if work_dir && Dir.exist?(work_dir)
+
+      rescue => e
+        # On failure, preserve working directory for debugging
+        Rails.logger.error "Terraform destroy failed. Working directory preserved at: #{work_dir}"
+        Rails.logger.error "Error: #{e.message}"
+        raise e
       end
     end
   end

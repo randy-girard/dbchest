@@ -1,0 +1,55 @@
+---
+# Configure MySQL Replica Node
+- name: Configure MySQL Replica
+  hosts: all
+  become: yes
+  vars:
+    mysql_version: "{{ mysql_version | default('8.0') }}"
+
+  tasks:
+    - name: Stop MySQL service
+      systemd:
+        name: mysql
+        state: stopped
+
+    - name: Configure replica settings
+      blockinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        marker: "# {mark} REPLICA CONFIG"
+        block: |
+          server-id = 2
+          read-only = ON
+          super-read-only = ON
+          relay-log = mysql-relay-bin
+
+    - name: Start MySQL service
+      systemd:
+        name: mysql
+        state: started
+
+    - name: Set up replication connection
+      mysql_replication:
+        mode: changemaster
+        master_host: "{{ primary_ip }}"
+        master_user: replication
+        master_password: "{{ replication_password }}"
+        master_auto_position: yes
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Start replication
+      mysql_replication:
+        mode: startslave
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Verify replication status
+      mysql_replication:
+        mode: getslave
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+      register: replica_status
+
+    - name: Display replication status
+      debug:
+        var: replica_status

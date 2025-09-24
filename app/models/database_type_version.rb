@@ -1,3 +1,5 @@
+require_relative '../services/database_types/base_database_type'
+
 class DatabaseTypeVersion < ApplicationRecord
   belongs_to :database_type
   has_many :nodes, dependent: :restrict_with_error
@@ -21,48 +23,22 @@ class DatabaseTypeVersion < ApplicationRecord
   end
 
   def supports_logical_replication?
-    case database_type.slug
-    when 'postgresql'
-      major_version >= 10
-    when 'mysql'
-      major_version >= 8
-    else
-      false
-    end
+    database_type_handler.supports_logical_replication?
   end
 
   def supports_streaming_replication?
-    case database_type.slug
-    when 'postgresql'
-      major_version >= 9
-    when 'mysql'
-      major_version >= 5
-    else
-      false
-    end
+    database_type_handler.supports_streaming_replication?
   end
 
   def replication_method_for_cross_version(target_version)
-    # If versions are different and logical replication is supported, use logical
-    # Otherwise use streaming if supported, else return nil (not supported)
-    if version != target_version.version
-      if supports_logical_replication? && target_version.supports_logical_replication?
-        'logical'
-      elsif supports_streaming_replication? && target_version.supports_streaming_replication?
-        'streaming'
-      else
-        nil # Replication not supported between these versions
-      end
-    else
-      # Same version, prefer streaming for better performance
-      if supports_streaming_replication?
-        'streaming'
-      elsif supports_logical_replication?
-        'logical'
-      else
-        nil
-      end
-    end
+    return nil unless target_version.is_a?(DatabaseTypeVersion)
+    return nil unless target_version.database_type_id == database_type_id
+    
+    database_type_handler.replication_method_for_cross_version(target_version)
+  end
+
+  def database_type_handler
+    @database_type_handler ||= DatabaseTypes::BaseDatabaseType.for_database_type_version(self)
   end
 
   def compatibility_notes

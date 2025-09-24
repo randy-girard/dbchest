@@ -1,3 +1,5 @@
+require_relative '../services/database_service_factory'
+
 class Node < ApplicationRecord
   belongs_to :cluster
   belongs_to :provider
@@ -31,6 +33,9 @@ class Node < ApplicationRecord
   before_validation :set_default_status
   before_validation :set_default_database_type_version, on: :create
 
+  # Generate SSH keys and root password on creation
+  after_create :ensure_ssh_keys_and_password
+
   # Broadcast status changes
   after_create :broadcast_initial_status
   after_update :broadcast_status_change, if: :saved_change_to_status?
@@ -41,7 +46,8 @@ class Node < ApplicationRecord
            :ssh_public_key,
            :ssh_private_key,
            :runtime_config,
-           :replication_password
+           :replication_password,
+           :root_password
 
   def build_node_settings!
     provider.provider_type.provider_type_node_options.each do |option|
@@ -200,9 +206,15 @@ class Node < ApplicationRecord
   end
 
   def replication_method_for(target_node)
-    return nil unless database_type_version.present? && target_node&.database_type_version.present?
-
+    return nil unless target_node.is_a?(Node)
+    return nil unless target_node.database_type_version
+    return nil unless database_type_version&.database_type_id == target_node.database_type_version.database_type_id
+    
     database_type_version.replication_method_for_cross_version(target_node.database_type_version)
+  end
+
+  def database_type_handler
+    @database_type_handler ||= database_type_version&.database_type_handler
   end
 
   def available_database_versions
@@ -210,7 +222,14 @@ class Node < ApplicationRecord
   end
 
   def provision_replica!
+    return false unless parent_node_id.present?
+    return false unless parent_node&.active?
+
     CreateService.perform_async(id, true)
+  end
+
+  def deployment_service
+    @deployment_service ||= DatabaseServiceFactory.deployment_service_for(self)
   end
 
   def ensure_replication_password!
@@ -223,6 +242,26 @@ class Node < ApplicationRecord
 
   def get_replication_password
     primary? ? ensure_replication_password! : parent_node.ensure_replication_password!
+  end
+
+  def ensure_root_password!
+    if root_password.blank?
+      self.root_password = SecureRandom.alphanumeric(16)
+      save!
+    end
+    root_password
+  end
+
+  def ensure_ssh_keys!
+    if ssh_private_key.blank? || ssh_public_key.blank?
+      require 'sshkey'
+      
+      ssh_key = SSHKey.generate(type: 'RSA', bits: 2048)
+      self.ssh_private_key = ssh_key.private_key
+      self.ssh_public_key = ssh_key.ssh_public_key
+      save!
+    end
+    { private: ssh_private_key, public: ssh_public_key }
   end
 
   # All nodes are created with replica-ready PostgreSQL configuration by default.
@@ -325,6 +364,11 @@ class Node < ApplicationRecord
     # If this was the last replica, optionally clean up replication configuration
     # For now, we'll leave the replication user and password for future use
     # This could be extended to remove pg_hba.conf entries for this specific replica
+  end
+
+  def ensure_ssh_keys_and_password
+    ensure_ssh_keys!
+    ensure_root_password!
   end
 
   def broadcast_initial_status

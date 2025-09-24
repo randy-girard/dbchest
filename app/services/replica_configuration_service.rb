@@ -1,3 +1,5 @@
+require_relative 'database_service_factory'
+
 class ReplicaConfigurationService
   def initialize
   end
@@ -12,22 +14,23 @@ class ReplicaConfigurationService
       raise "Cannot configure primary: Replica node #{@replica_node.id} has no IP address"
     end
     
-    # Ensure replication password exists
-    replication_password = @primary_node.ensure_replication_password!
-    
     Rails.logger.info "Configuring primary node #{@primary_node.id} for replica #{@replica_node.name} at IP #{replica_ip}"
+    
+    # Use the database-specific deployment service
+    deployment_service = DatabaseServiceFactory.deployment_service_for(@primary_node)
+    deployment_service.configure_replication!
     
     # Create replication slot name from replica name
     slot_name = @replica_node.name.downcase.gsub(/[^a-z0-9_]/, '_')
     
     # Use Ansible to configure the primary node for this specific replica
-    AnsibleRunService.new.perform(@primary_node.id, "configure_primary_replication.yml",
+    AnsibleRunService.new.perform(@primary_node.id, @primary_node.database_type_handler.primary_replication_playbook,
       vars: {
         replica_node_name: @replica_node.name,
         replica_ip: replica_ip,
-        replication_password: replication_password,
+        replication_password: @primary_node.get_replication_password,
         replication_slot_name: slot_name,
-        postgresql_version: @primary_node.database_type_version&.version || '15'
+        "#{@primary_node.database_type_slug}_version" => @primary_node.database_version
       })
   end
   
@@ -57,18 +60,10 @@ class ReplicaConfigurationService
     raise "Cannot configure replication: Primary node has no IP address" if primary_ip.blank?
     raise "Cannot configure replication: Replica node has no IP address" if replica_ip.blank?
     
-    # Get replication password
-    replication_password = @primary_node.ensure_replication_password!
-    
     Rails.logger.info "Configuring replica node #{@replica_node.id} to follow primary #{@primary_node.id}"
     
-    # Configure the replica node to follow the primary
-    AnsibleRunService.new.perform(@replica_node.id, "configure_replica.yml",
-      vars: {
-        primary_ip: primary_ip,
-        primary_node_name: @primary_node.name,
-        replication_password: replication_password,
-        postgresql_version: @replica_node.database_type_version&.version || '15'
-      })
+    # Use the database-specific deployment service
+    deployment_service = DatabaseServiceFactory.deployment_service_for(@replica_node)
+    deployment_service.deploy_replica!
   end
 end

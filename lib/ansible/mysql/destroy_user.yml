@@ -1,0 +1,14 @@
+---
+# MySQL User Removal
+- name: Remove MySQL User
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Remove MySQL user
+      mysql_user:
+        name: "{{ username }}"
+        host: "{{ host | default('%') }}"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        state: absent
