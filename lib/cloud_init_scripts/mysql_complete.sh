@@ -67,7 +67,7 @@ callback "installing" "Installing MySQL..."
 apt-get update
 
 # Install basic dependencies (curl already installed at script start)
-DEBIAN_FRONTEND=noninteractive apt-get install -y wget gnupg2 lsb-release
+DEBIAN_FRONTEND=noninteractive apt-get install -y wget gnupg2 lsb-release netcat-openbsd
 
 # Install MySQL using version-specific install command
 log "Installing MySQL version {{DB_VERSION}}..."
@@ -103,6 +103,129 @@ systemctl enable {{SERVICE_NAME}}
 
 # Verify MySQL is running
 systemctl is-active {{SERVICE_NAME}}
+
+# Check if this is a replica setup
+if [ -n "{{PRIMARY_HOST}}" ] && [ "{{PRIMARY_HOST}}" != "" ]; then
+  log "Configuring as MySQL replica..."
+  callback "configuring" "Setting up MySQL replication..."
+  
+  # Get replica configuration variables
+  PRIMARY_HOST="{{PRIMARY_HOST}}"
+  REPLICATION_PASSWORD="{{REPLICATION_PASSWORD}}"
+  
+  if [ -z "$PRIMARY_HOST" ] || [ -z "$REPLICATION_PASSWORD" ]; then
+    log "ERROR: Missing primary host or replication password for replica setup"
+    callback "error" "Replica configuration incomplete - missing primary connection details"
+    exit 1
+  fi
+  
+  log "Primary host: $PRIMARY_HOST"
+  log "Setting up replica from primary: $PRIMARY_HOST"
+  
+  # Wait for primary to be available
+  log "Checking primary availability..."
+  for i in {1..30}; do
+    if nc -z "$PRIMARY_HOST" 3306 2>/dev/null; then
+      log "Primary is available"
+      break
+    fi
+    log "Waiting for primary to be available... ($i/30)"
+    sleep 10
+  done
+  
+  if ! nc -z "$PRIMARY_HOST" 3306 2>/dev/null; then
+    log "ERROR: Primary host $PRIMARY_HOST is not reachable on port 3306"
+    callback "error" "Primary host not reachable for replication"
+    exit 1
+  fi
+  
+  # Configure MySQL replica settings
+  log "Configuring MySQL replica settings..."
+  callback "configuring" "Setting up MySQL replication configuration..."
+  
+  # Add replication settings to MySQL configuration
+  echo "server-id = $(hostname | md5sum | head -c8 | perl -pe 's/[a-f]/1/g' | head -c8)" >> "$MYSQL_CONF"
+  echo "relay-log = /var/log/mysql/mysql-relay-bin.log" >> "$MYSQL_CONF"
+  echo "log-bin = /var/log/mysql/mysql-bin.log" >> "$MYSQL_CONF"
+  echo "binlog-format = ROW" >> "$MYSQL_CONF"
+  
+  # Restart MySQL to apply replication configuration
+  log "Restarting MySQL with replication configuration..."
+  systemctl restart {{SERVICE_NAME}}
+  
+  # Wait for MySQL to start
+  sleep 10
+  
+  if ! systemctl is-active --quiet {{SERVICE_NAME}}; then
+    log "ERROR: MySQL failed to restart with replication configuration"
+    callback "error" "MySQL failed to restart with replication settings"
+    exit 1
+  fi
+  
+  # Set up replication
+  log "Setting up MySQL replication connection..."
+  callback "configuring" "Connecting to primary for replication..."
+  
+  mysql -e "
+    CHANGE MASTER TO
+      MASTER_HOST='$PRIMARY_HOST',
+      MASTER_USER='replication',
+      MASTER_PASSWORD='$REPLICATION_PASSWORD',
+      MASTER_AUTO_POSITION=1;
+    START SLAVE;
+  "
+  
+  # Check replication status
+  log "Checking replication status..."
+  sleep 5
+  
+  SLAVE_STATUS=$(mysql -e "SHOW SLAVE STATUS\G" | grep "Slave_IO_Running\|Slave_SQL_Running\|Last_Error")
+  log "Replication status: $SLAVE_STATUS"
+  
+  IO_RUNNING=$(mysql -e "SHOW SLAVE STATUS\G" | grep "Slave_IO_Running:" | awk '{print $2}')
+  SQL_RUNNING=$(mysql -e "SHOW SLAVE STATUS\G" | grep "Slave_SQL_Running:" | awk '{print $2}')
+  
+  if [ "$IO_RUNNING" = "Yes" ] && [ "$SQL_RUNNING" = "Yes" ]; then
+    log "MySQL replica setup completed successfully"
+    callback "active" "Replica is ready and replicating from primary"
+  else
+    log "ERROR: MySQL replication failed to start properly"
+    log "IO Running: $IO_RUNNING, SQL Running: $SQL_RUNNING"
+    callback "error" "MySQL replication failed to start"
+    exit 1
+  fi
+else
+  log "Configuring as MySQL primary..."
+  callback "configuring" "Primary setup completed"
+  
+  # For primary nodes, ensure replication configuration is in place
+  # Add binary logging and server-id for replication capability
+  if ! grep -q "log-bin" "$MYSQL_CONF"; then
+    echo "log-bin = /var/log/mysql/mysql-bin.log" >> "$MYSQL_CONF"
+  fi
+  if ! grep -q "server-id" "$MYSQL_CONF"; then
+    echo "server-id = 1" >> "$MYSQL_CONF"
+  fi
+  if ! grep -q "binlog-format" "$MYSQL_CONF"; then
+    echo "binlog-format = ROW" >> "$MYSQL_CONF"
+  fi
+  
+  # Restart MySQL to apply replication settings
+  log "Restarting MySQL to apply replication configuration..."
+  systemctl restart {{SERVICE_NAME}}
+  
+  # Wait for restart
+  sleep 5
+  
+  # Verify it's still working
+  if ! systemctl is-active --quiet {{SERVICE_NAME}}; then
+    log "ERROR: MySQL failed to restart with replication configuration"
+    callback "error" "MySQL failed to restart with replication settings"
+    exit 1
+  fi
+  
+  log "MySQL primary setup completed successfully"
+fi
 
 log "MySQL setup completed successfully"
 callback "active" "Database node is ready"

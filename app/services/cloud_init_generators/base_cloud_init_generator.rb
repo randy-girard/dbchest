@@ -37,17 +37,29 @@ module CloudInitGenerators
       
       # Add replica-specific substitutions if needed
       if is_replica
+        Rails.logger.debug "BaseCloudInitGenerator: Generating replica script for node #{node.id}"
+        Rails.logger.debug "BaseCloudInitGenerator: Parent node ID: #{node.parent_node_id}"
+        Rails.logger.debug "BaseCloudInitGenerator: Parent node: #{node.parent_node&.id}"
+        
         # For replicas, get the replication password from the parent node
         replication_password = node.parent_node&.ensure_replication_password! || ''
+        Rails.logger.debug "BaseCloudInitGenerator: Replication password length: #{replication_password.length}"
         script_content.gsub!('{{REPLICATION_PASSWORD}}', replication_password)
         
         # Add primary connection details for replicas
-        if node.parent_node && node.parent_node.runtime_config
-          primary_ip = node.parent_node.runtime_config['ip_address'] || ''
+        if node.parent_node
+          primary_ip = node.parent_node.get_ip_address || ''
+          Rails.logger.debug "BaseCloudInitGenerator: Primary IP: '#{primary_ip}'"
           script_content.gsub!('{{PRIMARY_HOST}}', primary_ip)
         else
+          Rails.logger.warn "BaseCloudInitGenerator: No parent node found for replica!"
           script_content.gsub!('{{PRIMARY_HOST}}', '')
         end
+      else
+        Rails.logger.debug "BaseCloudInitGenerator: Generating primary script for node #{node.id}"
+        # For primary nodes, ensure replica variables are empty
+        script_content.gsub!('{{REPLICATION_PASSWORD}}', '')
+        script_content.gsub!('{{PRIMARY_HOST}}', '')
       end
       
       script_content
