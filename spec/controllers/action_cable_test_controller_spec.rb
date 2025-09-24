@@ -58,7 +58,7 @@ RSpec.describe ActionCableTestController, type: :controller do
 
     it "returns success JSON with node data" do
       post :broadcast_test, params: { id: node.id }
-      
+
       json_response = JSON.parse(response.body)
       expect(json_response['success']).to be true
       expect(json_response['node_id']).to eq(node.id)
@@ -68,10 +68,10 @@ RSpec.describe ActionCableTestController, type: :controller do
 
     it "uses a random test message" do
       post :broadcast_test, params: { id: node.id }
-      
+
       json_response = JSON.parse(response.body)
       message = json_response['message']
-      
+
       expect(message).to include("Broadcast sent:")
       expect(message).to match(/Testing ActionCable broadcast|This is a test message|Broadcasting to all streams|Check your browser console/)
     end

@@ -18,12 +18,12 @@ RSpec.describe ProviderSetting, type: :model do
   describe 'encryption' do
     it 'encrypts key and value' do
       provider_setting.save!
-      
+
       # Check that the raw database values are encrypted (not the same as the original)
       raw_record = ProviderSetting.connection.select_one(
         "SELECT key, value FROM provider_settings WHERE id = #{provider_setting.id}"
       )
-      
+
       expect(raw_record['key']).not_to eq(provider_setting.key)
       expect(raw_record['value']).not_to eq(provider_setting.value)
     end
@@ -31,10 +31,10 @@ RSpec.describe ProviderSetting, type: :model do
     it 'decrypts key and value when accessed' do
       original_key = provider_setting.key
       original_value = provider_setting.value
-      
+
       provider_setting.save!
       provider_setting.reload
-      
+
       expect(provider_setting.key).to eq(original_key)
       expect(provider_setting.value).to eq(original_value)
     end

@@ -26,14 +26,14 @@ RSpec.describe TestActionCableController, type: :controller do
     it "assigns test statuses" do
       get :show, params: { node_id: node.id }
       test_statuses = assigns(:test_statuses)
-      
+
       expect(test_statuses).to be_an(Array)
       expect(test_statuses.length).to eq(5)
-      
+
       # Check that all expected statuses are present
       statuses = test_statuses.map { |ts| ts[:status] }
       expect(statuses).to include('pending', 'provisioning', 'configuring', 'active', 'destroying')
-      
+
       # Check that all have messages
       test_statuses.each do |ts|
         expect(ts[:message]).to be_present
@@ -70,10 +70,10 @@ RSpec.describe TestActionCableController, type: :controller do
       context "with JSON format" do
         it "returns JSON success response" do
           post :update_status, params: { node_id: node.id, status: 'active', message: 'Test message' }, format: :json
-          
+
           expect(response).to be_successful
           expect(response.content_type).to include('application/json')
-          
+
           json_response = JSON.parse(response.body)
           expect(json_response['success']).to be true
           expect(json_response['node_id']).to eq(node.id)
@@ -121,10 +121,10 @@ RSpec.describe TestActionCableController, type: :controller do
       context "with JSON format" do
         it "returns JSON error response" do
           post :update_status, params: { node_id: node.id, status: 'active', message: 'Test message' }, format: :json
-          
+
           expect(response).to be_successful
           expect(response.content_type).to include('application/json')
-          
+
           json_response = JSON.parse(response.body)
           expect(json_response['success']).to be false
           expect(json_response['error']).to eq("Update failed")

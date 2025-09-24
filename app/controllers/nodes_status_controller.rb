@@ -3,7 +3,7 @@ class NodesStatusController < ApplicationController
   def index
     @cluster = Cluster.find(params[:cluster_id])
     @nodes = @cluster.nodes.select(:id, :name, :status, :updated_at)
-    
+
     respond_to do |format|
       format.json do
         render json: @nodes.map { |node|
@@ -23,7 +23,7 @@ class NodesStatusController < ApplicationController
   # GET /nodes/:id/status
   def show
     @node = Node.find(params[:id])
-    
+
     respond_to do |format|
       format.json do
         render json: {

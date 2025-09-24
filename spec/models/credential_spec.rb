@@ -14,12 +14,12 @@ RSpec.describe Credential, type: :model do
   describe 'encryption' do
     it 'encrypts username and password' do
       credential.save!
-      
+
       # Check that the raw database values are encrypted (not the same as the original)
       raw_record = Credential.connection.select_one(
         "SELECT username, password FROM credentials WHERE id = #{credential.id}"
       )
-      
+
       expect(raw_record['username']).not_to eq(credential.username)
       expect(raw_record['password']).not_to eq(credential.password)
     end
@@ -27,10 +27,10 @@ RSpec.describe Credential, type: :model do
     it 'decrypts username and password when accessed' do
       original_username = credential.username
       original_password = credential.password
-      
+
       credential.save!
       credential.reload
-      
+
       expect(credential.username).to eq(original_username)
       expect(credential.password).to eq(original_password)
     end

@@ -18,7 +18,7 @@ RSpec.describe DatabaseTypeVersion, type: :model do
     it 'validates version uniqueness within database type' do
       create(:database_type_version, database_type: database_type, version: '15')
       duplicate_version = build(:database_type_version, database_type: database_type, version: '15')
-      
+
       expect(duplicate_version).not_to be_valid
       expect(duplicate_version.errors[:version]).to include('has already been taken')
     end
@@ -27,7 +27,7 @@ RSpec.describe DatabaseTypeVersion, type: :model do
       other_database_type = create(:database_type, name: 'MySQL', slug: 'mysql')
       create(:database_type_version, database_type: database_type, version: '15')
       other_version = build(:database_type_version, database_type: other_database_type, version: '15')
-      
+
       expect(other_version).to be_valid
     end
 
@@ -43,7 +43,7 @@ RSpec.describe DatabaseTypeVersion, type: :model do
       it 'sets other versions to non-default when setting a version as default' do
         existing_default = create(:database_type_version, database_type: database_type, is_default: true)
         new_default = create(:database_type_version, database_type: database_type, version: '16', is_default: true)
-        
+
         existing_default.reload
         expect(existing_default.is_default).to be false
         expect(new_default.is_default).to be true
@@ -53,7 +53,7 @@ RSpec.describe DatabaseTypeVersion, type: :model do
         other_database_type = create(:database_type, name: 'MySQL', slug: 'mysql')
         other_default = create(:database_type_version, database_type: other_database_type, is_default: true)
         new_default = create(:database_type_version, database_type: database_type, is_default: true)
-        
+
         other_default.reload
         expect(other_default.is_default).to be true
         expect(new_default.is_default).to be true
@@ -66,7 +66,7 @@ RSpec.describe DatabaseTypeVersion, type: :model do
       it 'returns only default versions' do
         default_version = create(:database_type_version, database_type: database_type, is_default: true)
         non_default_version = create(:database_type_version, database_type: database_type, version: '16', is_default: false)
-        
+
         expect(DatabaseTypeVersion.defaults).to include(default_version)
         expect(DatabaseTypeVersion.defaults).not_to include(non_default_version)
       end
@@ -115,7 +115,7 @@ RSpec.describe DatabaseTypeVersion, type: :model do
       handler = double('handler')
       allow(database_type_version).to receive(:database_type_handler).and_return(handler)
       allow(handler).to receive(:supports_logical_replication?).and_return(true)
-      
+
       expect(database_type_version.supports_logical_replication?).to be true
     end
   end
@@ -125,7 +125,7 @@ RSpec.describe DatabaseTypeVersion, type: :model do
       handler = double('handler')
       allow(database_type_version).to receive(:database_type_handler).and_return(handler)
       allow(handler).to receive(:supports_streaming_replication?).and_return(true)
-      
+
       expect(database_type_version.supports_streaming_replication?).to be true
     end
   end
@@ -137,14 +137,14 @@ RSpec.describe DatabaseTypeVersion, type: :model do
       handler = double('handler')
       allow(database_type_version).to receive(:database_type_handler).and_return(handler)
       allow(handler).to receive(:replication_method_for_cross_version).with(target_version).and_return('logical')
-      
+
       expect(database_type_version.replication_method_for_cross_version(target_version)).to eq('logical')
     end
 
     it 'returns nil for different database types' do
       other_database_type = create(:database_type, name: 'MySQL', slug: 'mysql')
       other_version = create(:database_type_version, database_type: other_database_type)
-      
+
       expect(database_type_version.replication_method_for_cross_version(other_version)).to be_nil
     end
 

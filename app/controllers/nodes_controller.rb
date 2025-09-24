@@ -61,36 +61,36 @@ class NodesController < ApplicationController
   # DELETE /nodes/1 or /nodes/1.json
   def destroy
     replica_action = params[:replica_action]
-    
+
     if @node.has_replicas? && replica_action.blank?
       redirect_to confirm_destroy_cluster_node_path(@cluster, @node), alert: "This node has replicas. Please specify what to do with them." and return
     end
-    
+
     # Handle replicas based on user choice
     if @node.has_replicas?
       case replica_action
-      when 'delete_all'
+      when "delete_all"
         # Delete all replicas first
         @node.replicas.each(&:deprovision!)
         notice_msg = "Node and all #{@node.replicas.count} replica(s) are being removed."
-      when 'promote_first'
+      when "promote_first"
         # Promote first replica to primary
         first_replica = @node.replicas.first
         if first_replica
           # Detach first replica (make it primary)
           first_replica.update!(parent_node: nil)
-          
+
           # Attach other replicas to the promoted node
           remaining_replicas = @node.replicas.reload.reject { |r| r.id == first_replica.id }
           remaining_replicas.each do |replica|
             replica.update!(parent_node: first_replica)
           end
-          
+
           notice_msg = "Node removed. #{first_replica.name} promoted to primary with #{remaining_replicas.count} replica(s)."
         else
           notice_msg = "Node removed. No replicas were available for promotion."
         end
-      when 'detach_all'
+      when "detach_all"
         # Detach all replicas (make them primaries)
         replica_count = @node.replicas.count
         @node.replicas.each do |replica|
@@ -101,7 +101,7 @@ class NodesController < ApplicationController
     else
       notice_msg = "Node is being removed."
     end
-    
+
     @node.deprovision!
 
     respond_to do |format|
@@ -113,9 +113,9 @@ class NodesController < ApplicationController
   def add_replica
     unless @node.can_create_replicas?
       if @node.replica?
-        redirect_to [@cluster, @node], alert: "Cannot create replica of a replica node. Only primary nodes can have replicas." and return
+        redirect_to [ @cluster, @node ], alert: "Cannot create replica of a replica node. Only primary nodes can have replicas." and return
       elsif !@node.active?
-        redirect_to [@cluster, @node], alert: "Cannot create replica from a non-active primary node. The primary node must be active before creating replicas." and return
+        redirect_to [ @cluster, @node ], alert: "Cannot create replica from a non-active primary node. The primary node must be active before creating replicas." and return
       end
     end
 
@@ -126,10 +126,10 @@ class NodesController < ApplicationController
       database_type_version: @node.database_type_version
     )
     @providers = Provider.all
-    
+
     # Build initial settings for the default provider (parent's provider)
     @replica.build_node_settings!
-    
+
     # Pre-populate with parent values, except for network settings
     network_settings = %w[ip_address gateway network subnet cidr]
     @node.node_settings.includes(:provider_type_node_option).each do |parent_setting|
@@ -143,9 +143,9 @@ class NodesController < ApplicationController
   def create_replica
     unless @node.can_create_replicas?
       if @node.replica?
-        redirect_to [@cluster, @node], alert: "Cannot create replica of a replica node. Only primary nodes can have replicas." and return
+        redirect_to [ @cluster, @node ], alert: "Cannot create replica of a replica node. Only primary nodes can have replicas." and return
       elsif !@node.active?
-        redirect_to [@cluster, @node], alert: "Cannot create replica from a non-active primary node. The primary node must be active before creating replicas." and return
+        redirect_to [ @cluster, @node ], alert: "Cannot create replica from a non-active primary node. The primary node must be active before creating replicas." and return
       end
     end
 
@@ -158,8 +158,8 @@ class NodesController < ApplicationController
         # All settings now come from the form - no need to copy from parent
 
         @replica.provision_replica!
-        format.html { redirect_to [@cluster, @node], notice: "Replica is being created." }
-        format.json { render :show, status: :created, location: [@cluster, @replica] }
+        format.html { redirect_to [ @cluster, @node ], notice: "Replica is being created." }
+        format.json { render :show, status: :created, location: [ @cluster, @replica ] }
       else
         @providers = Provider.all
         # Ensure node settings are built for the failed replica
@@ -183,7 +183,7 @@ class NodesController < ApplicationController
   def config_partial
     @provider = Provider.find(params[:provider_id])
     @node = @cluster.nodes.find_by_id(params[:node_id])
-    
+
     respond_to do |format|
       if @node == nil
         if params[:parent_node_id].present?
@@ -191,7 +191,7 @@ class NodesController < ApplicationController
           parent_node = @cluster.nodes.find(params[:parent_node_id])
           @replica = @cluster.nodes.new(provider: @provider, parent_node: parent_node)
           @replica.build_node_settings!
-          
+
           # Pre-populate with parent values, except for network settings
           network_settings = %w[ip_address gateway network subnet cidr]
           parent_node.node_settings.includes(:provider_type_node_option).each do |parent_setting|
@@ -200,7 +200,7 @@ class NodesController < ApplicationController
               replica_setting.value = parent_setting.value
             end
           end
-          
+
           format.html { render "nodes/replica_config_display", layout: false if request.xhr? }
           format.turbo_stream { render "nodes/replica_config_display" }
         else
@@ -212,18 +212,18 @@ class NodesController < ApplicationController
         end
       else
         # Existing node - rebuild settings for the new provider while preserving existing values
-        existing_values = @node.node_settings.map { |ns| [ns.key, ns.value] }.to_h
+        existing_values = @node.node_settings.map { |ns| [ ns.key, ns.value ] }.to_h
         @node.provider = @provider
         @node.node_settings.clear
         @node.build_node_settings!
-        
+
         # Restore existing values where they match new provider options
         @node.node_settings.each do |ns|
           if existing_values.key?(ns.key)
             ns.value = existing_values[ns.key]
           end
         end
-        
+
         format.html { render "nodes/config_partial", layout: false if request.xhr? }
         format.turbo_stream { render "nodes/config_partial" }
       end
@@ -233,17 +233,17 @@ class NodesController < ApplicationController
   private
     # Use callbacks to share common setup or constraints between actions.
     def check_node_destruction_status
-      if @node&.status == 'destroying'
-        redirect_to cluster_path(@cluster), 
+      if @node&.status == "destroying"
+        redirect_to cluster_path(@cluster),
                     alert: "Node '#{@node.name}' is currently being destroyed and cannot be accessed."
-        return
-      elsif @node&.status == 'destroyed'
-        redirect_to cluster_path(@cluster), 
+        nil
+      elsif @node&.status == "destroyed"
+        redirect_to cluster_path(@cluster),
                     alert: "Node '#{@node.name}' has been destroyed and is no longer available."
-        return
+        nil
       end
     end
-    
+
     def set_providers
       @providers = Provider.all
       @available_versions = @cluster.available_versions
@@ -271,10 +271,10 @@ class NodesController < ApplicationController
 
     def replica_params
       params.expect(node: [
-        :provider_id, 
+        :provider_id,
         :name,
         node_settings_attributes: [
-          [:id, :provider_type_node_option_id, :key, :value]
+          [ :id, :provider_type_node_option_id, :key, :value ]
         ]
       ])
     end

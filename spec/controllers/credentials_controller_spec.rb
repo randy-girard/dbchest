@@ -7,7 +7,7 @@ RSpec.describe CredentialsController, type: :controller do
   let(:provider) { create(:provider) }
   let(:node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
   let(:credential) { create(:credential, node: node) }
-  
+
   let(:valid_attributes) do
     {
       username: "testuser"

@@ -15,7 +15,7 @@ class CreateCredentialsService
       vars = {
         username: @credential.username,
         password: @credential.password,
-        postgresql_version: @credential.node.database_type_version&.version || '15'
+        postgresql_version: @credential.node.database_type_version&.version || "15"
       }
       AnsibleRunService.new.perform(@credential.node_id, "create_user.yml", vars: vars)
     end

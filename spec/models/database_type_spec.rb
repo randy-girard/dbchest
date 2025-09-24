@@ -58,7 +58,7 @@ RSpec.describe DatabaseType, type: :model do
       it 'returns database types with versions' do
         db_type_with_versions = create(:database_type, :with_versions)
         db_type_without_versions = create(:database_type)
-        
+
         expect(DatabaseType.active).to include(db_type_with_versions)
         expect(DatabaseType.active).not_to include(db_type_without_versions)
       end
@@ -72,7 +72,7 @@ RSpec.describe DatabaseType, type: :model do
       it 'returns the default version' do
         default_version = create(:database_type_version, database_type: database_type, is_default: true)
         other_version = create(:database_type_version, database_type: database_type, is_default: false, version: '16')
-        
+
         expect(database_type.default_version).to eq(default_version)
       end
     end
@@ -81,7 +81,7 @@ RSpec.describe DatabaseType, type: :model do
       it 'returns the first version' do
         first_version = create(:database_type_version, database_type: database_type, is_default: false)
         second_version = create(:database_type_version, database_type: database_type, is_default: false, version: '16')
-        
+
         expect(database_type.default_version).to eq(first_version)
       end
     end

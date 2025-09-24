@@ -32,8 +32,8 @@ class Cluster < ApplicationRecord
 
   def set_default_database_type
     return if database_type.present?
-    
+
     # Default to PostgreSQL
-    self.database_type = DatabaseType.find_by(slug: 'postgresql') || DatabaseType.first
+    self.database_type = DatabaseType.find_by(slug: "postgresql") || DatabaseType.first
   end
 end

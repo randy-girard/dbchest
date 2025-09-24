@@ -1,4 +1,4 @@
-require_relative '../cloud_init_generators/mysql_cloud_init_generator'
+require_relative "../cloud_init_generators/mysql_cloud_init_generator"
 
 module DatabaseTypes
   class MysqlDatabaseType < BaseDatabaseType

@@ -1,4 +1,4 @@
-require_relative 'base_deployment_service'
+require_relative "base_deployment_service"
 
 module DeploymentServices
   class PostgresqlDeploymentService < BaseDeploymentService
@@ -15,7 +15,7 @@ module DeploymentServices
       run_ansible_playbook(database_type_handler.replica_playbook, {
         primary_ip: primary_node.get_ip_address,
         replication_password: primary_node.get_replication_password,
-        replica_node_name: node.name.downcase.gsub(/[^a-z0-9]/, '-')
+        replica_node_name: node.name.downcase.gsub(/[^a-z0-9]/, "-")
       })
     end
 
@@ -24,7 +24,7 @@ module DeploymentServices
 
       # Ensure replication password exists
       node.ensure_replication_password!
-      
+
       run_ansible_playbook(database_type_handler.primary_replication_playbook, {
         replication_password: node.get_replication_password
       })
@@ -52,7 +52,7 @@ module DeploymentServices
       # PostgreSQL-specific backup logic
       timestamp = Time.current.strftime("%Y%m%d_%H%M%S")
       backup_file = "backup_#{node.id}_#{timestamp}.sql"
-      
+
       run_ansible_playbook("backup_database.yml", {
         database_name: database_name || "all",
         backup_file: backup_file

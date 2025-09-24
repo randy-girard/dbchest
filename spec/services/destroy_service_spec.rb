@@ -36,7 +36,7 @@ RSpec.describe DestroyService, type: :service do
         terraform_service = instance_double(TerraformDestroyService)
         expect(TerraformDestroyService).to receive(:new).and_return(terraform_service)
         expect(terraform_service).to receive(:perform).with(node.id)
-        
+
         service.perform(node.id)
       end
 
@@ -81,7 +81,7 @@ RSpec.describe DestroyService, type: :service do
             postgresql_version: parent_node.database_type_version&.version || '15'
           }
         )
-        
+
         service.perform(replica_node.id)
       end
 

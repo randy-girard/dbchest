@@ -37,15 +37,15 @@ class TerraformCreateService
         FileUtils.cp_r("#{source_dir}/.", work_dir)
 
         vars = {}
-        
+
         # Provider configuration - expand into individual variables
         provider_config = @node.provider.terraform_vars.dup
-        
+
         # Add each provider config item as individual variables
         provider_config.each do |key, value|
           vars[key.to_sym] = value
         end
-        
+
         # Node-specific credentials
         vars[:ssh_public_key] = @node.ssh_public_key
         vars[:ssh_private_key] = @node.ssh_private_key
@@ -70,7 +70,7 @@ class TerraformCreateService
 
         @node.node_settings.each do |node_setting|
           vars[node_setting.key] = node_setting.value
-          
+
           # Extract network-related settings for network_config
           case node_setting.key
           when "network", "subnet"
@@ -112,25 +112,25 @@ class TerraformCreateService
 
         # Capture Terraform outputs
         json, status = Open3.capture2(command, "output", "-json", chdir: work_dir)
-        
+
         # Log the output command to our log file
-        File.open(terraform_log_path, 'a') do |log|
+        File.open(terraform_log_path, "a") do |log|
           log.puts "=" * 80
           log.puts "[#{Time.current}] Capturing Terraform outputs"
           log.puts "=" * 80
           log.puts json
           log.puts "=" * 80
         end
-        
+
         data = JSON.parse(json)
         @node.runtime_config = data
         @node.save
 
         # Save updated state back to DB
         save_state_to_db(work_dir, @node)
-        
+
         Rails.logger.info "Terraform deployment completed. Full logs available at: #{terraform_log_path}"
-        
+
         # Clean up working directory only on success
         FileUtils.rm_rf(work_dir) if work_dir && Dir.exist?(work_dir)
 

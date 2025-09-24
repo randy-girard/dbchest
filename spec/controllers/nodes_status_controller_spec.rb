@@ -32,11 +32,11 @@ RSpec.describe NodesStatusController, type: :controller do
 
       it "returns JSON with node data" do
         get :index, params: { cluster_id: cluster.id }, format: :json
-        
+
         json_response = JSON.parse(response.body)
         expect(json_response).to be_an(Array)
         expect(json_response.length).to eq(3)
-        
+
         node_data = json_response.first
         expect(node_data).to have_key('id')
         expect(node_data).to have_key('name')
@@ -48,20 +48,20 @@ RSpec.describe NodesStatusController, type: :controller do
 
       it "includes status display methods" do
         get :index, params: { cluster_id: cluster.id }, format: :json
-        
+
         json_response = JSON.parse(response.body)
         active_node = json_response.find { |n| n['status'] == 'active' }
-        
+
         expect(active_node['status_display']).to be_present
         expect(active_node['status_badge_class']).to be_present
       end
 
       it "formats updated_at as ISO8601" do
         get :index, params: { cluster_id: cluster.id }, format: :json
-        
+
         json_response = JSON.parse(response.body)
         node_data = json_response.first
-        
+
         expect(node_data['updated_at']).to match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
       end
 
@@ -92,7 +92,7 @@ RSpec.describe NodesStatusController, type: :controller do
 
       it "returns empty array" do
         get :index, params: { cluster_id: empty_cluster.id }, format: :json
-        
+
         json_response = JSON.parse(response.body)
         expect(json_response).to eq([])
       end
@@ -110,7 +110,7 @@ RSpec.describe NodesStatusController, type: :controller do
 
       it "returns node status data" do
         get :show, params: { id: node.id }, format: :json
-        
+
         json_response = JSON.parse(response.body)
         expect(json_response['id']).to eq(node.id)
         expect(json_response['name']).to eq(node.name)

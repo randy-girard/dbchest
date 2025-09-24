@@ -1,4 +1,4 @@
-require_relative 'base_cloud_init_generator'
+require_relative "base_cloud_init_generator"
 
 module CloudInitGenerators
   class PostgresqlCloudInitGenerator < BaseCloudInitGenerator
@@ -28,7 +28,7 @@ module CloudInitGenerators
           callback "error" "PostgreSQL #{version_num} installation failed. Check system compatibility and requirements."
           exit 1
         fi
-        
+
         # Install additional dependencies
         DEBIAN_FRONTEND=noninteractive apt-get install -y python3-psycopg2
 
@@ -81,7 +81,7 @@ module CloudInitGenerators
 
         log "Primary PostgreSQL configured for replication capability"
         callback "configuring" "Primary ready - replication user and access will be added when replicas are created"
-        
+
         #{database_type.create_sample_data_commands.join("\n")}
 
         log "Primary PostgreSQL configuration completed"
@@ -96,7 +96,7 @@ module CloudInitGenerators
       version_num = database_type.version
       primary_ip = primary_node.get_ip_address
       replication_password = primary_node.get_replication_password
-      replica_node_name = node.name.downcase.gsub(/[^a-z0-9]/, '-')
+      replica_node_name = node.name.downcase.gsub(/[^a-z0-9]/, "-")
       slot_name = "#{replica_node_name}_slot"
 
       <<~SCRIPT
@@ -137,7 +137,7 @@ module CloudInitGenerators
         # Take base backup from primary
         log "Taking base backup from primary..."
         callback "configuring" "Downloading base backup from primary ($primary_ip)..."
-        
+
         sudo -u postgres PGPASSWORD="$replication_password" pg_basebackup \\
           -h "$primary_ip" \\
           -D "/var/lib/postgresql/$replica_version/main" \\
@@ -160,7 +160,7 @@ module CloudInitGenerators
         PRIMARY_CONN="host=#{primary_ip} port=5432 user=replication"
         PRIMARY_CONN="$PRIMARY_CONN password=#{replication_password}"
         PRIMARY_CONN="$PRIMARY_CONN application_name=#{replica_node_name}"
-        
+
         echo "primary_conninfo = '$PRIMARY_CONN'" | sudo -u postgres tee $CONFIG_FILE > /dev/null
         echo "primary_slot_name = '#{slot_name}'" | sudo -u postgres tee -a $CONFIG_FILE > /dev/null
 

@@ -17,7 +17,7 @@ RSpec.describe NodeSetting, type: :model do
     it 'validates key uniqueness within node and provider_type_node_option scope' do
       create(:node_setting, node: node, provider_type_node_option: provider_type_node_option, key: 'test_key')
       duplicate_setting = build(:node_setting, node: node, provider_type_node_option: provider_type_node_option, key: 'test_key')
-      
+
       expect(duplicate_setting).not_to be_valid
       expect(duplicate_setting.errors[:key]).to include('has already been taken')
     end
@@ -26,7 +26,7 @@ RSpec.describe NodeSetting, type: :model do
       other_node = create(:node, cluster: cluster, provider: provider, database_type_version: database_type.database_type_versions.first)
       create(:node_setting, node: node, provider_type_node_option: provider_type_node_option, key: 'test_key')
       other_setting = build(:node_setting, node: other_node, provider_type_node_option: provider_type_node_option, key: 'test_key')
-      
+
       expect(other_setting).to be_valid
     end
 
@@ -50,21 +50,21 @@ RSpec.describe NodeSetting, type: :model do
   describe 'encryption' do
     it 'encrypts value' do
       node_setting.save!
-      
+
       # Check that the raw database value is encrypted (not the same as the original)
       raw_record = NodeSetting.connection.select_one(
         "SELECT value FROM node_settings WHERE id = #{node_setting.id}"
       )
-      
+
       expect(raw_record['value']).not_to eq(node_setting.value)
     end
 
     it 'decrypts value when accessed' do
       original_value = node_setting.value
-      
+
       node_setting.save!
       node_setting.reload
-      
+
       expect(node_setting.value).to eq(original_value)
     end
   end

@@ -1,4 +1,4 @@
-require_relative 'base_cloud_init_generator'
+require_relative "base_cloud_init_generator"
 
 module CloudInitGenerators
   class MysqlCloudInitGenerator < BaseCloudInitGenerator
@@ -28,7 +28,7 @@ module CloudInitGenerators
           callback "error" "MySQL #{version_num} installation failed. Check system compatibility and requirements."
           exit 1
         fi
-        
+
         log "Configuring MySQL..."
         callback "configuring" "Configuring MySQL..."
 
@@ -67,7 +67,7 @@ module CloudInitGenerators
 
         log "Primary MySQL configured for replication capability"
         callback "configuring" "Primary ready - replication user and access will be added when replicas are created"
-        
+
         #{database_type.create_sample_data_commands.join("\n")}
 
         log "Primary MySQL configuration completed"
@@ -116,7 +116,7 @@ module CloudInitGenerators
         # Set up replication connection
         log "Setting up replication connection..."
         callback "configuring" "Connecting to primary for replication..."
-        
+
         mysql -e "
           CHANGE MASTER TO
             MASTER_HOST='$primary_ip',

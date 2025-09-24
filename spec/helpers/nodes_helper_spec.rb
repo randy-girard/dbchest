@@ -50,7 +50,7 @@ RSpec.describe NodesHelper, type: :helper do
       allow(node).to receive(:status).and_return(nil)
       allow(node).to receive(:status_display).and_return('Pending')
       allow(node).to receive(:status_badge_class).and_return('badge bg-warning')
-      
+
       result = helper.node_status_badge(node)
       expect(result).to include('Pending')
       expect(result).to include('badge bg-warning')

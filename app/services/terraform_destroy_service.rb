@@ -64,9 +64,9 @@ class TerraformDestroyService
         @node.save
 
         Rails.logger.info "Terraform destroy completed. Full logs available at: #{terraform_log_path}"
-        
+
         # save_state_to_db(work_dir, @node)
-        
+
         # Clean up working directory only on success
         FileUtils.rm_rf(work_dir) if work_dir && Dir.exist?(work_dir)
 

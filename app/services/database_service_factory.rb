@@ -1,5 +1,5 @@
-require_relative 'deployment_services/postgresql_deployment_service'
-require_relative 'deployment_services/mysql_deployment_service'
+require_relative "deployment_services/postgresql_deployment_service"
+require_relative "deployment_services/mysql_deployment_service"
 
 class DatabaseServiceFactory
   def self.cloud_init_service_for(node)
@@ -12,9 +12,9 @@ class DatabaseServiceFactory
 
   def self.deployment_service_for(node)
     case node.database_type_slug
-    when 'postgresql'
+    when "postgresql"
       DeploymentServices::PostgresqlDeploymentService.new(node)
-    when 'mysql'
+    when "mysql"
       DeploymentServices::MysqlDeploymentService.new(node)
     else
       raise ArgumentError, "Unknown database type: #{node.database_type_slug}"
@@ -23,9 +23,9 @@ class DatabaseServiceFactory
 
   def self.monitoring_service_for(node)
     case node.database_type_slug
-    when 'postgresql'
+    when "postgresql"
       DeploymentServices::PostgresqlMonitoringService.new(node)
-    when 'mysql'
+    when "mysql"
       DeploymentServices::MysqlMonitoringService.new(node)
     else
       raise ArgumentError, "Unknown database type: #{node.database_type_slug}"

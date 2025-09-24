@@ -15,7 +15,7 @@ RSpec.describe AnsibleRunService, type: :service do
     allow(node).to receive(:database_type_slug).and_return('postgresql')
     allow(node).to receive(:get_runtime_config_value).with("ip_address").and_return('192.168.1.100')
     allow(node).to receive(:ssh_private_key).and_return('fake_ssh_key')
-    
+
     # Mock external dependencies
     allow(service).to receive(:`).with('which ansible-playbook').and_return('/usr/bin/ansible-playbook')
     allow(Open3).to receive(:popen2e).and_yield(double(close: nil), [], double(value: double(exitstatus: 0)))
@@ -95,7 +95,7 @@ RSpec.describe AnsibleRunService, type: :service do
           '--private-key', '/tmp/key',
           Rails.root.join("lib", "ansible", "postgresql", playbook).to_s
         ]
-        
+
         expect(Open3).to receive(:popen2e).with({}, *expected_cmd, chdir: service.ansible_path.to_s)
         service.perform(node.id, playbook)
       end
@@ -103,7 +103,7 @@ RSpec.describe AnsibleRunService, type: :service do
       context 'with variables' do
         it 'creates vars file and includes it in command' do
           expect(vars_file).to receive(:write).with("test_var: test_value\n")
-          
+
           expected_cmd = [
             '/usr/bin/ansible-playbook',
             '-i', '/tmp/inventory',
@@ -111,7 +111,7 @@ RSpec.describe AnsibleRunService, type: :service do
             '--private-key', '/tmp/key',
             Rails.root.join("lib", "ansible", "postgresql", playbook).to_s
           ]
-          
+
           expect(Open3).to receive(:popen2e).with({}, *expected_cmd, chdir: service.ansible_path.to_s)
           service.perform(node.id, playbook, vars: vars)
         end
@@ -122,7 +122,7 @@ RSpec.describe AnsibleRunService, type: :service do
         expect(inventory_file).to receive(:unlink)
         expect(key_file).to receive(:close)
         expect(key_file).to receive(:unlink)
-        
+
         service.perform(node.id, playbook)
       end
     end
@@ -162,7 +162,7 @@ RSpec.describe AnsibleRunService, type: :service do
       it 'creates a new current task' do
         service.parse_line(task_line)
         current_task = service.instance_variable_get(:@current_task)
-        
+
         expect(current_task[:name]).to eq('Install PostgreSQL')
         expect(current_task[:status]).to eq('running')
         expect(current_task[:details]).to eq('')

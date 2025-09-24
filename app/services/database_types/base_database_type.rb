@@ -29,12 +29,12 @@ module DatabaseTypes
       # Otherwise use streaming if supported, else return nil (not supported)
       if database_type_version.version != target_version.version
         if supports_logical_replication? && target_version.supports_logical_replication?
-          'logical'
+          "logical"
         else
           nil
         end
       elsif supports_streaming_replication?
-        'streaming'
+        "streaming"
       else
         nil
       end
@@ -49,27 +49,27 @@ module DatabaseTypes
     end
 
     def primary_playbook
-      'create_node.yml'
+      "create_node.yml"
     end
 
     def replica_playbook
-      'configure_replica.yml'
+      "configure_replica.yml"
     end
 
     def cleanup_playbook
-      'cleanup_replica_config.yml'
+      "cleanup_replica_config.yml"
     end
 
     def primary_replication_playbook
-      'configure_primary_replication.yml'
+      "configure_primary_replication.yml"
     end
 
     def create_user_playbook
-      'create_user.yml'
+      "create_user.yml"
     end
 
     def destroy_user_playbook
-      'destroy_user.yml'
+      "destroy_user.yml"
     end
 
     # Default configuration methods that can be overridden
@@ -122,9 +122,9 @@ module DatabaseTypes
 
     def self.for_database_type_version(database_type_version)
       case database_type_version.database_type.slug
-      when 'postgresql'
+      when "postgresql"
         PostgresqlDatabaseType.new(database_type_version)
-      when 'mysql'
+      when "mysql"
         MysqlDatabaseType.new(database_type_version)
       else
         raise ArgumentError, "Unknown database type: #{database_type_version.database_type.slug}"

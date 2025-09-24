@@ -21,7 +21,7 @@ class Provider < ApplicationRecord
           provider_type_option_id: option.id,
           label: option.label,
           key: option.key,
-          value: 'placeholder')
+          value: "placeholder")
       end
     end
   end
@@ -55,7 +55,7 @@ class Provider < ApplicationRecord
     return if provider_type_id.blank?
 
     unless ProviderType.exists?(provider_type_id)
-      errors.add(:provider_type_id, 'is not included in the list')
+      errors.add(:provider_type_id, "is not included in the list")
     end
   end
 end

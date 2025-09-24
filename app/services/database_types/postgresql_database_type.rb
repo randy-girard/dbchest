@@ -1,4 +1,4 @@
-require_relative '../cloud_init_generators/postgresql_cloud_init_generator'
+require_relative "../cloud_init_generators/postgresql_cloud_init_generator"
 
 module DatabaseTypes
   class PostgresqlDatabaseType < BaseDatabaseType

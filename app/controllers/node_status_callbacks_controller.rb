@@ -10,7 +10,7 @@ class NodeStatusCallbacksController < ApplicationController
     Rails.logger.info "Received cloud-init callback for node #{@node.id}: status=#{status}, message=#{message}"
 
     # Handle special callback to configure primary for replica
-    if status == 'configure_primary_for_replica'
+    if status == "configure_primary_for_replica"
       handle_configure_primary_for_replica(@node, message)
       render json: { success: true }
       return
@@ -18,7 +18,7 @@ class NodeStatusCallbacksController < ApplicationController
 
     # Validate status
     unless Node::STATUSES.key?(status)
-      render json: { error: 'Invalid status' }, status: :bad_request
+      render json: { error: "Invalid status" }, status: :bad_request
       return
     end
 
@@ -27,10 +27,10 @@ class NodeStatusCallbacksController < ApplicationController
 
     render json: { success: true }
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'Node not found' }, status: :not_found
+    render json: { error: "Node not found" }, status: :not_found
   rescue => e
     Rails.logger.error "Error in cloud-init callback for node #{params[:id]}: #{e.message}"
-    render json: { error: 'Internal server error' }, status: :internal_server_error
+    render json: { error: "Internal server error" }, status: :internal_server_error
   end
 
   private
@@ -62,6 +62,6 @@ class NodeStatusCallbacksController < ApplicationController
     )
 
     # Update the replica status to indicate we're waiting for primary configuration
-    replica_node.update_status!('configuring', "Waiting for primary configuration for IP #{replica_ip}")
+    replica_node.update_status!("configuring", "Waiting for primary configuration for IP #{replica_ip}")
   end
 end

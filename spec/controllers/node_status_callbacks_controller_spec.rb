@@ -21,7 +21,7 @@ RSpec.describe NodeStatusCallbacksController, type: :controller do
 
       it "returns JSON success" do
         post :update, params: { id: node.id, status: 'active', message: 'Node is ready' }
-        
+
         json_response = JSON.parse(response.body)
         expect(json_response['success']).to be true
       end
@@ -41,7 +41,7 @@ RSpec.describe NodeStatusCallbacksController, type: :controller do
         Node::STATUSES.keys.each do |status|
           post :update, params: { id: node.id, status: status, message: "Testing #{status}" }
           expect(response).to be_successful
-          
+
           json_response = JSON.parse(response.body)
           expect(json_response['success']).to be true
         end
@@ -56,7 +56,7 @@ RSpec.describe NodeStatusCallbacksController, type: :controller do
 
       it "returns error message" do
         post :update, params: { id: node.id, status: 'invalid_status', message: 'Test' }
-        
+
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Invalid status')
       end
@@ -75,7 +75,7 @@ RSpec.describe NodeStatusCallbacksController, type: :controller do
 
       it "returns error message" do
         post :update, params: { id: 999999, status: 'active', message: 'Test' }
-        
+
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Node not found')
       end
@@ -93,7 +93,7 @@ RSpec.describe NodeStatusCallbacksController, type: :controller do
 
       it "returns error message" do
         post :update, params: { id: node.id, status: 'active', message: 'Test' }
-        
+
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Internal server error')
       end
@@ -117,7 +117,7 @@ RSpec.describe NodeStatusCallbacksController, type: :controller do
       it "handles configure_primary_for_replica status" do
         message = "Configure primary for replica at 192.168.1.100"
         post :update, params: { id: replica_node.id, status: 'configure_primary_for_replica', message: message }
-        
+
         expect(response).to be_successful
         json_response = JSON.parse(response.body)
         expect(json_response['success']).to be true
@@ -130,7 +130,7 @@ RSpec.describe NodeStatusCallbacksController, type: :controller do
           replica_node_id: replica_node.id,
           replica_ip: '192.168.1.100'
         )
-        
+
         post :update, params: { id: replica_node.id, status: 'configure_primary_for_replica', message: message }
       end
 
@@ -155,7 +155,7 @@ RSpec.describe NodeStatusCallbacksController, type: :controller do
         it "logs error and continues" do
           message = "Configure primary for replica without IP"
           expect(Rails.logger).to receive(:error).with(/Could not extract replica IP from message/)
-          
+
           post :update, params: { id: replica_node.id, status: 'configure_primary_for_replica', message: message }
           expect(response).to be_successful
         end
@@ -167,7 +167,7 @@ RSpec.describe NodeStatusCallbacksController, type: :controller do
         it "logs error and continues" do
           message = "Configure primary for replica at 192.168.1.100"
           expect(Rails.logger).to receive(:error).with(/Replica node #{orphan_replica.id} has no parent node/)
-          
+
           post :update, params: { id: orphan_replica.id, status: 'configure_primary_for_replica', message: message }
           expect(response).to be_successful
         end

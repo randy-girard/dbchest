@@ -3,19 +3,19 @@ class UpdatePostgreSqlInstallationCommands < ActiveRecord::Migration[8.0]
     # Update PostgreSQL installation commands to handle Ubuntu version compatibility
     postgresql_type = DatabaseType.find_by(slug: 'postgresql')
     return unless postgresql_type
-    
+
     # Update PostgreSQL 12 - available in Ubuntu 20.04 default repos
     pg12 = postgresql_type.database_type_versions.find_by(version: '12')
     pg12&.update!(
       install_command: 'DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-12 postgresql-contrib-12'
     )
-    
+
     # Update PostgreSQL 13 - available in Ubuntu 20.04 default repos
     pg13 = postgresql_type.database_type_versions.find_by(version: '13')
     pg13&.update!(
       install_command: 'DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-13 postgresql-contrib-13'
     )
-    
+
     # Update PostgreSQL 14 - needs PostgreSQL APT repository
     pg14 = postgresql_type.database_type_versions.find_by(version: '14')
     pg14&.update!(
@@ -27,7 +27,7 @@ class UpdatePostgreSqlInstallationCommands < ActiveRecord::Migration[8.0]
         DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-14 postgresql-contrib-14
       CMD
     )
-    
+
     # Update PostgreSQL 15 - needs PostgreSQL APT repository
     pg15 = postgresql_type.database_type_versions.find_by(version: '15')
     pg15&.update!(
@@ -39,7 +39,7 @@ class UpdatePostgreSqlInstallationCommands < ActiveRecord::Migration[8.0]
         DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-15 postgresql-contrib-15
       CMD
     )
-    
+
     # Update PostgreSQL 16 - needs newer Ubuntu version, error on unsupported systems
     pg16 = postgresql_type.database_type_versions.find_by(version: '16')
     pg16&.update!(
@@ -67,7 +67,7 @@ class UpdatePostgreSqlInstallationCommands < ActiveRecord::Migration[8.0]
     # Revert to simpler installation commands
     postgresql_type = DatabaseType.find_by(slug: 'postgresql')
     return unless postgresql_type
-    
+
     postgresql_type.database_type_versions.update_all(
       install_command: 'DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib'
     )

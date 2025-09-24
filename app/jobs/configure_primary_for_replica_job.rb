@@ -14,7 +14,7 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
       error_msg = "replica_ip is blank or empty"
       Rails.logger.error "ConfigurePrimaryForReplicaJob failed: #{error_msg}"
       broadcast_job_message("Job failed: #{error_msg}", "error")
-      @replica_node.update_status!('error', "Primary configuration failed: #{error_msg}")
+      @replica_node.update_status!("error", "Primary configuration failed: #{error_msg}")
       return
     end
 
@@ -23,7 +23,7 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
       error_msg = "replica_ip '#{@replica_ip}' is not a valid IP address"
       Rails.logger.error "ConfigurePrimaryForReplicaJob failed: #{error_msg}"
       broadcast_job_message("Job failed: #{error_msg}", "error")
-      @replica_node.update_status!('error', "Primary configuration failed: #{error_msg}")
+      @replica_node.update_status!("error", "Primary configuration failed: #{error_msg}")
       return
     end
 
@@ -33,37 +33,37 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
     begin
       # Ensure primary node has replication password
       replication_password = @primary_node.ensure_replication_password!
-      
+
       # Generate Ansible playbook for primary configuration
       playbook_content = generate_primary_configuration_playbook(replication_password)
-      
+
       # Write playbook to temporary file
       playbook_file = write_temp_playbook(playbook_content)
-      
+
       # Execute Ansible playbook
       result = execute_ansible_playbook(playbook_file)
-      
+
       if result[:success]
         Rails.logger.info "Successfully configured primary #{@primary_node.id} for replica at #{@replica_ip}"
         broadcast_job_message("Ansible playbook completed successfully", "info")
-        
+
         # Update primary node status to indicate it's ready for replication
         @primary_node.broadcast_status_update("Primary configured for replica at #{@replica_ip}")
-        
+
         # Broadcast to replica that primary is ready
         @replica_node.broadcast_status_update("Primary configured - ready for replication")
-        
+
         broadcast_job_message("Job completed successfully - primary ready for replication", "info")
       else
         Rails.logger.error "Failed to configure primary #{@primary_node.id}: #{result[:error]}"
         broadcast_job_message("Ansible playbook failed: #{result[:error]}", "error")
-        @replica_node.update_status!('error', "Failed to configure primary: #{result[:error]}")
+        @replica_node.update_status!("error", "Failed to configure primary: #{result[:error]}")
       end
-      
+
     rescue => e
       Rails.logger.error "Error in ConfigurePrimaryForReplicaJob: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
-      @replica_node.update_status!('error', "Primary configuration job failed: #{e.message}")
+      @replica_node.update_status!("error", "Primary configuration job failed: #{e.message}")
     ensure
       # Clean up temporary playbook file
       File.delete(playbook_file) if playbook_file && File.exist?(playbook_file)
@@ -74,9 +74,9 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
 
   def generate_primary_configuration_playbook(replication_password)
     # Get database version information
-    primary_version = @primary_node.database_type_version&.version || '15'
-    replica_version = @replica_node.database_type_version&.version || '15'
-    
+    primary_version = @primary_node.database_type_version&.version || "15"
+    replica_version = @replica_node.database_type_version&.version || "15"
+
     <<~YAML
       ---
       - name: Configure PostgreSQL primary for replication from specific replica
@@ -88,7 +88,7 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
           replication_password: "#{replication_password}"
           postgresql_version: "#{primary_version}"
           replica_postgresql_version: "#{replica_version}"
-        
+      #{'  '}
         tasks:
           - name: Validate replica_ip is not empty
             fail:
@@ -161,7 +161,7 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
               login_password: "{{ replication_password }}"
               query: "SELECT 1"
             register: replication_test
-            
+      #{'      '}
           - name: Configuration verification
             debug:
               msg: "Primary successfully configured for replication from {{ replica_ip }}"
@@ -170,7 +170,7 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
   end
 
   def write_temp_playbook(content)
-    temp_file = Tempfile.new(['configure_primary_', '.yml'])
+    temp_file = Tempfile.new([ "configure_primary_", ".yml" ])
     temp_file.write(content)
     temp_file.close
     temp_file.path
@@ -179,18 +179,18 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
   def execute_ansible_playbook(playbook_file)
     # Get primary node IP
     primary_ip = @primary_node.get_ip_address
-    
+
     if primary_ip.blank?
       return { success: false, error: "Primary node IP address not available" }
     end
 
     # Build Ansible command
     ansible_cmd = [
-      'ansible-playbook',
-      '-i', "#{primary_ip},",
-      '--private-key', @primary_node.ssh_private_key_path,
-      '--user', 'root',
-      '--ssh-common-args', '-o StrictHostKeyChecking=no',
+      "ansible-playbook",
+      "-i", "#{primary_ip},",
+      "--private-key", @primary_node.ssh_private_key_path,
+      "--user", "root",
+      "--ssh-common-args", "-o StrictHostKeyChecking=no",
       playbook_file
     ]
 
@@ -215,11 +215,11 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
 
   def broadcast_job_message(message, level = "info")
     return unless Rails.env.development?
-    
+
     console_data = {
       timestamp: Time.current.strftime("%H:%M:%S"),
-      event_type: 'job_message',
-      job_name: 'ConfigurePrimaryForReplicaJob',
+      event_type: "job_message",
+      job_name: "ConfigurePrimaryForReplicaJob",
       primary_node_id: @primary_node&.id,
       replica_node_id: @replica_node&.id,
       replica_ip: @replica_ip,

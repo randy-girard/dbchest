@@ -78,10 +78,10 @@ RSpec.describe DatabaseServiceFactory, type: :service do
         # Mock the monitoring service class since it might not exist yet
         monitoring_service_class = double('PostgresqlMonitoringService')
         monitoring_service_instance = double('monitoring_service_instance')
-        
+
         stub_const('DeploymentServices::PostgresqlMonitoringService', monitoring_service_class)
         expect(monitoring_service_class).to receive(:new).with(node).and_return(monitoring_service_instance)
-        
+
         service = DatabaseServiceFactory.monitoring_service_for(node)
         expect(service).to eq(monitoring_service_instance)
       end
@@ -94,10 +94,10 @@ RSpec.describe DatabaseServiceFactory, type: :service do
         # Mock the monitoring service class since it might not exist yet
         monitoring_service_class = double('MysqlMonitoringService')
         monitoring_service_instance = double('monitoring_service_instance')
-        
+
         stub_const('DeploymentServices::MysqlMonitoringService', monitoring_service_class)
         expect(monitoring_service_class).to receive(:new).with(node).and_return(monitoring_service_instance)
-        
+
         service = DatabaseServiceFactory.monitoring_service_for(node)
         expect(service).to eq(monitoring_service_instance)
       end

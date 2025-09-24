@@ -29,7 +29,7 @@ RSpec.describe CreateService, type: :service do
         terraform_service = instance_double(TerraformCreateService)
         expect(TerraformCreateService).to receive(:new).and_return(terraform_service)
         expect(terraform_service).to receive(:perform).with(node.id)
-        
+
         service.perform(node.id)
       end
 
@@ -49,7 +49,7 @@ RSpec.describe CreateService, type: :service do
         replica_config_service = instance_double(ReplicaConfigurationService)
         expect(ReplicaConfigurationService).to receive(:new).and_return(replica_config_service)
         expect(replica_config_service).to receive(:configure_primary_for_replica).with(parent_node.id, replica_node.id)
-        
+
         service.perform(replica_node.id, true)
       end
 

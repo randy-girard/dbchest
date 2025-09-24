@@ -8,25 +8,25 @@ FactoryBot.define do
     data_directory_pattern { "/var/lib/postgresql/15/main" }
     config_file_pattern { "/etc/postgresql/15/main/postgresql.conf" }
     is_default { false }
-    
+
     trait :default do
       is_default { true }
     end
-    
+
     trait :postgresql_12 do
       version { "12" }
       install_command { "DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-12 postgresql-contrib-12" }
       data_directory_pattern { "/var/lib/postgresql/12/main" }
       config_file_pattern { "/etc/postgresql/12/main/postgresql.conf" }
     end
-    
+
     trait :postgresql_16 do
       version { "16" }
       install_command { "DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-16 postgresql-contrib-16" }
       data_directory_pattern { "/var/lib/postgresql/16/main" }
       config_file_pattern { "/etc/postgresql/16/main/postgresql.conf" }
     end
-    
+
     trait :mysql_8 do
       association :database_type, :mysql
       version { "8.0" }

@@ -18,7 +18,7 @@ class PopulateDatabaseTypesAndVersions < ActiveRecord::Migration[8.0]
         is_default: false
       },
       {
-        version: '13', 
+        version: '13',
         install_command: 'DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-13 postgresql-contrib-13',
         default_port: 5432,
         service_name: 'postgresql',
@@ -39,7 +39,7 @@ class PopulateDatabaseTypesAndVersions < ActiveRecord::Migration[8.0]
         version: '15',
         install_command: 'DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-15 postgresql-contrib-15',
         default_port: 5432,
-        service_name: 'postgresql', 
+        service_name: 'postgresql',
         data_directory_pattern: '/var/lib/postgresql/15/main',
         config_file_pattern: '/etc/postgresql/15/main/postgresql.conf',
         is_default: true # Current default
@@ -49,7 +49,7 @@ class PopulateDatabaseTypesAndVersions < ActiveRecord::Migration[8.0]
         install_command: 'DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-16 postgresql-contrib-16',
         default_port: 5432,
         service_name: 'postgresql',
-        data_directory_pattern: '/var/lib/postgresql/16/main', 
+        data_directory_pattern: '/var/lib/postgresql/16/main',
         config_file_pattern: '/etc/postgresql/16/main/postgresql.conf',
         is_default: false
       }
@@ -96,7 +96,7 @@ class PopulateDatabaseTypesAndVersions < ActiveRecord::Migration[8.0]
     # Remove the associations first
     Node.update_all(database_type_version_id: nil)
     Cluster.update_all(database_type_id: nil)
-    
+
     # Then remove the data
     DatabaseTypeVersion.delete_all
     DatabaseType.delete_all

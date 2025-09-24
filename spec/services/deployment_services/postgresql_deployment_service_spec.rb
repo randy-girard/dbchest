@@ -27,7 +27,7 @@ RSpec.describe DeploymentServices::PostgresqlDeploymentService, type: :service d
         'postgresql_primary.yml',
         { postgres_password: 'generated_password' }
       )
-      
+
       service.deploy_primary!
     end
   end
@@ -55,18 +55,18 @@ RSpec.describe DeploymentServices::PostgresqlDeploymentService, type: :service d
             replica_node_name: replica_node.name.downcase.gsub(/[^a-z0-9]/, '-')
           }
         )
-        
+
         replica_service.deploy_replica!
       end
 
       it 'sanitizes replica node name' do
         allow(replica_node).to receive(:name).and_return('Test Node #1')
-        
+
         expect(replica_service).to receive(:run_ansible_playbook).with(
           'postgresql_replica.yml',
           hash_including(replica_node_name: 'test-node--1')
         )
-        
+
         replica_service.deploy_replica!
       end
     end
@@ -113,7 +113,7 @@ RSpec.describe DeploymentServices::PostgresqlDeploymentService, type: :service d
           'postgresql_configure_replication.yml',
           { replication_password: 'repl_password' }
         )
-        
+
         service.configure_replication!
       end
     end
@@ -159,7 +159,7 @@ RSpec.describe DeploymentServices::PostgresqlDeploymentService, type: :service d
           privileges: 'ALL'
         }
       )
-      
+
       service.create_user!('testuser', 'testpass')
     end
 
@@ -172,7 +172,7 @@ RSpec.describe DeploymentServices::PostgresqlDeploymentService, type: :service d
           privileges: 'SELECT,INSERT'
         }
       )
-      
+
       service.create_user!('testuser', 'testpass', 'SELECT,INSERT')
     end
   end
@@ -187,7 +187,7 @@ RSpec.describe DeploymentServices::PostgresqlDeploymentService, type: :service d
         'postgresql_destroy_user.yml',
         { username: 'testuser' }
       )
-      
+
       service.destroy_user!('testuser')
     end
   end
@@ -197,7 +197,7 @@ RSpec.describe DeploymentServices::PostgresqlDeploymentService, type: :service d
       timestamp = '20231201_143000'
       allow(Time).to receive(:current).and_return(Time.parse('2023-12-01 14:30:00'))
       allow(Time.current).to receive(:strftime).with("%Y%m%d_%H%M%S").and_return(timestamp)
-      
+
       expect(service).to receive(:run_ansible_playbook).with(
         'backup_database.yml',
         {
@@ -205,7 +205,7 @@ RSpec.describe DeploymentServices::PostgresqlDeploymentService, type: :service d
           backup_file: "backup_#{node.id}_#{timestamp}.sql"
         }
       )
-      
+
       service.backup_database
     end
 
@@ -213,7 +213,7 @@ RSpec.describe DeploymentServices::PostgresqlDeploymentService, type: :service d
       timestamp = '20231201_143000'
       allow(Time).to receive(:current).and_return(Time.parse('2023-12-01 14:30:00'))
       allow(Time.current).to receive(:strftime).with("%Y%m%d_%H%M%S").and_return(timestamp)
-      
+
       expect(service).to receive(:run_ansible_playbook).with(
         'backup_database.yml',
         {
@@ -221,7 +221,7 @@ RSpec.describe DeploymentServices::PostgresqlDeploymentService, type: :service d
           backup_file: "backup_#{node.id}_#{timestamp}.sql"
         }
       )
-      
+
       service.backup_database('myapp')
     end
   end
@@ -235,7 +235,7 @@ RSpec.describe DeploymentServices::PostgresqlDeploymentService, type: :service d
           backup_file: 'backup_123_20231201_143000.sql'
         }
       )
-      
+
       service.restore_database('backup_123_20231201_143000.sql', 'myapp')
     end
   end

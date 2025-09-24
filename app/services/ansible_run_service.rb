@@ -1,5 +1,5 @@
 require "open3"
-require_relative 'database_service_factory'
+require_relative "database_service_factory"
 
 class AnsibleRunService
   def initialize
@@ -12,7 +12,7 @@ class AnsibleRunService
   def playbook_path(node, playbook)
     database_type_handler = node.database_type_handler
     return Rails.root.join(ansible_path, "postgresql", playbook).to_s unless database_type_handler
-    
+
     Rails.root.join(ansible_path, node.database_type_slug, playbook).to_s
   end
 
@@ -126,12 +126,12 @@ class AnsibleRunService
     # Send JSON to ActionCable or any other system
     payload = task.to_json
     ActionCable.server.broadcast("ansible", payload)
-    
+
     # In development, also broadcast to console channel for debugging
     if Rails.env.development?
       console_data = {
         timestamp: Time.current.strftime("%H:%M:%S"),
-        event_type: 'ansible_task',
+        event_type: "ansible_task",
         node_id: @node_id,
         task_name: task["name"],
         status: task["status"],
@@ -140,7 +140,7 @@ class AnsibleRunService
       }
       ActionCable.server.broadcast("development_console", console_data)
     end
-    
+
     # Log to Rails logger instead of console
     Rails.logger.info payload
   end

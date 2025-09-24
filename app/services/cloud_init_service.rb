@@ -1,4 +1,4 @@
-require_relative 'database_types/base_database_type'
+require_relative "database_types/base_database_type"
 
 class CloudInitService
   def initialize
@@ -17,7 +17,7 @@ class CloudInitService
   def write_script_to_file(node_id, work_dir, is_replica = false)
     script_content = generate_user_data(node_id, is_replica)
     script_file = File.join(work_dir, "cloud_init_script.sh")
-    
+
     File.write(script_file, script_content)
     script_file
   end

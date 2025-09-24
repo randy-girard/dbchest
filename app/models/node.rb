@@ -1,4 +1,4 @@
-require_relative '../services/database_service_factory'
+require_relative "../services/database_service_factory"
 
 class Node < ApplicationRecord
   belongs_to :cluster
@@ -19,13 +19,13 @@ class Node < ApplicationRecord
 
   # Status constants
   STATUSES = {
-    'pending' => 'Pending',
-    'provisioning' => 'Provisioning',
-    'configuring' => 'Configuring',
-    'active' => 'Active',
-    'error' => 'Error',
-    'destroying' => 'Destroying',
-    'destroyed' => 'Destroyed'
+    "pending" => "Pending",
+    "provisioning" => "Provisioning",
+    "configuring" => "Configuring",
+    "active" => "Active",
+    "error" => "Error",
+    "destroying" => "Destroying",
+    "destroyed" => "Destroyed"
   }.freeze
 
   validates :status, inclusion: { in: STATUSES.keys }
@@ -120,20 +120,20 @@ class Node < ApplicationRecord
     end
 
     # Clean up the IP address
-    ip_part = ip_with_subnet.to_s.strip.split('/').first
+    ip_part = ip_with_subnet.to_s.strip.split("/").first
 
     # Validate it's a proper IP address
     begin
       IPAddr.new(ip_part)
       Rails.logger.debug "Node #{id}: Successfully validated IP address: #{ip_part}"
-      return ip_part
+      ip_part
     rescue IPAddr::InvalidAddressError => e
       Rails.logger.error "Node #{id}: Invalid IP address '#{ip_part}': #{e.message}"
 
       # If it looks like a hostname, try to resolve it
       if ip_part.match?(/^[a-zA-Z]/)
         begin
-          require 'resolv'
+          require "resolv"
           resolved_ip = Resolv.getaddress(ip_part)
           Rails.logger.info "Node #{id}: Resolved hostname '#{ip_part}' to IP: #{resolved_ip}"
           return resolved_ip
@@ -145,7 +145,7 @@ class Node < ApplicationRecord
       # Last resort: return the cleaned value even if it's invalid
       # This will help us see exactly what's being passed to Ansible
       Rails.logger.warn "Node #{id}: Returning potentially invalid IP: '#{ip_part}'"
-      return ip_part
+      ip_part
     end
   end
 
@@ -174,7 +174,7 @@ class Node < ApplicationRecord
   end
 
   def active?
-    status == 'active'
+    status == "active"
   end
 
   def has_replicas?
@@ -256,9 +256,9 @@ class Node < ApplicationRecord
 
   def ensure_ssh_keys!
     if ssh_private_key.blank? || ssh_public_key.blank?
-      require 'sshkey'
+      require "sshkey"
 
-      ssh_key = SSHKey.generate(type: 'RSA', bits: 2048)
+      ssh_key = SSHKey.generate(type: "RSA", bits: 2048)
       self.ssh_private_key = ssh_key.private_key
       self.ssh_public_key = ssh_key.ssh_public_key
       save!
@@ -281,7 +281,7 @@ class Node < ApplicationRecord
       if Rails.env.development?
         console_data = {
           timestamp: Time.current.strftime("%H:%M:%S"),
-          event_type: 'node_update_status',
+          event_type: "node_update_status",
           message: message
         }
         ActionCable.server.broadcast("development_console", console_data)
@@ -295,35 +295,35 @@ class Node < ApplicationRecord
   end
 
   def status_display
-    STATUSES[status] || status&.humanize || 'Unknown'
+    STATUSES[status] || status&.humanize || "Unknown"
   end
 
   def status_badge_class
     case status
-    when 'active'
-      'bg-success'
-    when 'provisioning', 'configuring'
-      'bg-warning'
-    when 'error'
-      'bg-danger'
-    when 'destroying'
-      'bg-info'
-    when 'destroyed'
-      'bg-dark'
+    when "active"
+      "bg-success"
+    when "provisioning", "configuring"
+      "bg-warning"
+    when "error"
+      "bg-danger"
+    when "destroying"
+      "bg-info"
+    when "destroyed"
+      "bg-dark"
     else
-      'bg-primary'
+      "bg-primary"
     end
   end
 
   # Ensure we have a status value, fallback for existing nodes
   def status
-    read_attribute(:status) || 'pending'
+    read_attribute(:status) || "pending"
   end
 
   private
 
   def set_default_status
-    self.status = 'pending' if status.blank?
+    self.status = "pending" if status.blank?
   end
 
   def set_default_database_type_version
@@ -361,7 +361,7 @@ class Node < ApplicationRecord
   end
 
   def cleanup_parent_replication_config
-    return unless parent_node.present?
+    nil unless parent_node.present?
 
     # If this was the last replica, optionally clean up replication configuration
     # For now, we'll leave the replication user and password for future use
@@ -413,7 +413,7 @@ class Node < ApplicationRecord
         timestamp: Time.current.strftime("%H:%M:%S"),
         node_name: name,
         cluster_id: cluster_id,
-        event_type: 'node_status_update'
+        event_type: "node_status_update"
       })
       ActionCable.server.broadcast("development_console", console_data)
       Rails.logger.debug "🖥️  Broadcasted to development console: #{console_data.inspect}"

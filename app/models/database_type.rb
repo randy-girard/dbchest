@@ -19,9 +19,9 @@ class DatabaseType < ApplicationRecord
     # MySQL supports it from version 8.0+
     # Can be extended for other database types
     case slug
-    when 'postgresql'
+    when "postgresql"
       database_type_versions.any? { |v| v.version.to_f >= 10.0 }
-    when 'mysql'
+    when "mysql"
       database_type_versions.any? { |v| v.version.to_f >= 8.0 }
     else
       false
@@ -31,6 +31,6 @@ class DatabaseType < ApplicationRecord
   private
 
   def generate_slug
-    self.slug = name.downcase.gsub(/[^a-z0-9]/, '_').gsub(/_+/, '_').gsub(/^_|_$/, '')
+    self.slug = name.downcase.gsub(/[^a-z0-9]/, "_").gsub(/_+/, "_").gsub(/^_|_$/, "")
   end
 end

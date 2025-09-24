@@ -14,7 +14,7 @@ class CreateDatabaseTypeVersions < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    add_index :database_type_versions, [:database_type_id, :version], unique: true, name: 'index_db_type_versions_on_type_and_version'
+    add_index :database_type_versions, [ :database_type_id, :version ], unique: true, name: 'index_db_type_versions_on_type_and_version'
     add_index :database_type_versions, :is_default
   end
 end

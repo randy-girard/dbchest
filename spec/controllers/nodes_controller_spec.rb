@@ -6,7 +6,7 @@ RSpec.describe NodesController, type: :controller do
   let(:cluster) { create(:cluster, database_type: database_type) }
   let(:provider) { create(:provider) }
   let(:node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
-  
+
   let(:valid_attributes) do
     {
       name: "Test Node",
@@ -14,7 +14,7 @@ RSpec.describe NodesController, type: :controller do
       database_type_version_id: database_type_version.id
     }
   end
-  
+
   let(:invalid_attributes) do
     {
       name: "",
@@ -142,7 +142,7 @@ RSpec.describe NodesController, type: :controller do
 
       it "redirects to the created node" do
         post :create, params: { cluster_id: cluster.to_param, node: valid_attributes }
-        expect(response).to redirect_to([cluster, Node.last])
+        expect(response).to redirect_to([ cluster, Node.last ])
       end
 
       it "sets a success notice" do
@@ -184,7 +184,7 @@ RSpec.describe NodesController, type: :controller do
 
       it "redirects to the node" do
         put :update, params: { cluster_id: cluster.to_param, id: node.to_param, node: new_attributes }
-        expect(response).to redirect_to([cluster, node])
+        expect(response).to redirect_to([ cluster, node ])
       end
 
       it "sets a success notice" do
@@ -240,7 +240,7 @@ RSpec.describe NodesController, type: :controller do
   describe "GET #add_replica" do
     it "redirects with alert when node cannot create replicas" do
       get :add_replica, params: { cluster_id: cluster.to_param, id: node.to_param }
-      expect(response).to redirect_to([cluster, node])
+      expect(response).to redirect_to([ cluster, node ])
       expect(flash[:alert]).to include("Cannot create replica")
     end
 
@@ -259,7 +259,7 @@ RSpec.describe NodesController, type: :controller do
 
       it "redirects with alert" do
         get :add_replica, params: { cluster_id: cluster.to_param, id: node.to_param }
-        expect(response).to redirect_to([cluster, node])
+        expect(response).to redirect_to([ cluster, node ])
         expect(flash[:alert]).to include("Cannot create replica")
       end
     end
@@ -322,7 +322,7 @@ RSpec.describe NodesController, type: :controller do
 
       it "redirects to the parent node" do
         post :create_replica, params: { cluster_id: cluster.to_param, id: node.to_param, node: replica_attributes }
-        expect(response).to redirect_to([cluster, node])
+        expect(response).to redirect_to([ cluster, node ])
       end
     end
 

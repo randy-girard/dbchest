@@ -1,4 +1,4 @@
-require_relative 'base_deployment_service'
+require_relative "base_deployment_service"
 
 module DeploymentServices
   class MysqlDeploymentService < BaseDeploymentService
@@ -24,7 +24,7 @@ module DeploymentServices
 
       # Ensure replication password exists
       node.ensure_replication_password!
-      
+
       run_ansible_playbook(database_type_handler.primary_replication_playbook, {
         replication_password: node.get_replication_password,
         mysql_root_password: get_root_password
@@ -57,7 +57,7 @@ module DeploymentServices
       # MySQL-specific backup logic
       timestamp = Time.current.strftime("%Y%m%d_%H%M%S")
       backup_file = "backup_#{node.id}_#{timestamp}.sql"
-      
+
       run_ansible_playbook("backup_database.yml", {
         database_name: database_name || "--all-databases",
         backup_file: backup_file,

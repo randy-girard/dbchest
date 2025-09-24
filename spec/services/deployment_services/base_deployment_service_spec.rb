@@ -55,18 +55,18 @@ RSpec.describe DeploymentServices::BaseDeploymentService, type: :service do
       it 'returns the node database type handler' do
         handler = double('database_type_handler')
         allow(node).to receive(:database_type_handler).and_return(handler)
-        
+
         expect(service.send(:database_type_handler)).to eq(handler)
       end
 
       it 'memoizes the database type handler' do
         handler = double('database_type_handler')
         allow(node).to receive(:database_type_handler).and_return(handler)
-        
+
         # Call twice to test memoization
         service.send(:database_type_handler)
         service.send(:database_type_handler)
-        
+
         expect(node).to have_received(:database_type_handler).once
       end
     end
@@ -79,7 +79,7 @@ RSpec.describe DeploymentServices::BaseDeploymentService, type: :service do
       it 'memoizes the ansible service' do
         service1 = service.send(:ansible_service)
         service2 = service.send(:ansible_service)
-        
+
         expect(service1).to be(service2)
       end
     end
@@ -92,7 +92,7 @@ RSpec.describe DeploymentServices::BaseDeploymentService, type: :service do
       it 'memoizes the cloud init service' do
         service1 = service.send(:cloud_init_service)
         service2 = service.send(:cloud_init_service)
-        
+
         expect(service1).to be(service2)
       end
     end
@@ -113,19 +113,19 @@ RSpec.describe DeploymentServices::BaseDeploymentService, type: :service do
           'postgresql_version' => '15',
           'custom_var' => 'value'
         }
-        
+
         expect(ansible_service).to receive(:perform).with(node.id, playbook, vars: expected_vars)
-        
+
         service.send(:run_ansible_playbook, playbook, vars)
       end
 
       it 'includes database version in default vars' do
         expect(ansible_service).to receive(:perform).with(
-          node.id, 
-          playbook, 
+          node.id,
+          playbook,
           vars: { 'postgresql_version' => '15' }
         )
-        
+
         service.send(:run_ansible_playbook, playbook)
       end
 
@@ -135,9 +135,9 @@ RSpec.describe DeploymentServices::BaseDeploymentService, type: :service do
           'postgresql_version' => '14',
           'other_var' => 'test'
         }
-        
+
         expect(ansible_service).to receive(:perform).with(node.id, playbook, vars: expected_vars)
-        
+
         service.send(:run_ansible_playbook, playbook, custom_vars)
       end
     end
