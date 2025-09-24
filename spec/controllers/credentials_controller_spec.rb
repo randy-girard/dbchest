@@ -136,7 +136,7 @@ RSpec.describe CredentialsController, type: :controller do
       it "renders the new template" do
         post :create, params: { cluster_id: cluster.to_param, node_id: node.to_param, credential: invalid_attributes }
         expect(response).to render_template(:new)
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
   end
@@ -173,7 +173,7 @@ RSpec.describe CredentialsController, type: :controller do
       it "renders the edit template" do
         put :update, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param, credential: invalid_attributes }
         expect(response).to render_template(:edit)
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
   end
@@ -222,7 +222,7 @@ RSpec.describe CredentialsController, type: :controller do
       context "with invalid params" do
         it "returns JSON with errors" do
           post :create, params: { cluster_id: cluster.to_param, node_id: node.to_param, credential: invalid_attributes }, format: :json
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
           expect(response.content_type).to include('application/json')
         end
       end
@@ -240,7 +240,7 @@ RSpec.describe CredentialsController, type: :controller do
       context "with invalid params" do
         it "returns JSON with errors" do
           put :update, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param, credential: invalid_attributes }, format: :json
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
           expect(response.content_type).to include('application/json')
         end
       end

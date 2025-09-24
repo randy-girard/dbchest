@@ -31,8 +31,8 @@ class ClustersController < ApplicationController
         format.json { render :show, status: :created, location: @cluster }
       else
         @database_types = DatabaseType.joins(:database_type_versions).distinct.order(:name)
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @cluster.errors, status: :unprocessable_entity }
+        format.html { render :new, status: :unprocessable_content }
+        format.json { render json: @cluster.errors, status: :unprocessable_content }
       end
     end
   end
@@ -45,8 +45,8 @@ class ClustersController < ApplicationController
         format.json { render :show, status: :ok, location: @cluster }
       else
         @database_types = DatabaseType.joins(:database_type_versions).distinct.order(:name)
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @cluster.errors, status: :unprocessable_entity }
+        format.html { render :edit, status: :unprocessable_content }
+        format.json { render json: @cluster.errors, status: :unprocessable_content }
       end
     end
   end

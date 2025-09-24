@@ -34,8 +34,8 @@ class NodesController < ApplicationController
       else
         # Build node settings if they don't exist (for dynamic dropdown repopulation)
         @node.build_node_settings! if @node.node_settings.empty?
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @node.errors, status: :unprocessable_entity }
+        format.html { render :new, status: :unprocessable_content }
+        format.json { render json: @node.errors, status: :unprocessable_content }
       end
     end
   end
@@ -47,8 +47,8 @@ class NodesController < ApplicationController
         format.html { redirect_to [ @cluster, @node ], notice: "Node was successfully updated.", status: :see_other }
         format.json { render :show, status: :ok, location: [ @cluster, @node ] }
       else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @node.errors, status: :unprocessable_entity }
+        format.html { render :edit, status: :unprocessable_content }
+        format.json { render json: @node.errors, status: :unprocessable_content }
       end
     end
   end

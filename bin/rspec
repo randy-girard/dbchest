@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Suppress Ruby warnings during test runs
+ENV['RUBYOPT'] = '-W0'
+
+# Load bundler and run rspec
+require 'bundler/setup'
+load Gem.bin_path('rspec-core', 'rspec')

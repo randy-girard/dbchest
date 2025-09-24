@@ -83,7 +83,7 @@ class AnsibleRunService
       end
 
       exit_status = wait_thr.value
-      puts "Ansible exited with status #{exit_status.exitstatus}"
+      Rails.logger.info "Ansible exited with status #{exit_status.exitstatus}"
     end
   ensure
     # Cleanup
@@ -141,7 +141,7 @@ class AnsibleRunService
       ActionCable.server.broadcast("development_console", console_data)
     end
     
-    # Optionally output to console
-    puts payload
+    # Log to Rails logger instead of console
+    Rails.logger.info payload
   end
 end

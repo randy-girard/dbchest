@@ -117,7 +117,7 @@ RSpec.describe ClustersController, type: :controller do
       it "renders the new template" do
         post :create, params: { cluster: invalid_attributes }
         expect(response).to render_template(:new)
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
 
       it "assigns database types" do
@@ -162,7 +162,7 @@ RSpec.describe ClustersController, type: :controller do
       it "renders the edit template" do
         put :update, params: { id: cluster.to_param, cluster: invalid_attributes }
         expect(response).to render_template(:edit)
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
 
       it "assigns database types" do

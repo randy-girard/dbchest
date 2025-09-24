@@ -29,8 +29,8 @@ class ProvidersController < ApplicationController
         format.html { redirect_to provider_path(@provider), notice: "Provider was successfully created." }
         format.json { render :show, status: :created, location: @provider }
       else
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @provider.errors, status: :unprocessable_entity }
+        format.html { render :new, status: :unprocessable_content }
+        format.json { render json: @provider.errors, status: :unprocessable_content }
       end
     end
   end
@@ -42,8 +42,8 @@ class ProvidersController < ApplicationController
         format.html { redirect_to @provider, notice: "Provider was successfully updated.", status: :see_other }
         format.json { render :show, status: :ok, location: @provider }
       else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @provider.errors, status: :unprocessable_entity }
+        format.html { render :edit, status: :unprocessable_content }
+        format.json { render json: @provider.errors, status: :unprocessable_content }
       end
     end
   end

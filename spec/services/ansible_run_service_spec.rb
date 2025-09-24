@@ -221,8 +221,8 @@ RSpec.describe AnsibleRunService, type: :service do
       service.broadcast(task)
     end
 
-    it 'outputs to console' do
-      expect(service).to receive(:puts).with(task.to_json)
+    it 'logs to Rails logger' do
+      expect(Rails.logger).to receive(:info).with(task.to_json)
       service.broadcast(task)
     end
 

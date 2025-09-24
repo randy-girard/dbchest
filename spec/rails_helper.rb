@@ -37,6 +37,18 @@ rescue ActiveRecord::PendingMigrationError => e
   abort e.to_s.strip
 end
 RSpec.configure do |config|
+  # Suppress warnings and output during tests
+  config.before(:suite) do
+    # Suppress Ruby warnings
+    $VERBOSE = nil
+
+    # Suppress Rails logger output during tests
+    Rails.logger.level = Logger::ERROR
+
+    # Suppress ActionCable logger output
+    ActionCable.server.config.logger = Logger.new(nil)
+  end
+
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [
     Rails.root.join('spec/fixtures')
