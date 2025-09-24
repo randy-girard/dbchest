@@ -68,23 +68,51 @@ RSpec.describe ApiController, type: :controller do
       get :index, params: { provider_id: provider.id }
     end
 
-    context "when provider not found" do
-      it "raises ActiveRecord::RecordNotFound" do
-        allow(Provider).to receive(:find).and_raise(ActiveRecord::RecordNotFound)
 
-        expect {
-          get :index, params: { provider_id: 999999 }
-        }.to raise_error(ActiveRecord::RecordNotFound)
+
+    context "when api client is nil" do
+      before do
+        allow(provider).to receive(:api_client).and_return(nil)
+      end
+
+      it "returns unprocessable_content status" do
+        get :index, params: { provider_id: provider.id }
+        expect(response).to have_http_status(:unprocessable_content)
+      end
+
+      it "returns error message in JSON" do
+        get :index, params: { provider_id: provider.id }
+        json_response = JSON.parse(response.body)
+        expect(json_response['error']).to include('Provider client not available')
+      end
+
+      it "logs error message" do
+        expect(Rails.logger).to receive(:error).with(/No API client available/)
+        get :index, params: { provider_id: provider.id }
       end
     end
 
     context "when api client raises an error" do
-      it "allows the error to bubble up" do
+      it "returns internal_server_error status" do
         allow(mock_client).to receive(:call).and_raise(StandardError, "API Error")
 
-        expect {
-          get :index, params: { provider_id: provider.id }
-        }.to raise_error(StandardError, "API Error")
+        get :index, params: { provider_id: provider.id }
+        expect(response).to have_http_status(:internal_server_error)
+      end
+
+      it "returns error message in JSON" do
+        allow(mock_client).to receive(:call).and_raise(StandardError, "API Error")
+
+        get :index, params: { provider_id: provider.id }
+        json_response = JSON.parse(response.body)
+        expect(json_response['error']).to eq('API call failed: API Error')
+      end
+
+      it "logs error message" do
+        allow(mock_client).to receive(:call).and_raise(StandardError, "API Error")
+        expect(Rails.logger).to receive(:error).with('API call failed: API Error')
+
+        get :index, params: { provider_id: provider.id }
       end
     end
 
@@ -107,5 +135,41 @@ RSpec.describe ApiController, type: :controller do
         get :index, params: params
       end
     end
+
+    context "with real provider client integration" do
+      let(:provider_type) { create(:provider_type, key: 'proxmox') }
+      let(:real_provider) { create(:provider, provider_type: provider_type) }
+
+      before do
+        # Clear the mocks from the outer scope for these tests
+        allow(Provider).to receive(:find).and_call_original
+      end
+
+      it "works with registered provider client" do
+        # Mock the actual Proxmox client call
+        mock_proxmox_client = double('ProxmoxClient')
+        allow(ProviderClient::Base).to receive(:for_provider).with(real_provider).and_return(mock_proxmox_client)
+        allow(mock_proxmox_client).to receive(:call).and_return({ 'nodes' => ['pve1', 'pve2'] })
+
+        get :index, params: { provider_id: real_provider.id, function: 'nodes' }
+
+        expect(response).to be_successful
+        json_response = JSON.parse(response.body)
+        expect(json_response['nodes']).to eq(['pve1', 'pve2'])
+      end
+
+      it "handles unknown provider type gracefully" do
+        unknown_provider_type = create(:provider_type, key: 'unknown_provider')
+        unknown_provider = create(:provider, provider_type: unknown_provider_type)
+
+        get :index, params: { provider_id: unknown_provider.id, function: 'nodes' }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        json_response = JSON.parse(response.body)
+        expect(json_response['error']).to include('Provider client not available')
+      end
+    end
   end
+
+
 end

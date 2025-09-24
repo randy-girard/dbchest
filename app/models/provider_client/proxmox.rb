@@ -2,6 +2,9 @@ module ProviderClient
   class Proxmox < ProviderClient::Base
     include ActionView::Helpers::NumberHelper
 
+    # Register this client with the base class
+    Base.register('proxmox', self)
+
     def exists?(node)
       proxmox_node = node.get_runtime_config_value("node")
       vmid = node.get_runtime_config_value("vmid")

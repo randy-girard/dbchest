@@ -143,11 +143,27 @@ RSpec.describe DatabaseTypes::BaseDatabaseType, type: :service do
       let(:unknown_type) { create(:database_type, slug: 'unknown') }
       let(:unknown_version) { create(:database_type_version, database_type: unknown_type) }
 
-      it 'raises ArgumentError' do
+      it 'raises ArgumentError with available types' do
         expect {
           described_class.for_database_type_version(unknown_version)
-        }.to raise_error(ArgumentError, /Unknown database type: unknown/)
+        }.to raise_error(ArgumentError, /Unknown database type: unknown. Available types:/)
       end
+    end
+  end
+
+  describe '.register' do
+    it 'registers a database type handler' do
+      test_class = Class.new(described_class)
+      described_class.register('test_db', test_class)
+
+      expect(described_class.registered_types).to include('test_db')
+    end
+  end
+
+  describe '.registered_types' do
+    it 'returns list of registered database types' do
+      types = described_class.registered_types
+      expect(types).to include('postgresql', 'mysql')
     end
   end
 end

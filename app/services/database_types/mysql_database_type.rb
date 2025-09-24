@@ -2,6 +2,8 @@ require_relative "../cloud_init_generators/mysql_cloud_init_generator"
 
 module DatabaseTypes
   class MysqlDatabaseType < BaseDatabaseType
+    # Register this handler with the base class
+    BaseDatabaseType.register('mysql', self)
     def supports_logical_replication?
       major_version >= 8
     end

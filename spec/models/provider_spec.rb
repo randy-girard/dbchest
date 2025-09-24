@@ -91,17 +91,18 @@ RSpec.describe Provider, type: :model do
       before { provider_type.update!(key: 'proxmox') }
 
       it 'returns Proxmox API client' do
-        allow(provider).to receive(:provider_settings_object).and_return(double('settings'))
-        expect(ProviderClient::Proxmox).to receive(:new).with(provider.provider_settings_object)
+        expect(ProviderClient::Base).to receive(:for_provider).with(provider).and_return(double('client'))
 
-        provider.api_client
+        client = provider.api_client
+        expect(client).not_to be_nil
       end
     end
 
     context 'for unknown provider type' do
       before { provider_type.update!(key: 'unknown') }
 
-      it 'returns nil' do
+      it 'returns nil and logs warning' do
+        expect(Rails.logger).to receive(:warn).with(/Provider client not found/)
         expect(provider.api_client).to be_nil
       end
     end

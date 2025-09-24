@@ -43,10 +43,10 @@ class Provider < ApplicationRecord
   end
 
   def api_client
-    case provider_type.key
-    when "proxmox"
-      ProviderClient::Proxmox.new(provider_settings_object)
-    end
+    ProviderClient::Base.for_provider(self)
+  rescue ArgumentError => e
+    Rails.logger.warn "Provider client not found: #{e.message}"
+    nil
   end
 
   private

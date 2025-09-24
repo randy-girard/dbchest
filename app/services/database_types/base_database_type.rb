@@ -120,15 +120,26 @@ module DatabaseTypes
       }
     end
 
+    # Registry for database type handlers
+    @handlers = {}
+
+    def self.register(slug, handler_class)
+      @handlers[slug.to_s] = handler_class
+    end
+
     def self.for_database_type_version(database_type_version)
-      case database_type_version.database_type.slug
-      when "postgresql"
-        PostgresqlDatabaseType.new(database_type_version)
-      when "mysql"
-        MysqlDatabaseType.new(database_type_version)
+      slug = database_type_version.database_type.slug
+      handler_class = @handlers[slug]
+
+      if handler_class
+        handler_class.new(database_type_version)
       else
-        raise ArgumentError, "Unknown database type: #{database_type_version.database_type.slug}"
+        raise ArgumentError, "Unknown database type: #{slug}. Available types: #{@handlers.keys.join(', ')}"
       end
+    end
+
+    def self.registered_types
+      @handlers.keys
     end
   end
 end

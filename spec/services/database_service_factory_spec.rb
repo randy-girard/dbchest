@@ -62,10 +62,10 @@ RSpec.describe DatabaseServiceFactory, type: :service do
       let(:unknown_cluster) { create(:cluster, database_type: unknown_database_type) }
       let(:node) { create(:node, cluster: unknown_cluster, provider: provider, database_type_version: unknown_version) }
 
-      it 'raises an ArgumentError' do
+      it 'raises an ArgumentError with available types' do
         expect {
           DatabaseServiceFactory.deployment_service_for(node)
-        }.to raise_error(ArgumentError, "Unknown database type: unknown")
+        }.to raise_error(ArgumentError, /Unknown database type: unknown. Available types:/)
       end
     end
   end
@@ -74,32 +74,20 @@ RSpec.describe DatabaseServiceFactory, type: :service do
     context 'with postgresql node' do
       let(:node) { create(:node, cluster: postgresql_cluster, provider: provider, database_type_version: postgresql_version) }
 
-      it 'returns a PostgresqlMonitoringService instance' do
-        # Mock the monitoring service class since it might not exist yet
-        monitoring_service_class = double('PostgresqlMonitoringService')
-        monitoring_service_instance = double('monitoring_service_instance')
-
-        stub_const('DeploymentServices::PostgresqlMonitoringService', monitoring_service_class)
-        expect(monitoring_service_class).to receive(:new).with(node).and_return(monitoring_service_instance)
-
-        service = DatabaseServiceFactory.monitoring_service_for(node)
-        expect(service).to eq(monitoring_service_instance)
+      it 'raises error since monitoring services are not yet implemented' do
+        expect {
+          DatabaseServiceFactory.monitoring_service_for(node)
+        }.to raise_error(ArgumentError, /Unknown database type: postgresql. Available types:/)
       end
     end
 
     context 'with mysql node' do
       let(:node) { create(:node, cluster: mysql_cluster, provider: provider, database_type_version: mysql_version) }
 
-      it 'returns a MysqlMonitoringService instance' do
-        # Mock the monitoring service class since it might not exist yet
-        monitoring_service_class = double('MysqlMonitoringService')
-        monitoring_service_instance = double('monitoring_service_instance')
-
-        stub_const('DeploymentServices::MysqlMonitoringService', monitoring_service_class)
-        expect(monitoring_service_class).to receive(:new).with(node).and_return(monitoring_service_instance)
-
-        service = DatabaseServiceFactory.monitoring_service_for(node)
-        expect(service).to eq(monitoring_service_instance)
+      it 'raises error since monitoring services are not yet implemented' do
+        expect {
+          DatabaseServiceFactory.monitoring_service_for(node)
+        }.to raise_error(ArgumentError, /Unknown database type: mysql. Available types:/)
       end
     end
 
@@ -109,10 +97,44 @@ RSpec.describe DatabaseServiceFactory, type: :service do
       let(:unknown_cluster) { create(:cluster, database_type: unknown_database_type) }
       let(:node) { create(:node, cluster: unknown_cluster, provider: provider, database_type_version: unknown_version) }
 
-      it 'raises an ArgumentError' do
+      it 'raises an ArgumentError with available types' do
         expect {
           DatabaseServiceFactory.monitoring_service_for(node)
-        }.to raise_error(ArgumentError, "Unknown database type: unknown")
+        }.to raise_error(ArgumentError, /Unknown database type: unknown. Available types:/)
+      end
+    end
+  end
+
+  describe 'registry methods' do
+    describe '.register_deployment_service' do
+      it 'registers a deployment service' do
+        test_service = Class.new
+        DatabaseServiceFactory.register_deployment_service('test_db', test_service)
+
+        expect(DatabaseServiceFactory.registered_deployment_types).to include('test_db')
+      end
+    end
+
+    describe '.register_monitoring_service' do
+      it 'registers a monitoring service' do
+        test_service = Class.new
+        DatabaseServiceFactory.register_monitoring_service('test_db', test_service)
+
+        expect(DatabaseServiceFactory.registered_monitoring_types).to include('test_db')
+      end
+    end
+
+    describe '.registered_deployment_types' do
+      it 'returns list of registered deployment service types' do
+        types = DatabaseServiceFactory.registered_deployment_types
+        expect(types).to include('postgresql', 'mysql')
+      end
+    end
+
+    describe '.registered_monitoring_types' do
+      it 'returns list of registered monitoring service types' do
+        types = DatabaseServiceFactory.registered_monitoring_types
+        expect(types).to be_an(Array)
       end
     end
   end

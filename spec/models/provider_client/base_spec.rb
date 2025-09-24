@@ -48,4 +48,72 @@ RSpec.describe ProviderClient::Base, type: :model do
       end
     end
   end
+
+  describe 'registry methods' do
+    describe '.register' do
+      it 'registers a provider client' do
+        test_client = Class.new(described_class)
+        described_class.register('test_provider', test_client)
+
+        expect(described_class.registered_types).to include('test_provider')
+      end
+    end
+
+    describe '.for_provider' do
+      let(:provider_type) { double('provider_type', key: 'test_provider') }
+      let(:provider) { double('provider', provider_type: provider_type, provider_settings_object: settings) }
+      let(:test_client_class) { Class.new(described_class) }
+
+      before do
+        described_class.register('test_provider', test_client_class)
+      end
+
+      it 'returns correct client instance' do
+        client = described_class.for_provider(provider)
+        expect(client).to be_a(test_client_class)
+      end
+
+      it 'raises error for unknown provider type' do
+        unknown_provider_type = double('provider_type', key: 'unknown')
+        unknown_provider = double('provider', provider_type: unknown_provider_type)
+
+        expect {
+          described_class.for_provider(unknown_provider)
+        }.to raise_error(ArgumentError, /Unknown provider type: unknown/)
+      end
+    end
+
+    describe '.registered_types' do
+      it 'returns list of registered provider types' do
+        types = described_class.registered_types
+        expect(types).to include('proxmox')
+      end
+    end
+  end
+
+  describe 'abstract methods' do
+    describe '#exists?' do
+      it 'raises NotImplementedError' do
+        expect {
+          client.exists?(double('node'))
+        }.to raise_error(NotImplementedError, /must implement #exists?/)
+      end
+    end
+
+    describe '#nodes' do
+      it 'raises NotImplementedError' do
+        expect {
+          client.nodes
+        }.to raise_error(NotImplementedError, /must implement #nodes/)
+      end
+    end
+
+    describe '#storage' do
+      it 'raises NotImplementedError' do
+        expect {
+          client.storage
+        }.to raise_error(NotImplementedError, /must implement #storage/)
+      end
+    end
+  end
 end

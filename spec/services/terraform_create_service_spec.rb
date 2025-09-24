@@ -54,7 +54,7 @@ RSpec.describe TerraformCreateService, type: :service do
 
         expect {
           service.perform(invalid_node.id)
-        }.to raise_error(ArgumentError, 'Invalid provider type')
+        }.to raise_error(ArgumentError, /Invalid provider type/)
       end
 
       it 'creates working directory' do
@@ -154,7 +154,7 @@ RSpec.describe TerraformCreateService, type: :service do
       end
 
       it 'logs error message' do
-        expect(Rails.logger).to receive(:error).with(/Terraform deployment failed/)
+        expect(Rails.logger).to receive(:error).with(/Terraform create failed/)
         expect(Rails.logger).to receive(:error).with(/Error:/)
 
         expect { service.perform(node.id) }.to raise_error('Terraform command failed')

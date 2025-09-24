@@ -10,10 +10,9 @@ class AnsibleRunService
   end
 
   def playbook_path(node, playbook)
-    database_type_handler = node.database_type_handler
-    return Rails.root.join(ansible_path, "postgresql", playbook).to_s unless database_type_handler
+    database_type_slug = node.database_type_slug || "postgresql" # fallback for backward compatibility
 
-    Rails.root.join(ansible_path, node.database_type_slug, playbook).to_s
+    Rails.root.join(ansible_path, database_type_slug, playbook).to_s
   end
 
   def perform(node_id, playbook, vars: {})
@@ -38,7 +37,8 @@ class AnsibleRunService
 
     # Create a temporary inventory file
     inventory = Tempfile.new("ansible_inventory")
-    inventory.write("[postgres_servers]\n")
+    inventory_group_name = determine_inventory_group_name(@node)
+    inventory.write("[#{inventory_group_name}]\n")
     hosts.each do |host|
       content = [
         host[:ip],
@@ -143,5 +143,19 @@ class AnsibleRunService
 
     # Log to Rails logger instead of console
     Rails.logger.info payload
+  end
+
+  private
+
+  def determine_inventory_group_name(node)
+    # Use database type-specific group name, with fallback for backward compatibility
+    case node.database_type_slug
+    when "postgresql"
+      "postgres_servers"
+    when "mysql"
+      "mysql_servers"
+    else
+      "database_servers"
+    end
   end
 end
