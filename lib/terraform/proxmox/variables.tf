@@ -42,6 +42,7 @@ variable "node_root_password" {
   type        = string
   description = "Root password for the node"
   sensitive   = true
+  default     = ""
 }
 
 # Proxmox-specific variables  
@@ -121,6 +122,7 @@ variable "database_version" {
 variable "node_id" {
   type        = string
   description = "Node ID from application"
+  default     = ""
 }
 
 variable "is_replica" {

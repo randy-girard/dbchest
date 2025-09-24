@@ -14,17 +14,18 @@ trap cleanup EXIT INT TERM
 
 # Logging function
 log() {
-  echo "[$$(date '+%Y-%m-%d %H:%M:%S')] $$1" | tee -a /var/log/dbchest-setup.log
+  local message="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+  echo "$message" | tee -a /var/log/dbchest-setup.log
 }
 
 # Callback function to update node status
 callback() {
-  local status="$$1"
-  local message="$$2"
+  local status="$1"
+  local message="$2"
   
   curl -s -X POST "{{CALLBACK_URL}}" \
     -H "Content-Type: application/json" \
-    -d "{\"status\": \"$$status\", \"message\": \"$$message\"}" || true
+    -d "{\"status\": \"$status\", \"message\": \"$message\"}" || true
 }
 
 log "Starting DBChest MySQL node setup..."
@@ -80,13 +81,13 @@ mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ROOT_PASSWORD}}';"
 
 # Configure MySQL for remote connections
 MYSQL_CONF="/etc/mysql/mysql.conf.d/mysqld.cnf"
-cp "$$MYSQL_CONF" "$$MYSQL_CONF.backup"
+cp "$MYSQL_CONF" "$MYSQL_CONF.backup"
 
 # Basic configuration
-sed -i 's/bind-address.*/bind-address = 0.0.0.0/' "$$MYSQL_CONF"
-echo "max_connections = 100" >> "$$MYSQL_CONF"
-echo "general_log = 1" >> "$$MYSQL_CONF"
-echo "general_log_file = /var/log/mysql/mysql.log" >> "$$MYSQL_CONF"
+sed -i 's/bind-address.*/bind-address = 0.0.0.0/' "$MYSQL_CONF"
+echo "max_connections = 100" >> "$MYSQL_CONF"
+echo "general_log = 1" >> "$MYSQL_CONF"
+echo "general_log_file = /var/log/mysql/mysql.log" >> "$MYSQL_CONF"
 
 # Restart MySQL to apply configuration
 systemctl restart {{SERVICE_NAME}}
