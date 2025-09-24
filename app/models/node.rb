@@ -12,6 +12,7 @@ class Node < ApplicationRecord
   accepts_nested_attributes_for :node_settings
 
   validates :name, presence: true, uniqueness: { scope: :cluster_id }
+  validates :provider, presence: true
   validate :parent_node_must_be_primary
   validate :database_type_version_matches_cluster
   validate :replica_version_matches_primary

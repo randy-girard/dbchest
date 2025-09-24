@@ -29,7 +29,7 @@ class CredentialsController < ApplicationController
       if @credential.save
         @credential.provision!
         format.html { redirect_to @cluster, notice: "Credential was successfully created." }
-        format.json { render :show, status: :created, location: @credential }
+        format.json { render :show, status: :created, location: [@cluster, @node, @credential] }
       else
         format.html { render :new, status: :unprocessable_entity }
         format.json { render json: @credential.errors, status: :unprocessable_entity }
@@ -42,7 +42,7 @@ class CredentialsController < ApplicationController
     respond_to do |format|
       if @credential.update(credential_params)
         format.html { redirect_to @cluster, notice: "Credential was successfully updated.", status: :see_other }
-        format.json { render :show, status: :ok, location: @credential }
+        format.json { render :show, status: :ok, location: [@cluster, @node, @credential] }
       else
         format.html { render :edit, status: :unprocessable_entity }
         format.json { render json: @credential.errors, status: :unprocessable_entity }

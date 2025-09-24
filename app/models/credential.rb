@@ -1,6 +1,8 @@
 class Credential < ApplicationRecord
   belongs_to :node
 
+  validates :username, presence: true
+
   encrypts :username,
            :password
 

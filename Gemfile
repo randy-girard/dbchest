@@ -72,6 +72,7 @@ group :test do
   gem "database_cleaner-active_record"
   gem "shoulda-matchers"
   gem "simplecov", require: false
+  gem "rails-controller-testing"
 
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"

@@ -20,10 +20,13 @@ class AnsibleRunService
     @node = Node.find_by_id(node_id)
     @node_id = node_id
     @playbook_name = playbook
-    
-    ip = @node.get_runtime_config_value("ip_address")
-    ip_address = IPAddr.new(ip).to_s
 
+    return unless @node
+
+    ip = @node.get_runtime_config_value("ip_address")
+    return unless ip
+
+    ip_address = IPAddr.new(ip).to_s
     return if ip_address.nil?
 
     hosts = [
@@ -84,10 +87,14 @@ class AnsibleRunService
     end
   ensure
     # Cleanup
-    inventory.close
-    inventory.unlink
-    key_file.close
-    key_file.unlink
+    if defined?(inventory) && inventory
+      inventory.close
+      inventory.unlink
+    end
+    if defined?(key_file) && key_file
+      key_file.close
+      key_file.unlink
+    end
   end
 
   # Parse each line for task names or status updates
