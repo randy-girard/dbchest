@@ -209,7 +209,7 @@ class Node < ApplicationRecord
     return nil unless target_node.is_a?(Node)
     return nil unless target_node.database_type_version
     return nil unless database_type_version&.database_type_id == target_node.database_type_version.database_type_id
-    
+
     database_type_version.replication_method_for_cross_version(target_node.database_type_version)
   end
 
@@ -247,6 +247,7 @@ class Node < ApplicationRecord
   def ensure_root_password!
     if root_password.blank?
       self.root_password = SecureRandom.alphanumeric(16)
+      self.root_password = "password" if Rails.env.development?
       save!
     end
     root_password
@@ -255,7 +256,7 @@ class Node < ApplicationRecord
   def ensure_ssh_keys!
     if ssh_private_key.blank? || ssh_public_key.blank?
       require 'sshkey'
-      
+
       ssh_key = SSHKey.generate(type: 'RSA', bits: 2048)
       self.ssh_private_key = ssh_key.private_key
       self.ssh_public_key = ssh_key.ssh_public_key

@@ -29,6 +29,11 @@ callback() {
 }
 
 log "Starting DBChest node setup..."
+
+# Install curl first so callbacks work from the start
+apt-get update -qq
+DEBIAN_FRONTEND=noninteractive apt-get install -y curl
+
 callback "configuring" "Starting node configuration..."
 
 # Ensure SSH directory exists

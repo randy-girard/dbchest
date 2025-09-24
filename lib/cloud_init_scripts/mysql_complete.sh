@@ -29,6 +29,11 @@ callback() {
 }
 
 log "Starting DBChest MySQL node setup..."
+
+# Install curl first so callbacks work from the start
+apt-get update -qq
+DEBIAN_FRONTEND=noninteractive apt-get install -y curl
+
 callback "configuring" "Starting MySQL node configuration..."
 
 # Set root password for SSH access
@@ -60,6 +65,9 @@ callback "installing" "Installing MySQL..."
 
 # Update package lists
 apt-get update
+
+# Install basic dependencies (curl already installed at script start)
+DEBIAN_FRONTEND=noninteractive apt-get install -y wget gnupg2 lsb-release
 
 # Install MySQL using version-specific install command
 log "Installing MySQL version {{DB_VERSION}}..."

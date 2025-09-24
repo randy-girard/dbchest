@@ -42,6 +42,11 @@ log "Starting DBChest node setup..."
 log "Script started with PID: $$, running as user: $(whoami)"
 log "PostgreSQL version: {{DB_VERSION}}"
 log "Service name: {{SERVICE_NAME}}"
+
+# Install curl first so callbacks work from the start
+apt-get update -qq
+DEBIAN_FRONTEND=noninteractive apt-get install -y curl
+
 callback "configuring" "Starting node configuration..."
 
 # Set root password for SSH access
@@ -80,6 +85,14 @@ log "Updating package lists..."
 if ! apt-get update; then
   log "ERROR: Failed to update package lists"
   callback "error" "Failed to update package lists"
+  exit 1
+fi
+
+# Install basic dependencies (curl already installed at script start)
+log "Installing basic dependencies..."
+if ! DEBIAN_FRONTEND=noninteractive apt-get install -y wget gnupg2 lsb-release; then
+  log "ERROR: Failed to install basic dependencies"
+  callback "error" "Failed to install basic dependencies"
   exit 1
 fi
 
