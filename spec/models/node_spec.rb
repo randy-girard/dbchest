@@ -314,6 +314,129 @@ RSpec.describe Node, type: :model do
         end
       end
     end
+
+    describe '#get_ip_address' do
+      context 'when ip_address is in runtime_config' do
+        it 'returns the IP address without subnet' do
+          node.runtime_config = { 'ip_address' => '192.168.1.100/24' }
+          expect(node.get_ip_address).to eq('192.168.1.100')
+        end
+
+        it 'returns the IP address when already clean' do
+          node.runtime_config = { 'ip_address' => '192.168.1.100' }
+          expect(node.get_ip_address).to eq('192.168.1.100')
+        end
+      end
+
+      context 'when ip_address is not in runtime_config' do
+        it 'checks alternative keys' do
+          node.runtime_config = { 'public_ip' => '10.0.0.1' }
+          expect(node.get_ip_address).to eq('10.0.0.1')
+        end
+
+        it 'checks network interfaces' do
+          node.runtime_config = {
+            'network_interfaces' => [
+              { 'ip' => '172.16.0.1/16' },
+              { 'ip' => '192.168.1.100/24' }
+            ]
+          }
+          expect(node.get_ip_address).to eq('172.16.0.1')
+        end
+
+        it 'returns nil when no IP found' do
+          node.runtime_config = {}
+          expect(node.get_ip_address).to be_nil
+        end
+      end
+
+      context 'with invalid IP addresses' do
+        it 'handles invalid IP gracefully' do
+          node.runtime_config = { 'ip_address' => 'invalid-ip' }
+          expect(node.get_ip_address).to eq('invalid-ip')
+        end
+
+        it 'attempts hostname resolution' do
+          node.runtime_config = { 'ip_address' => 'localhost' }
+          allow(Resolv).to receive(:getaddress).with('localhost').and_return('127.0.0.1')
+          expect(node.get_ip_address).to eq('127.0.0.1')
+        end
+
+        it 'handles hostname resolution failure' do
+          node.runtime_config = { 'ip_address' => 'nonexistent.host' }
+          allow(Resolv).to receive(:getaddress).and_raise(Resolv::ResolvError.new('Name not found'))
+          expect(node.get_ip_address).to eq('nonexistent.host')
+        end
+      end
+    end
+
+    describe '#replication_method_for' do
+      let(:target_node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
+
+      it 'returns nil for non-Node objects' do
+        expect(node.replication_method_for('not a node')).to be_nil
+      end
+
+      it 'returns nil when target node has no database_type_version' do
+        target_node.database_type_version = nil
+        expect(node.replication_method_for(target_node)).to be_nil
+      end
+
+      it 'returns nil when database types do not match' do
+        other_db_type = create(:database_type, name: 'MySQL')
+        other_version = create(:database_type_version, database_type: other_db_type)
+        target_node.database_type_version = other_version
+        expect(node.replication_method_for(target_node)).to be_nil
+      end
+
+      it 'delegates to database_type_version for compatible types' do
+        expect(database_type_version).to receive(:replication_method_for_cross_version).with(target_node.database_type_version)
+        node.replication_method_for(target_node)
+      end
+    end
+
+    describe '#provision_replica!' do
+      let(:parent_node) { create(:node, :active, cluster: cluster, provider: provider, database_type_version: database_type_version) }
+      let(:replica) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version, parent_node: parent_node) }
+
+      it 'returns false when no parent node' do
+        expect(node.provision_replica!).to be false
+      end
+
+      it 'returns false when parent node is not active' do
+        parent_node.update!(status: 'pending')
+        expect(replica.provision_replica!).to be false
+      end
+
+      it 'calls CreateService when parent is active' do
+        expect(CreateService).to receive(:perform_async).with(replica.id, true)
+        replica.provision_replica!
+      end
+    end
+
+    describe '#broadcast_status_update' do
+      before { node.save! }
+
+      it 'broadcasts to multiple channels' do
+        expect(ActionCable.server).to receive(:broadcast).at_least(3).times
+        node.send(:broadcast_status_update, 'Test message')
+      end
+
+      it 'includes node data in broadcast' do
+        expect(ActionCable.server).to receive(:broadcast) do |channel, data|
+          expect(data[:id]).to eq(node.id)
+          expect(data[:status]).to eq(node.status)
+          expect(data[:name]).to eq(node.name)
+        end.at_least(:once)
+
+        node.send(:broadcast_status_update, 'Test message')
+      end
+
+      it 'handles broadcast errors gracefully' do
+        allow(ActionCable.server).to receive(:broadcast).and_raise(StandardError.new('Broadcast failed'))
+        expect { node.send(:broadcast_status_update) }.not_to raise_error
+      end
+    end
   end
 
   describe 'factory' do

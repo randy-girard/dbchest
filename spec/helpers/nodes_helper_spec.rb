@@ -58,6 +58,27 @@ RSpec.describe NodesHelper, type: :helper do
   end
 
   describe '#node_status_message_area' do
+    it 'creates a div with correct message area class' do
+      result = helper.node_status_message_area(node)
+      expect(result).to include('<div')
+      expect(result).to include('status-message text-muted small')
+      expect(result).to include("data-node-status-message=\"#{node.id}\"")
+      expect(result).to include('style="display: none;"')
+    end
+
+    it 'accepts additional CSS classes' do
+      result = helper.node_status_message_area(node, class: 'extra-class')
+      expect(result).to include('status-message text-muted small extra-class')
+    end
+
+    it 'handles empty options' do
+      result = helper.node_status_message_area(node, {})
+      expect(result).to include('status-message text-muted small')
+      expect(result).not_to include('extra-class')
+    end
+  end
+
+  describe '#node_status_message_area' do
     it 'creates a div with correct CSS classes' do
       result = helper.node_status_message_area(node)
       expect(result).to include('<div')

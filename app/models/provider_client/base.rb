@@ -7,8 +7,9 @@ module ProviderClient
     end
 
     def call(params)
-      if respond_to?(params[:function])
-        send(params[:function], params)
+      function = params[:function]
+      if function && respond_to?(function)
+        send(function, params)
       end
     end
   end

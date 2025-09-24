@@ -88,14 +88,28 @@ RSpec.describe ApplicationHelper, type: :helper do
       end
     end
 
-    context 'for unknown statuses' do
+    context 'for unknown status' do
       it 'returns primary badge class' do
-        node.status = 'unknown_status'
+        node.status = 'unknown'
         expect(helper.node_status_badge_class(node)).to eq('badge bg-primary')
       end
     end
 
-    context 'when node has no status' do
+    context 'for nil status' do
+      it 'returns warning badge class (defaults to pending)' do
+        node.status = nil
+        expect(helper.node_status_badge_class(node)).to eq('badge bg-warning')
+      end
+    end
+
+    context 'for unknown status' do
+      it 'returns primary badge class' do
+        node.status = 'unknown'
+        expect(helper.node_status_badge_class(node)).to eq('badge bg-primary')
+      end
+    end
+
+    context 'for nil status' do
       it 'returns warning badge class (defaults to pending)' do
         node.status = nil
         expect(helper.node_status_badge_class(node)).to eq('badge bg-warning')
