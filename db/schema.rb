@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_22_182244) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_26_221554) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -57,6 +57,44 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_22_182244) do
     t.index ["slug"], name: "index_database_types_on_slug", unique: true
   end
 
+  create_table "monitoring_configs", force: :cascade do |t|
+    t.bigint "node_id", null: false
+    t.string "config_type", null: false
+    t.jsonb "thresholds", default: {}
+    t.boolean "enabled", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["config_type"], name: "index_monitoring_configs_on_config_type"
+    t.index ["enabled"], name: "index_monitoring_configs_on_enabled"
+    t.index ["node_id", "config_type"], name: "index_monitoring_configs_on_node_id_and_config_type", unique: true
+    t.index ["node_id"], name: "index_monitoring_configs_on_node_id"
+    t.index ["thresholds"], name: "index_monitoring_configs_on_thresholds", using: :gin
+  end
+
+  create_table "node_metrics", force: :cascade do |t|
+    t.bigint "node_id", null: false
+    t.datetime "collected_at", null: false
+    t.decimal "cpu_usage_percent", precision: 5, scale: 2
+    t.bigint "memory_total_mb"
+    t.bigint "memory_used_mb"
+    t.bigint "memory_available_mb"
+    t.bigint "swap_total_mb"
+    t.bigint "swap_used_mb"
+    t.jsonb "disk_usage", default: {}
+    t.jsonb "network_stats", default: {}
+    t.jsonb "load_average", default: {}
+    t.bigint "uptime_seconds"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["collected_at"], name: "index_node_metrics_on_collected_at"
+    t.index ["disk_usage"], name: "index_node_metrics_on_disk_usage", using: :gin
+    t.index ["load_average"], name: "index_node_metrics_on_load_average", using: :gin
+    t.index ["network_stats"], name: "index_node_metrics_on_network_stats", using: :gin
+    t.index ["node_id", "collected_at"], name: "index_node_metrics_on_node_id_and_collected_at"
+    t.index ["node_id", "created_at"], name: "index_node_metrics_on_node_id_and_created_at"
+    t.index ["node_id"], name: "index_node_metrics_on_node_id"
+  end
+
   create_table "node_settings", force: :cascade do |t|
     t.bigint "node_id", null: false
     t.bigint "provider_type_node_option_id", null: false
@@ -83,8 +121,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_22_182244) do
     t.string "status", default: "pending"
     t.bigint "database_type_version_id", null: false
     t.string "root_password"
+    t.string "metrics_api_key"
     t.index ["cluster_id"], name: "index_nodes_on_cluster_id"
     t.index ["database_type_version_id"], name: "index_nodes_on_database_type_version_id"
+    t.index ["metrics_api_key"], name: "index_nodes_on_metrics_api_key", unique: true
     t.index ["parent_node_id"], name: "index_nodes_on_parent_node_id"
     t.index ["provider_id"], name: "index_nodes_on_provider_id"
     t.index ["status"], name: "index_nodes_on_status"
@@ -137,9 +177,32 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_22_182244) do
     t.index ["provider_type_id"], name: "index_providers_on_provider_type_id"
   end
 
+  create_table "server_metrics", force: :cascade do |t|
+    t.string "hostname", null: false
+    t.decimal "cpu_usage", precision: 5, scale: 2, null: false
+    t.bigint "memory_used", null: false
+    t.bigint "memory_total", null: false
+    t.bigint "disk_used", null: false
+    t.bigint "disk_total", null: false
+    t.decimal "load_1m", precision: 8, scale: 2, null: false
+    t.decimal "load_5m", precision: 8, scale: 2, null: false
+    t.decimal "load_15m", precision: 8, scale: 2, null: false
+    t.bigint "network_bytes_sent", default: 0, null: false
+    t.bigint "network_bytes_received", default: 0, null: false
+    t.datetime "collected_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["collected_at"], name: "index_server_metrics_on_collected_at"
+    t.index ["created_at"], name: "index_server_metrics_on_created_at"
+    t.index ["hostname", "collected_at"], name: "index_server_metrics_on_hostname_and_collected_at"
+    t.index ["hostname"], name: "index_server_metrics_on_hostname"
+  end
+
   add_foreign_key "clusters", "database_types"
   add_foreign_key "credentials", "nodes"
   add_foreign_key "database_type_versions", "database_types"
+  add_foreign_key "monitoring_configs", "nodes"
+  add_foreign_key "node_metrics", "nodes"
   add_foreign_key "node_settings", "nodes"
   add_foreign_key "node_settings", "provider_type_node_options"
   add_foreign_key "nodes", "clusters"

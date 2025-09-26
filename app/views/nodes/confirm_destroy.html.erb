@@ -205,15 +205,33 @@ document.addEventListener('DOMContentLoaded', function() {
   const radioButtons = document.querySelectorAll('input[name="replica_action"]');
   const deleteBtn = document.getElementById('delete-btn');
 
-  radioButtons.forEach(function(radio) {
-    radio.addEventListener('change', function() {
-      deleteBtn.disabled = false;
+  // If there are no radio buttons (no replicas), enable the delete button immediately
+  if (radioButtons.length === 0) {
+    deleteBtn.disabled = false;
+  } else {
+    // If there are radio buttons, wait for one to be selected
+    radioButtons.forEach(function(radio) {
+      radio.addEventListener('change', function() {
+        deleteBtn.disabled = false;
+      });
     });
-  });
+  }
 });
 
 function confirmDelete() {
+  const radioButtons = document.querySelectorAll('input[name="replica_action"]');
   const selectedAction = document.querySelector('input[name="replica_action"]:checked');
+
+  // If there are no radio buttons (no replicas), proceed with simple confirmation
+  if (radioButtons.length === 0) {
+    const confirmMessage = 'Are you sure you want to delete this node? This action cannot be undone.';
+    if (confirm(confirmMessage)) {
+      submitDeleteForm();
+    }
+    return;
+  }
+
+  // If there are radio buttons but none selected, show error
   if (!selectedAction) {
     alert('Please select an action for the replica nodes.');
     return;
@@ -235,31 +253,38 @@ function confirmDelete() {
   }
 
   if (confirm(confirmMessage)) {
-    // Create a form and submit it
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '<%= cluster_node_path(@cluster, @node) %>';
-    
-    const methodField = document.createElement('input');
-    methodField.type = 'hidden';
-    methodField.name = '_method';
-    methodField.value = 'DELETE';
-    form.appendChild(methodField);
+    submitDeleteForm(actionValue);
+  }
+}
 
-    const csrfField = document.createElement('input');
-    csrfField.type = 'hidden';
-    csrfField.name = 'authenticity_token';
-    csrfField.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    form.appendChild(csrfField);
+function submitDeleteForm(replicaAction = null) {
+  // Create a form and submit it
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '<%= cluster_node_path(@cluster, @node) %>';
 
+  const methodField = document.createElement('input');
+  methodField.type = 'hidden';
+  methodField.name = '_method';
+  methodField.value = 'DELETE';
+  form.appendChild(methodField);
+
+  const csrfField = document.createElement('input');
+  csrfField.type = 'hidden';
+  csrfField.name = 'authenticity_token';
+  csrfField.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+  form.appendChild(csrfField);
+
+  // Only add replica_action if it's provided (when there are replicas)
+  if (replicaAction) {
     const actionField = document.createElement('input');
     actionField.type = 'hidden';
     actionField.name = 'replica_action';
-    actionField.value = actionValue;
+    actionField.value = replicaAction;
     form.appendChild(actionField);
-
-    document.body.appendChild(form);
-    form.submit();
   }
+
+  document.body.appendChild(form);
+  form.submit();
 }
 </script>

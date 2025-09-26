@@ -7,9 +7,10 @@ class TerraformCreateService < TerraformBaseService
     return unless @node
 
     begin
-      # Ensure SSH keys and root password are generated
+      # Ensure SSH keys, root password, and metrics API key are generated
       @node.ensure_ssh_keys!
       @node.ensure_root_password!
+      @node.ensure_metrics_api_key!
 
       # Setup working environment
       env = setup_working_directory(@node, "create")

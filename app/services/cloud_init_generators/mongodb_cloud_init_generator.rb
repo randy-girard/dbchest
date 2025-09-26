@@ -9,6 +9,7 @@ module CloudInitGenerators
         start_mongodb_service,
         setup_replication(is_replica),
         create_sample_data,
+        setup_metrics_collection,
         final_status_update
       ]
 
@@ -132,19 +133,86 @@ module CloudInitGenerators
       SCRIPT
     end
 
+    def setup_metrics_collection
+      <<~SCRIPT
+        # Setup metrics collection
+        echo "Setting up metrics collection..."
+
+        # Create metrics collector script
+        cat > /usr/local/bin/dbchest-metrics-collector.sh << 'METRICS_SCRIPT_EOF'
+        #{metrics_collector_script_content}
+        METRICS_SCRIPT_EOF
+
+        # Make script executable
+        chmod +x /usr/local/bin/dbchest-metrics-collector.sh
+
+        # Create systemd service
+        cat > /etc/systemd/system/dbchest-metrics.service << 'SERVICE_EOF'
+        #{metrics_service_content}
+        SERVICE_EOF
+
+        # Create systemd timer
+        cat > /etc/systemd/system/dbchest-metrics.timer << 'TIMER_EOF'
+        #{metrics_timer_content}
+        TIMER_EOF
+
+        # Reload systemd and enable the timer
+        systemctl daemon-reload
+        systemctl enable dbchest-metrics.timer
+        systemctl start dbchest-metrics.timer
+
+        echo "Metrics collection service installed and started"
+      SCRIPT
+    end
+
     def final_status_update
       <<~SCRIPT
         # Final status update
         echo "MongoDB #{node.replica? ? 'replica' : 'primary'} setup completed successfully!"
-        
+
         # Log MongoDB status
         systemctl status mongod --no-pager
-        
+
         # Log replica set status (if applicable)
         if #{database_type_handler.supports_logical_replication?}; then
           mongosh --eval 'rs.status()' --quiet || echo "Replica set not yet configured"
         fi
       SCRIPT
+    end
+
+    # Helper methods for metrics collection scripts
+    def metrics_collector_script_content
+      script_path = Rails.root.join("lib", "cloud_init_scripts", "metrics_collector.sh")
+      script_content = File.read(script_path)
+
+      # Substitute variables in the metrics collector script
+      script_content.gsub!("{{DBCHEST_API_URL}}", metrics_api_base_url)
+      script_content.gsub!("{{NODE_ID}}", node.id.to_s)
+      script_content.gsub!("{{METRICS_API_KEY}}", node.ensure_metrics_api_key!)
+
+      script_content
+    end
+
+    def metrics_service_content
+      File.read(Rails.root.join("lib", "cloud_init_scripts", "dbchest-metrics.service"))
+    end
+
+    def metrics_timer_content
+      File.read(Rails.root.join("lib", "cloud_init_scripts", "dbchest-metrics.timer"))
+    end
+
+    def metrics_api_base_url
+      # Use the same logic as the base generator for consistency
+      port = ENV["PORT"] || "3000"
+
+      if Rails.env.development?
+        # Try to get the host IP that the container can reach
+        # This might be host.docker.internal for Docker Desktop or the actual IP
+        ENV["DBCHEST_CALLBACK_HOST"] || "http://host.docker.internal:#{port}"
+      else
+        # In production, use the actual application URL
+        Rails.application.routes.default_url_options[:host] || "http://localhost:#{port}"
+      end
     end
   end
 end

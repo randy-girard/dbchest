@@ -35,6 +35,14 @@ module CloudInitGenerators
         script_content.gsub!("{{SERVICE_NAME}}", node.database_type_version.service_name)
       end
 
+      # Replace metrics collection variables
+      script_content.gsub!("{{DBCHEST_API_URL}}", metrics_api_base_url)
+      script_content.gsub!("{{NODE_ID}}", node.id.to_s)
+      script_content.gsub!("{{METRICS_API_KEY}}", node.ensure_metrics_api_key!)
+      script_content.gsub!("{{METRICS_COLLECTOR_SCRIPT}}", metrics_collector_script_content)
+      script_content.gsub!("{{METRICS_SERVICE}}", metrics_service_content)
+      script_content.gsub!("{{METRICS_TIMER}}", metrics_timer_content)
+
       # Add replica-specific substitutions if needed
       if is_replica
         Rails.logger.debug "BaseCloudInitGenerator: Generating replica script for node #{node.id}"
@@ -90,6 +98,43 @@ module CloudInitGenerators
             -s -o /dev/null || true
         }
       SCRIPT
+    end
+
+    # Metrics-related helper methods
+    def metrics_api_base_url
+      # Use the same logic as callback_url for consistency
+      port = ENV["PORT"] || "3000"
+
+      if Rails.env.development?
+        # Try to get the host IP that the container can reach
+        # This might be host.docker.internal for Docker Desktop or the actual IP
+        ENV["DBCHEST_CALLBACK_HOST"] || "http://host.docker.internal:#{port}"
+      else
+        # In production, use the actual application URL
+        Rails.application.routes.default_url_options[:host] || "http://localhost:#{port}"
+      end
+    end
+
+    def metrics_collector_script_content
+      script_path = Rails.root.join("lib", "cloud_init_scripts", "metrics_collector.sh")
+      script_content = File.read(script_path)
+
+      # Substitute variables in the metrics collector script
+      script_content.gsub!("{{DBCHEST_API_URL}}", metrics_api_base_url)
+      script_content.gsub!("{{NODE_ID}}", node.id.to_s)
+      script_content.gsub!("{{METRICS_API_KEY}}", node.ensure_metrics_api_key!)
+
+      script_content
+    end
+
+    def metrics_service_content
+      service_path = Rails.root.join("lib", "cloud_init_scripts", "dbchest-metrics.service")
+      File.read(service_path)
+    end
+
+    def metrics_timer_content
+      timer_path = Rails.root.join("lib", "cloud_init_scripts", "dbchest-metrics.timer")
+      File.read(timer_path)
     end
 
     def callback_url

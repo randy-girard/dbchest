@@ -1,0 +1,311 @@
+<% content_for :title, "Node Dashboard - #{@node.name}" %>
+
+<div class="container-fluid" data-controller="node-metrics-dashboard" 
+     data-node-metrics-dashboard-node-id-value="<%= @node.id %>"
+     data-node-metrics-dashboard-cluster-id-value="<%= @node.cluster_id %>">
+  
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="h3 mb-1">
+            <i class="fas fa-server me-2"></i>
+            <%= @node.name %>
+            <span class="badge bg-<%= @node.status == 'active' ? 'success' : 'warning' %> ms-2">
+              <%= @node.status.humanize %>
+            </span>
+          </h1>
+          <p class="text-muted mb-0">
+            <%= @node.database_type_name %> <%= @node.database_version %> 
+            <%= @node.replica? ? "Replica" : "Primary" %> Node
+          </p>
+        </div>
+        <div class="text-end">
+          <%= link_to "Back to Cluster", cluster_path(@node.cluster), class: "btn btn-outline-secondary" %>
+          <div class="btn-group ms-2" role="group">
+            <button type="button" class="btn btn-outline-primary" data-action="click->node-metrics-dashboard#refreshData">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <div class="btn-group" role="group">
+              <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-clock"></i> Time Range
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" data-action="click->node-metrics-dashboard#changeTimeRange" data-range="15m">Last 15 minutes</a></li>
+                <li><a class="dropdown-item" href="#" data-action="click->node-metrics-dashboard#changeTimeRange" data-range="1h">Last hour</a></li>
+                <li><a class="dropdown-item" href="#" data-action="click->node-metrics-dashboard#changeTimeRange" data-range="6h">Last 6 hours</a></li>
+                <li><a class="dropdown-item" href="#" data-action="click->node-metrics-dashboard#changeTimeRange" data-range="24h">Last 24 hours</a></li>
+                <li><a class="dropdown-item" href="#" data-action="click->node-metrics-dashboard#changeTimeRange" data-range="7d">Last 7 days</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts Section -->
+  <div class="row mb-4" data-node-metrics-dashboard-target="alertsContainer" style="display: none;">
+    <div class="col-12">
+      <div class="alert alert-warning" role="alert">
+        <h6 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Active Alerts</h6>
+        <div data-node-metrics-dashboard-target="alertsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Metrics Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title text-muted">CPU Usage</h6>
+              <h3 class="mb-0" data-node-metrics-dashboard-target="cpuUsage">
+                <%= @latest_metrics&.cpu_usage_percent || "N/A" %>%
+              </h3>
+            </div>
+            <div class="text-primary">
+              <i class="fas fa-microchip fa-2x"></i>
+            </div>
+          </div>
+          <div class="mt-2">
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar" data-node-metrics-dashboard-target="cpuProgressBar" 
+                   style="width: <%= @latest_metrics&.cpu_usage_percent || 0 %>%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title text-muted">Memory Usage</h6>
+              <h3 class="mb-0" data-node-metrics-dashboard-target="memoryUsage">
+                <%= @latest_metrics&.memory_usage_percent || "N/A" %>%
+              </h3>
+            </div>
+            <div class="text-success">
+              <i class="fas fa-memory fa-2x"></i>
+            </div>
+          </div>
+          <div class="mt-2">
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar bg-success" data-node-metrics-dashboard-target="memoryProgressBar" 
+                   style="width: <%= @latest_metrics&.memory_usage_percent || 0 %>%"></div>
+            </div>
+            <small class="text-muted">
+              <%= number_to_human_size((@latest_metrics&.memory_used_mb || 0) * 1024 * 1024) %> / 
+              <%= number_to_human_size((@latest_metrics&.memory_total_mb || 0) * 1024 * 1024) %>
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title text-muted">Disk Usage</h6>
+              <h3 class="mb-0" data-node-metrics-dashboard-target="diskUsage">
+                <%= @latest_metrics&.disk_usage_percent('/') || "N/A" %>%
+              </h3>
+            </div>
+            <div class="text-warning">
+              <i class="fas fa-hdd fa-2x"></i>
+            </div>
+          </div>
+          <div class="mt-2">
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar bg-warning" data-node-metrics-dashboard-target="diskProgressBar" 
+                   style="width: <%= @latest_metrics&.disk_usage_percent('/') || 0 %>%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title text-muted">Uptime</h6>
+              <h3 class="mb-0" data-node-metrics-dashboard-target="uptime">
+                <%= @latest_metrics&.uptime_formatted || "N/A" %>
+              </h3>
+            </div>
+            <div class="text-info">
+              <i class="fas fa-clock fa-2x"></i>
+            </div>
+          </div>
+          <div class="mt-2">
+            <small class="text-muted">
+              Health: <span class="badge bg-<%= @health_status == 'healthy' ? 'success' : @health_status == 'warning' ? 'warning' : 'danger' %>" 
+                           data-node-metrics-dashboard-target="healthStatus">
+                <%= @health_status&.humanize || 'Unknown' %>
+              </span>
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="row">
+    <!-- CPU Chart -->
+    <div class="col-lg-6 mb-4">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fas fa-microchip me-2"></i>CPU Usage Over Time
+          </h6>
+        </div>
+        <div class="card-body">
+          <canvas data-node-metrics-dashboard-target="cpuChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Memory Chart -->
+    <div class="col-lg-6 mb-4">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fas fa-memory me-2"></i>Memory Usage Over Time
+          </h6>
+        </div>
+        <div class="card-body">
+          <canvas data-node-metrics-dashboard-target="memoryChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load Average Chart -->
+    <div class="col-lg-6 mb-4">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fas fa-tachometer-alt me-2"></i>Load Average
+          </h6>
+        </div>
+        <div class="card-body">
+          <canvas data-node-metrics-dashboard-target="loadChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Disk Usage Chart -->
+    <div class="col-lg-6 mb-4">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fas fa-hdd me-2"></i>Disk Usage Over Time
+          </h6>
+        </div>
+        <div class="card-body">
+          <canvas data-node-metrics-dashboard-target="diskChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Network and System Info -->
+  <div class="row">
+    <div class="col-lg-6 mb-4">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fas fa-network-wired me-2"></i>Network Statistics
+          </h6>
+        </div>
+        <div class="card-body">
+          <div data-node-metrics-dashboard-target="networkStats">
+            <% if @latest_metrics %>
+              <% @latest_metrics.network_interfaces.each do |interface| %>
+                <div class="row mb-2">
+                  <div class="col-3"><strong><%= interface %></strong></div>
+                  <div class="col-4">
+                    <small class="text-muted">RX:</small> 
+                    <%= number_to_human_size(@latest_metrics.network_rx_bytes(interface)) %>
+                  </div>
+                  <div class="col-4">
+                    <small class="text-muted">TX:</small> 
+                    <%= number_to_human_size(@latest_metrics.network_tx_bytes(interface)) %>
+                  </div>
+                </div>
+              <% end %>
+            <% else %>
+              <p class="text-muted">No network data available</p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fas fa-info-circle me-2"></i>System Information
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-6">
+              <strong>Node ID:</strong><br>
+              <small class="text-muted"><%= @node.id %></small>
+            </div>
+            <div class="col-6">
+              <strong>IP Address:</strong><br>
+              <small class="text-muted"><%= @node.get_ip_address || 'N/A' %></small>
+            </div>
+          </div>
+          <hr>
+          <div class="row">
+            <div class="col-6">
+              <strong>Created:</strong><br>
+              <small class="text-muted"><%= @node.created_at.strftime("%Y-%m-%d %H:%M") %></small>
+            </div>
+            <div class="col-6">
+              <strong>Last Metrics:</strong><br>
+              <small class="text-muted" data-node-metrics-dashboard-target="lastUpdate">
+                <%= @latest_metrics&.collected_at&.strftime("%Y-%m-%d %H:%M:%S") || 'Never' %>
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connection Status -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="mb-0">Real-time Connection Status</h6>
+              <small class="text-muted">Live metrics updates via WebSocket</small>
+            </div>
+            <div>
+              <span class="badge bg-secondary" data-node-metrics-dashboard-target="connectionStatus">
+                Connecting...
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -21,6 +21,12 @@ Rails.application.routes.draw do
     end
     # Status API for ActionCable fallback
     get "nodes/status", to: "nodes_status#index"
+
+    # Cluster dashboard
+    resource :dashboard, controller: 'cluster_dashboards', only: [:show] do
+      get :metrics_summary
+      get :live_status
+    end
   end
 
   # Individual node status API
@@ -28,6 +34,22 @@ Rails.application.routes.draw do
 
   # Cloud-init callback API
   post "nodes/:id/status_callback", to: "node_status_callbacks#update", as: :node_status_callback
+
+  # Node metrics API
+  resources :nodes, only: [] do
+    resources :metrics, controller: 'node_metrics', only: [:create, :index] do
+      collection do
+        get :latest
+        get :summary
+      end
+    end
+
+    # Node dashboard
+    resource :dashboard, controller: 'node_dashboards', only: [:show] do
+      get :metrics_data
+      get :live_metrics
+    end
+  end
 
   # ActionCable test routes (development/testing)
   get "action_cable_test", to: "action_cable_test#index"

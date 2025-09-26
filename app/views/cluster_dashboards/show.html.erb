@@ -1,0 +1,315 @@
+<% content_for :title, "Cluster Dashboard - #{@cluster.name}" %>
+
+<div class="container-fluid" data-controller="cluster-metrics-dashboard" 
+     data-cluster-metrics-dashboard-cluster-id-value="<%= @cluster.id %>">
+  
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="h3 mb-1">
+            <i class="fas fa-layer-group me-2"></i>
+            <%= @cluster.name %> Cluster
+            <span class="badge bg-<%= @cluster_health[:status] == 'healthy' ? 'success' : @cluster_health[:status] == 'warning' ? 'warning' : 'danger' %> ms-2">
+              <%= @cluster_health[:status].humanize %>
+            </span>
+          </h1>
+          <p class="text-muted mb-0">
+            <%= @cluster.database_type.name %> Cluster with <%= @nodes.count %> nodes
+            (<%= @nodes.where(status: 'active').count %> active)
+          </p>
+        </div>
+        <div class="text-end">
+          <%= link_to "Back to Clusters", clusters_path, class: "btn btn-outline-secondary" %>
+          <div class="btn-group ms-2" role="group">
+            <button type="button" class="btn btn-outline-primary" data-action="click->cluster-metrics-dashboard#refreshData">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <div class="btn-group" role="group">
+              <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-clock"></i> Time Range
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" data-action="click->cluster-metrics-dashboard#changeTimeRange" data-range="15m">Last 15 minutes</a></li>
+                <li><a class="dropdown-item" href="#" data-action="click->cluster-metrics-dashboard#changeTimeRange" data-range="1h">Last hour</a></li>
+                <li><a class="dropdown-item" href="#" data-action="click->cluster-metrics-dashboard#changeTimeRange" data-range="6h">Last 6 hours</a></li>
+                <li><a class="dropdown-item" href="#" data-action="click->cluster-metrics-dashboard#changeTimeRange" data-range="24h">Last 24 hours</a></li>
+                <li><a class="dropdown-item" href="#" data-action="click->cluster-metrics-dashboard#changeTimeRange" data-range="7d">Last 7 days</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cluster Health Alert -->
+  <% if @cluster_health[:status] != 'healthy' %>
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="alert alert-<%= @cluster_health[:status] == 'warning' ? 'warning' : 'danger' %>" role="alert">
+          <h6 class="alert-heading">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Cluster Health Alert
+          </h6>
+          <%= @cluster_health[:message] %>
+          <% if @recent_alerts.any? %>
+            <hr>
+            <small>Recent alerts: <%= @recent_alerts.first(3).map { |a| "#{a[:node_name]}: #{a[:message]}" }.join(", ") %></small>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Cluster Overview Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title text-muted">Cluster CPU</h6>
+              <h3 class="mb-0" data-cluster-metrics-dashboard-target="clusterCpu">
+                <%= @cluster_metrics.dig(:cpu, :average) || "N/A" %>%
+              </h3>
+            </div>
+            <div class="text-primary">
+              <i class="fas fa-microchip fa-2x"></i>
+            </div>
+          </div>
+          <div class="mt-2">
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar" data-cluster-metrics-dashboard-target="clusterCpuBar" 
+                   style="width: <%= @cluster_metrics.dig(:cpu, :average) || 0 %>%"></div>
+            </div>
+            <small class="text-muted">
+              Avg: <%= @cluster_metrics.dig(:cpu, :average) || 0 %>% | 
+              Max: <%= @cluster_metrics.dig(:cpu, :max) || 0 %>%
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title text-muted">Cluster Memory</h6>
+              <h3 class="mb-0" data-cluster-metrics-dashboard-target="clusterMemory">
+                <%= @cluster_metrics.dig(:memory, :usage_percent) || "N/A" %>%
+              </h3>
+            </div>
+            <div class="text-success">
+              <i class="fas fa-memory fa-2x"></i>
+            </div>
+          </div>
+          <div class="mt-2">
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar bg-success" data-cluster-metrics-dashboard-target="clusterMemoryBar" 
+                   style="width: <%= @cluster_metrics.dig(:memory, :usage_percent) || 0 %>%"></div>
+            </div>
+            <small class="text-muted">
+              <%= number_to_human_size((@cluster_metrics.dig(:memory, :used_mb) || 0) * 1024 * 1024) %> / 
+              <%= number_to_human_size((@cluster_metrics.dig(:memory, :total_mb) || 0) * 1024 * 1024) %>
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title text-muted">Cluster Storage</h6>
+              <h3 class="mb-0" data-cluster-metrics-dashboard-target="clusterDisk">
+                <%= @cluster_metrics.dig(:disk, :usage_percent) || "N/A" %>%
+              </h3>
+            </div>
+            <div class="text-warning">
+              <i class="fas fa-hdd fa-2x"></i>
+            </div>
+          </div>
+          <div class="mt-2">
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar bg-warning" data-cluster-metrics-dashboard-target="clusterDiskBar" 
+                   style="width: <%= @cluster_metrics.dig(:disk, :usage_percent) || 0 %>%"></div>
+            </div>
+            <small class="text-muted">
+              <%= @cluster_metrics.dig(:disk, :used_gb) || 0 %> GB / 
+              <%= @cluster_metrics.dig(:disk, :total_gb) || 0 %> GB
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title text-muted">Node Health</h6>
+              <h3 class="mb-0" data-cluster-metrics-dashboard-target="healthyNodes">
+                <%= @cluster_health[:healthy_nodes] %>/<%= @cluster_health[:total_nodes] %>
+              </h3>
+            </div>
+            <div class="text-info">
+              <i class="fas fa-heartbeat fa-2x"></i>
+            </div>
+          </div>
+          <div class="mt-2">
+            <div class="d-flex justify-content-between">
+              <span class="badge bg-success"><%= @cluster_health[:healthy_nodes] %> Healthy</span>
+              <% if @cluster_health[:warning_nodes] > 0 %>
+                <span class="badge bg-warning"><%= @cluster_health[:warning_nodes] %> Warning</span>
+              <% end %>
+              <% if @cluster_health[:critical_nodes] > 0 %>
+                <span class="badge bg-danger"><%= @cluster_health[:critical_nodes] %> Critical</span>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nodes Grid -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fas fa-server me-2"></i>Cluster Nodes
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row" data-cluster-metrics-dashboard-target="nodesGrid">
+            <% @nodes.each do |node| %>
+              <div class="col-lg-4 col-md-6 mb-3" data-node-id="<%= node.id %>">
+                <div class="card border-<%= node.current_health_status == 'healthy' ? 'success' : node.current_health_status == 'warning' ? 'warning' : 'danger' %>">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <h6 class="card-title mb-1">
+                          <%= link_to node.name, node_dashboard_path(node), class: "text-decoration-none" %>
+                          <% if node.replica? %>
+                            <small class="badge bg-secondary">Replica</small>
+                          <% else %>
+                            <small class="badge bg-primary">Primary</small>
+                          <% end %>
+                        </h6>
+                        <small class="text-muted"><%= node.get_ip_address || 'No IP' %></small>
+                      </div>
+                      <span class="badge bg-<%= node.status == 'active' ? 'success' : 'warning' %>">
+                        <%= node.status.humanize %>
+                      </span>
+                    </div>
+                    
+                    <% if node.latest_metrics %>
+                      <div class="row text-center">
+                        <div class="col-4">
+                          <small class="text-muted d-block">CPU</small>
+                          <strong class="text-<%= node.latest_metrics.cpu_status == 'healthy' ? 'success' : node.latest_metrics.cpu_status == 'warning' ? 'warning' : 'danger' %>">
+                            <%= node.latest_metrics.cpu_usage_percent %>%
+                          </strong>
+                        </div>
+                        <div class="col-4">
+                          <small class="text-muted d-block">Memory</small>
+                          <strong class="text-<%= node.latest_metrics.memory_status == 'healthy' ? 'success' : node.latest_metrics.memory_status == 'warning' ? 'warning' : 'danger' %>">
+                            <%= node.latest_metrics.memory_usage_percent %>%
+                          </strong>
+                        </div>
+                        <div class="col-4">
+                          <small class="text-muted d-block">Disk</small>
+                          <strong class="text-<%= node.latest_metrics.disk_status('/') == 'healthy' ? 'success' : node.latest_metrics.disk_status('/') == 'warning' ? 'warning' : 'danger' %>">
+                            <%= node.latest_metrics.disk_usage_percent('/') %>%
+                          </strong>
+                        </div>
+                      </div>
+                      
+                      <div class="mt-2">
+                        <small class="text-muted">
+                          Last update: <%= time_ago_in_words(node.latest_metrics.collected_at) %> ago
+                        </small>
+                      </div>
+                    <% else %>
+                      <div class="text-center text-muted">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        No metrics available
+                      </div>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Alerts -->
+  <% if @recent_alerts.any? %>
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h6 class="card-title mb-0">
+              <i class="fas fa-exclamation-triangle me-2"></i>Recent Alerts
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <% @recent_alerts.first(10).each do |alert| %>
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong><%= alert[:node_name] %></strong>
+                    <span class="badge bg-<%= alert[:type] == 'critical' ? 'danger' : 'warning' %> ms-2">
+                      <%= alert[:type].humanize %>
+                    </span>
+                    <br>
+                    <small class="text-muted"><%= alert[:message] %></small>
+                  </div>
+                  <div class="text-end">
+                    <small class="text-muted">
+                      <%= time_ago_in_words(Time.parse(alert[:timestamp])) %> ago
+                    </small>
+                    <br>
+                    <%= link_to "View Node", node_dashboard_path(alert[:node_id]), class: "btn btn-sm btn-outline-primary" %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Connection Status -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="mb-0">Real-time Connection Status</h6>
+              <small class="text-muted">Live cluster metrics updates via WebSocket</small>
+            </div>
+            <div>
+              <span class="badge bg-secondary" data-cluster-metrics-dashboard-target="connectionStatus">
+                Connecting...
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

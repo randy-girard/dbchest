@@ -1,0 +1,11 @@
+[Unit]
+Description=Run DBChest Node Metrics Collector every 30 seconds
+Requires=dbchest-metrics.service
+
+[Timer]
+OnBootSec=30sec
+OnUnitActiveSec=30sec
+AccuracySec=1sec
+
+[Install]
+WantedBy=timers.target

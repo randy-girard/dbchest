@@ -520,5 +520,40 @@ else
   log "PostgreSQL primary setup completed successfully"
 fi
 
+# Setup metrics collection
+setup_metrics_collection() {
+  log "Setting up metrics collection..."
+  callback "configuring" "Installing metrics collection system..."
+
+  # Create metrics collector script
+  cat > /usr/local/bin/dbchest-metrics-collector.sh << 'METRICS_SCRIPT_EOF'
+{{METRICS_COLLECTOR_SCRIPT}}
+METRICS_SCRIPT_EOF
+
+  # Make script executable
+  chmod +x /usr/local/bin/dbchest-metrics-collector.sh
+
+  # Create systemd service
+  cat > /etc/systemd/system/dbchest-metrics.service << 'SERVICE_EOF'
+{{METRICS_SERVICE}}
+SERVICE_EOF
+
+  # Create systemd timer
+  cat > /etc/systemd/system/dbchest-metrics.timer << 'TIMER_EOF'
+{{METRICS_TIMER}}
+TIMER_EOF
+
+  # Reload systemd and enable the timer
+  systemctl daemon-reload
+  systemctl enable dbchest-metrics.timer
+  systemctl start dbchest-metrics.timer
+
+  log "Metrics collection service installed and started"
+  callback "configuring" "Metrics collection system active"
+}
+
+# Call metrics setup function
+setup_metrics_collection
+
 log "PostgreSQL setup completed successfully"
 callback "active" "Database node is ready"
