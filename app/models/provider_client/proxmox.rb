@@ -3,7 +3,7 @@ module ProviderClient
     include ActionView::Helpers::NumberHelper
 
     # Register this client with the base class
-    Base.register('proxmox', self)
+    Base.register("proxmox", self)
 
     def exists?(node)
       proxmox_node = node.get_runtime_config_value("node")

@@ -9,7 +9,7 @@ class CreateMonitoringConfigs < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    add_index :monitoring_configs, [:node_id, :config_type], unique: true
+    add_index :monitoring_configs, [ :node_id, :config_type ], unique: true
     add_index :monitoring_configs, :config_type
     add_index :monitoring_configs, :enabled
     add_index :monitoring_configs, :thresholds, using: :gin

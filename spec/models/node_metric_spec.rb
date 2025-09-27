@@ -6,7 +6,7 @@ RSpec.describe NodeMetric, type: :model do
   let(:cluster) { create(:cluster, database_type: database_type) }
   let(:provider) { create(:provider) }
   let(:node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
-  
+
   let(:valid_attributes) do
     {
       node: node,
@@ -70,7 +70,7 @@ RSpec.describe NodeMetric, type: :model do
 
     describe '.recent' do
       it 'orders by collected_at descending' do
-        expect(NodeMetric.recent).to eq([latest_metric, recent_metric, old_metric])
+        expect(NodeMetric.recent).to eq([ latest_metric, recent_metric, old_metric ])
       end
     end
 
@@ -118,12 +118,13 @@ RSpec.describe NodeMetric, type: :model do
     end
 
     describe '.max_memory_for_period' do
-      let!(:memory_metric1) { create(:node_metric, node: node, memory_used_mb: 2048, collected_at: 2.hours.ago) }
-      let!(:memory_metric2) { create(:node_metric, node: node, memory_used_mb: 4096, collected_at: 1.hour.ago) }
-      let!(:memory_metric3) { create(:node_metric, node: node, memory_used_mb: 3072, collected_at: 30.minutes.ago) }
+      let(:memory_node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
+      let!(:memory_metric1) { create(:node_metric, node: memory_node, memory_used_mb: 2048, collected_at: 2.hours.ago) }
+      let!(:memory_metric2) { create(:node_metric, node: memory_node, memory_used_mb: 4096, collected_at: 1.hour.ago) }
+      let!(:memory_metric3) { create(:node_metric, node: memory_node, memory_used_mb: 3072, collected_at: 30.minutes.ago) }
 
       it 'returns maximum memory usage for a period' do
-        max_memory = NodeMetric.max_memory_for_period(node.id, 3.hours.ago, Time.current)
+        max_memory = NodeMetric.max_memory_for_period(memory_node.id, 3.hours.ago, Time.current)
         expect(max_memory).to eq(4096)
       end
     end
@@ -181,7 +182,7 @@ RSpec.describe NodeMetric, type: :model do
     subject { build(:node_metric, valid_attributes) }
 
     it 'returns network interfaces' do
-      expect(subject.network_interfaces).to eq(['eth0'])
+      expect(subject.network_interfaces).to eq([ 'eth0' ])
     end
 
     it 'returns network statistics for interface' do
@@ -200,7 +201,7 @@ RSpec.describe NodeMetric, type: :model do
     subject { build(:node_metric, valid_attributes) }
 
     it 'returns disk mounts' do
-      expect(subject.disk_mounts).to eq(['/'])
+      expect(subject.disk_mounts).to eq([ '/' ])
     end
 
     it 'returns disk usage statistics' do
@@ -268,9 +269,9 @@ RSpec.describe NodeMetric, type: :model do
 
     describe '#overall_health_status' do
       it 'returns critical if any metric is critical' do
-        metric = build(:node_metric, 
+        metric = build(:node_metric,
           cpu_usage_percent: 90, # critical
-          memory_total_mb: 8192, 
+          memory_total_mb: 8192,
           memory_used_mb: 4096, # healthy
           disk_usage: { '/' => { 'usage_percent' => 50 } } # healthy
         )
@@ -278,9 +279,9 @@ RSpec.describe NodeMetric, type: :model do
       end
 
       it 'returns warning if any metric is warning and none critical' do
-        metric = build(:node_metric, 
+        metric = build(:node_metric,
           cpu_usage_percent: 75, # warning
-          memory_total_mb: 8192, 
+          memory_total_mb: 8192,
           memory_used_mb: 4096, # healthy
           disk_usage: { '/' => { 'usage_percent' => 50 } } # healthy
         )
@@ -288,9 +289,9 @@ RSpec.describe NodeMetric, type: :model do
       end
 
       it 'returns healthy if all metrics are healthy' do
-        metric = build(:node_metric, 
+        metric = build(:node_metric,
           cpu_usage_percent: 50, # healthy
-          memory_total_mb: 8192, 
+          memory_total_mb: 8192,
           memory_used_mb: 4096, # healthy
           disk_usage: { '/' => { 'usage_percent' => 50 } } # healthy
         )
@@ -304,7 +305,7 @@ RSpec.describe NodeMetric, type: :model do
 
     it 'returns properly formatted JSON' do
       json = subject.to_metrics_json
-      
+
       expect(json).to include(:cpu, :memory, :swap, :disk, :network, :load_average, :uptime, :health_status)
       expect(json[:cpu]).to include(:usage_percent, :status)
       expect(json[:memory]).to include(:total_mb, :used_mb, :available_mb, :usage_percent, :status)

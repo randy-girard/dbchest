@@ -5,14 +5,14 @@ RSpec.describe MonitoringConfig, type: :model do
   let(:database_type_version) { create(:database_type_version, database_type: database_type) }
   let(:cluster) { create(:cluster, database_type: database_type) }
   let(:provider) { create(:provider) }
-  let(:node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
 
   describe 'associations' do
     it { should belong_to(:node) }
   end
 
   describe 'validations' do
-    subject { build(:monitoring_config, node: node, config_type: 'cpu') }
+    let(:validation_node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
+    subject { build(:monitoring_config, node: validation_node, config_type: 'load_average') }
 
     it { should validate_presence_of(:config_type) }
     it { should validate_inclusion_of(:config_type).in_array(%w[cpu memory disk network load_average]) }
@@ -21,11 +21,17 @@ RSpec.describe MonitoringConfig, type: :model do
   end
 
   describe 'scopes' do
-    let!(:enabled_config) { create(:monitoring_config, node: node, config_type: 'cpu', enabled: true) }
-    let!(:disabled_config) { create(:monitoring_config, node: node, config_type: 'memory', enabled: false) }
-
     describe '.enabled' do
       it 'returns only enabled configurations' do
+        node = create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version)
+
+        # Node automatically creates monitoring configs, so let's use them
+        enabled_config = node.monitoring_configs.find_by(config_type: 'memory')
+        disabled_config = node.monitoring_configs.find_by(config_type: 'disk')
+
+        # Update one to be disabled
+        disabled_config.update!(enabled: false)
+
         expect(MonitoringConfig.enabled).to include(enabled_config)
         expect(MonitoringConfig.enabled).not_to include(disabled_config)
       end
@@ -33,8 +39,16 @@ RSpec.describe MonitoringConfig, type: :model do
 
     describe '.for_type' do
       it 'returns configurations for specific type' do
-        expect(MonitoringConfig.for_type('cpu')).to include(enabled_config)
-        expect(MonitoringConfig.for_type('cpu')).not_to include(disabled_config)
+        node = create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version)
+
+        # Node automatically creates monitoring configs, so let's use them
+        memory_config = node.monitoring_configs.find_by(config_type: 'memory')
+        disk_config = node.monitoring_configs.find_by(config_type: 'disk')
+
+        expect(MonitoringConfig.for_type('memory')).to include(memory_config)
+        expect(MonitoringConfig.for_type('memory')).not_to include(disk_config)
+        expect(MonitoringConfig.for_type('disk')).to include(disk_config)
+        expect(MonitoringConfig.for_type('disk')).not_to include(memory_config)
       end
     end
   end
@@ -42,8 +56,12 @@ RSpec.describe MonitoringConfig, type: :model do
   describe 'class methods' do
     describe '.default_config_for_node' do
       it 'creates default configuration for node and type' do
+        # Create a node without triggering the after_create callback
+        node = build(:node, cluster: cluster, provider: provider, database_type_version: database_type_version)
+        node.save!(validate: false)
+
         config = MonitoringConfig.default_config_for_node(node, 'cpu')
-        
+
         expect(config.node).to eq(node)
         expect(config.config_type).to eq('cpu')
         expect(config.thresholds).to eq(MonitoringConfig::DEFAULT_THRESHOLDS['cpu'])
@@ -51,23 +69,31 @@ RSpec.describe MonitoringConfig, type: :model do
       end
 
       it 'returns existing configuration if already exists' do
-        existing = create(:monitoring_config, node: node, config_type: 'cpu')
-        config = MonitoringConfig.default_config_for_node(node, 'cpu')
-        
+        node = create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version)
+        existing = node.monitoring_configs.find_by(config_type: 'memory')
+        config = MonitoringConfig.default_config_for_node(node, 'memory')
+
         expect(config).to eq(existing)
       end
     end
 
     describe '.ensure_default_configs_for_node' do
       it 'creates all default configurations for a node' do
+        # Create a node and clear its monitoring configs to test the method
+        node = create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version)
+        node.monitoring_configs.destroy_all
+
+        # Ensure the node has no monitoring configs initially
+        expect(node.monitoring_configs.count).to eq(0)
+
         expect {
           MonitoringConfig.ensure_default_configs_for_node(node)
         }.to change { node.monitoring_configs.count }.by(5) # cpu, memory, disk, network, load_average
       end
 
       it 'does not create duplicates if configurations already exist' do
-        MonitoringConfig.ensure_default_configs_for_node(node)
-        
+        node = create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version)
+
         expect {
           MonitoringConfig.ensure_default_configs_for_node(node)
         }.not_to change { node.monitoring_configs.count }
@@ -76,10 +102,11 @@ RSpec.describe MonitoringConfig, type: :model do
   end
 
   describe 'instance methods' do
+    let(:node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
     let(:config) do
-      create(:monitoring_config, 
-        node: node, 
-        config_type: 'cpu',
+      # Use the automatically created CPU config and update its thresholds
+      cpu_config = node.monitoring_configs.find_by(config_type: 'cpu')
+      cpu_config.update!(
         thresholds: {
           'warning' => 70.0,
           'critical' => 85.0,
@@ -87,6 +114,7 @@ RSpec.describe MonitoringConfig, type: :model do
           'custom_critical' => 80.0
         }
       )
+      cpu_config
     end
 
     describe '#warning_threshold' do
@@ -160,7 +188,8 @@ RSpec.describe MonitoringConfig, type: :model do
 
   describe 'validation methods' do
     describe 'CPU threshold validation' do
-      let(:cpu_config) { build(:monitoring_config, node: node, config_type: 'cpu') }
+      let(:node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
+      let(:cpu_config) { node.monitoring_configs.find_by(config_type: 'cpu') }
 
       it 'validates CPU warning threshold range' do
         cpu_config.thresholds = { 'warning' => 150.0 }
@@ -187,7 +216,8 @@ RSpec.describe MonitoringConfig, type: :model do
     end
 
     describe 'Memory threshold validation' do
-      let(:memory_config) { build(:monitoring_config, node: node, config_type: 'memory') }
+      let(:node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
+      let(:memory_config) { node.monitoring_configs.find_by(config_type: 'memory') }
 
       it 'validates memory warning threshold range' do
         memory_config.thresholds = { 'warning' => 150.0 }
@@ -214,7 +244,8 @@ RSpec.describe MonitoringConfig, type: :model do
     end
 
     describe 'Disk threshold validation' do
-      let(:disk_config) { build(:monitoring_config, node: node, config_type: 'disk') }
+      let(:node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
+      let(:disk_config) { node.monitoring_configs.find_by(config_type: 'disk') }
 
       it 'validates disk warning threshold range' do
         disk_config.thresholds = { 'warning' => 150.0 }
@@ -244,19 +275,19 @@ RSpec.describe MonitoringConfig, type: :model do
   describe 'default thresholds' do
     it 'has proper default thresholds for all config types' do
       expect(MonitoringConfig::DEFAULT_THRESHOLDS).to include('cpu', 'memory', 'disk', 'load_average', 'network')
-      
+
       # CPU thresholds
       expect(MonitoringConfig::DEFAULT_THRESHOLDS['cpu']).to eq({
         'warning' => 70.0,
         'critical' => 85.0
       })
-      
+
       # Memory thresholds
       expect(MonitoringConfig::DEFAULT_THRESHOLDS['memory']).to eq({
         'warning' => 75.0,
         'critical' => 90.0
       })
-      
+
       # Disk thresholds
       expect(MonitoringConfig::DEFAULT_THRESHOLDS['disk']).to eq({
         'warning' => 80.0,

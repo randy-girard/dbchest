@@ -3,7 +3,7 @@ require_relative "../cloud_init_generators/mongodb_cloud_init_generator"
 module DatabaseTypes
   class MongodbDatabaseType < BaseDatabaseType
     # Register this handler with the base class
-    BaseDatabaseType.register('mongodb', self)
+    BaseDatabaseType.register("mongodb", self)
 
     def supports_logical_replication?
       # MongoDB supports replica sets from version 3.0+

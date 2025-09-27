@@ -82,7 +82,7 @@ RSpec.describe TerraformBaseService, type: :service do
   describe '#execute_terraform_commands' do
     let(:work_dir) { '/tmp/test' }
     let(:terraform_log_path) { '/tmp/test.log' }
-    let(:commands) { ['terraform init', 'terraform plan'] }
+    let(:commands) { [ 'terraform init', 'terraform plan' ] }
 
     it 'executes all commands in sequence' do
       expect(service).to receive(:run_cmd).with('terraform init', work_dir, terraform_log_path)

@@ -273,9 +273,9 @@ class Node < ApplicationRecord
 
   def ssh_private_key_path
     # Create a temporary file with the SSH private key
-    require 'tempfile'
+    require "tempfile"
 
-    temp_file = Tempfile.new(['ssh_key', '.pem'])
+    temp_file = Tempfile.new([ "ssh_key", ".pem" ])
     temp_file.write(ssh_private_key)
     temp_file.chmod(0600)
     temp_file.flush
@@ -478,7 +478,7 @@ class Node < ApplicationRecord
 
   def current_health_status
     latest = latest_metrics
-    return 'unknown' unless latest
+    return "unknown" unless latest
 
     # Use custom thresholds if available, otherwise use default logic
     if monitoring_configs.enabled.any?
@@ -510,19 +510,19 @@ class Node < ApplicationRecord
     statuses = []
 
     # Check CPU with custom thresholds
-    cpu_config = monitoring_configs.enabled.for_type('cpu').first
+    cpu_config = monitoring_configs.enabled.for_type("cpu").first
     if cpu_config
       statuses << cpu_config.check_threshold(metrics.cpu_usage_percent)
     end
 
     # Check Memory with custom thresholds
-    memory_config = monitoring_configs.enabled.for_type('memory').first
+    memory_config = monitoring_configs.enabled.for_type("memory").first
     if memory_config
       statuses << memory_config.check_threshold(metrics.memory_usage_percent)
     end
 
     # Check Disk with custom thresholds
-    disk_config = monitoring_configs.enabled.for_type('disk').first
+    disk_config = monitoring_configs.enabled.for_type("disk").first
     if disk_config
       metrics.disk_mounts.each do |mount|
         statuses << disk_config.check_threshold(metrics.disk_usage_percent(mount))
@@ -530,10 +530,10 @@ class Node < ApplicationRecord
     end
 
     # Return the worst status
-    return 'critical' if statuses.include?('critical')
-    return 'warning' if statuses.include?('warning')
-    return 'healthy' if statuses.include?('healthy')
-    'unknown'
+    return "critical" if statuses.include?("critical")
+    return "warning" if statuses.include?("warning")
+    return "healthy" if statuses.include?("healthy")
+    "unknown"
   end
 
   def get_monitoring_config(config_type)
@@ -553,49 +553,49 @@ class Node < ApplicationRecord
     latest = latest_metrics
 
     # CPU alerts
-    cpu_config = get_monitoring_config('cpu')
+    cpu_config = get_monitoring_config("cpu")
     if cpu_config.enabled?
       status = cpu_config.check_threshold(latest.cpu_usage_percent)
-      if status != 'healthy'
+      if status != "healthy"
         alerts << {
           type: status,
-          category: 'cpu',
+          category: "cpu",
           message: "CPU usage: #{latest.cpu_usage_percent}%",
           value: latest.cpu_usage_percent,
-          threshold: status == 'critical' ? cpu_config.critical_threshold : cpu_config.warning_threshold
+          threshold: status == "critical" ? cpu_config.critical_threshold : cpu_config.warning_threshold
         }
       end
     end
 
     # Memory alerts
-    memory_config = get_monitoring_config('memory')
+    memory_config = get_monitoring_config("memory")
     if memory_config.enabled?
       status = memory_config.check_threshold(latest.memory_usage_percent)
-      if status != 'healthy'
+      if status != "healthy"
         alerts << {
           type: status,
-          category: 'memory',
+          category: "memory",
           message: "Memory usage: #{latest.memory_usage_percent}%",
           value: latest.memory_usage_percent,
-          threshold: status == 'critical' ? memory_config.critical_threshold : memory_config.warning_threshold
+          threshold: status == "critical" ? memory_config.critical_threshold : memory_config.warning_threshold
         }
       end
     end
 
     # Disk alerts
-    disk_config = get_monitoring_config('disk')
+    disk_config = get_monitoring_config("disk")
     if disk_config.enabled?
       latest.disk_mounts.each do |mount|
         usage = latest.disk_usage_percent(mount)
         status = disk_config.check_threshold(usage)
-        if status != 'healthy'
+        if status != "healthy"
           alerts << {
             type: status,
-            category: 'disk',
+            category: "disk",
             message: "Disk usage on #{mount}: #{usage}%",
             value: usage,
             mount: mount,
-            threshold: status == 'critical' ? disk_config.critical_threshold : disk_config.warning_threshold
+            threshold: status == "critical" ? disk_config.critical_threshold : disk_config.warning_threshold
           }
         end
       end

@@ -110,17 +110,17 @@ module CloudInitGenerators
     end
 
     def configure_mongodb(is_replica)
-      config_commands = is_replica ? 
-        database_type_handler.replica_configuration_commands : 
+      config_commands = is_replica ?
+        database_type_handler.replica_configuration_commands :
         database_type_handler.primary_configuration_commands
 
       <<~SCRIPT
         # Configure MongoDB
         echo "Configuring MongoDB..."
-        
+
         # Backup original config
         cp /etc/mongod.conf /etc/mongod.conf.backup
-        
+
         # Apply configuration commands
         #{config_commands.join("\n")}
       SCRIPT
@@ -132,7 +132,7 @@ module CloudInitGenerators
         echo "Starting MongoDB service..."
         systemctl enable mongod
         systemctl start mongod
-        
+
         # Wait for MongoDB to be ready
         echo "Waiting for MongoDB to be ready..."
         for i in {1..30}; do
@@ -162,7 +162,7 @@ module CloudInitGenerators
         echo "Initializing MongoDB replica set..."
         sleep 5  # Give MongoDB time to fully start
         #{database_type_handler.initiate_replica_set_command}
-        
+
         echo "MongoDB primary replica set initialized"
       SCRIPT
     end
@@ -174,7 +174,7 @@ module CloudInitGenerators
       <<~SCRIPT
         # Configure as replica member
         echo "Configuring MongoDB replica..."
-        
+
         # Wait for primary to be available
         echo "Waiting for primary MongoDB at #{primary_ip}..."
         for i in {1..60}; do
@@ -185,7 +185,7 @@ module CloudInitGenerators
           echo "Waiting for primary... ($i/60)"
           sleep 5
         done
-        
+
         echo "MongoDB replica configuration completed"
       SCRIPT
     end
@@ -197,9 +197,9 @@ module CloudInitGenerators
         # Create sample data (primary only)
         echo "Creating sample data..."
         sleep 2  # Give MongoDB time to be fully ready
-        
+
         #{database_type_handler.create_sample_data_commands.join("\n")}
-        
+
         echo "Sample data created successfully"
       SCRIPT
     end

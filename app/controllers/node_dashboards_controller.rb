@@ -5,14 +5,14 @@ class NodeDashboardsController < ApplicationController
   def show
     @latest_metrics = @node.latest_metrics
     @metrics_history = @node.metrics_since(1.hour.ago).limit(60) # Last hour of data
-    
+
     # Calculate summary statistics
     @summary_stats = calculate_summary_stats
-    
+
     # Health status and alerts
     @health_status = @node.current_health_status
     @alerts = check_for_alerts
-    
+
     respond_to do |format|
       format.html
       format.json do
@@ -31,21 +31,21 @@ class NodeDashboardsController < ApplicationController
   # GET /nodes/:node_id/dashboard/metrics_data
   def metrics_data
     # Get metrics for the specified time range
-    time_range = params[:range] || '1h'
+    time_range = params[:range] || "1h"
     start_time = case time_range
-                 when '15m' then 15.minutes.ago
-                 when '1h' then 1.hour.ago
-                 when '6h' then 6.hours.ago
-                 when '24h' then 24.hours.ago
-                 when '7d' then 7.days.ago
-                 else 1.hour.ago
-                 end
+    when "15m" then 15.minutes.ago
+    when "1h" then 1.hour.ago
+    when "6h" then 6.hours.ago
+    when "24h" then 24.hours.ago
+    when "7d" then 7.days.ago
+    else 1.hour.ago
+    end
 
     metrics = @node.metrics_since(start_time).recent.limit(500)
-    
+
     # Format data for charts
     chart_data = format_metrics_for_charts(metrics)
-    
+
     render json: {
       time_range: time_range,
       start_time: start_time.iso8601,
@@ -59,7 +59,7 @@ class NodeDashboardsController < ApplicationController
   def live_metrics
     # Return the latest metrics for live updates
     latest = @node.latest_metrics
-    
+
     if latest
       render json: {
         success: true,
@@ -106,7 +106,7 @@ class NodeDashboardsController < ApplicationController
 
     cpu_values = @metrics_history.map(&:cpu_usage_percent).compact
     memory_values = @metrics_history.map(&:memory_usage_percent).compact
-    
+
     {
       cpu: {
         current: @latest_metrics&.cpu_usage_percent,
@@ -165,16 +165,16 @@ class NodeDashboardsController < ApplicationController
     # CPU alerts
     if @latest_metrics.cpu_usage_percent > 85
       alerts << {
-        type: 'critical',
-        category: 'cpu',
+        type: "critical",
+        category: "cpu",
         message: "High CPU usage: #{@latest_metrics.cpu_usage_percent}%",
         threshold: 85,
         current_value: @latest_metrics.cpu_usage_percent
       }
     elsif @latest_metrics.cpu_usage_percent > 70
       alerts << {
-        type: 'warning',
-        category: 'cpu',
+        type: "warning",
+        category: "cpu",
         message: "Elevated CPU usage: #{@latest_metrics.cpu_usage_percent}%",
         threshold: 70,
         current_value: @latest_metrics.cpu_usage_percent
@@ -185,16 +185,16 @@ class NodeDashboardsController < ApplicationController
     memory_percent = @latest_metrics.memory_usage_percent
     if memory_percent > 90
       alerts << {
-        type: 'critical',
-        category: 'memory',
+        type: "critical",
+        category: "memory",
         message: "High memory usage: #{memory_percent}%",
         threshold: 90,
         current_value: memory_percent
       }
     elsif memory_percent > 75
       alerts << {
-        type: 'warning',
-        category: 'memory',
+        type: "warning",
+        category: "memory",
         message: "Elevated memory usage: #{memory_percent}%",
         threshold: 75,
         current_value: memory_percent
@@ -206,8 +206,8 @@ class NodeDashboardsController < ApplicationController
       usage = @latest_metrics.disk_usage_percent(mount)
       if usage > 90
         alerts << {
-          type: 'critical',
-          category: 'disk',
+          type: "critical",
+          category: "disk",
           message: "High disk usage on #{mount}: #{usage}%",
           threshold: 90,
           current_value: usage,
@@ -215,8 +215,8 @@ class NodeDashboardsController < ApplicationController
         }
       elsif usage > 80
         alerts << {
-          type: 'warning',
-          category: 'disk',
+          type: "warning",
+          category: "disk",
           message: "Elevated disk usage on #{mount}: #{usage}%",
           threshold: 80,
           current_value: usage,
@@ -244,32 +244,32 @@ class NodeDashboardsController < ApplicationController
 
   def format_disk_chart_data(metrics)
     disk_data = {}
-    
+
     # Get all unique mount points
     all_mounts = metrics.flat_map(&:disk_mounts).uniq
-    
+
     all_mounts.each do |mount|
       disk_data[mount] = metrics.map do |m|
         { x: m.collected_at.to_i * 1000, y: m.disk_usage_percent(mount) }
       end
     end
-    
+
     disk_data
   end
 
   def format_network_chart_data(metrics)
     network_data = {}
-    
+
     # Get all unique network interfaces
     all_interfaces = metrics.flat_map(&:network_interfaces).uniq
-    
+
     all_interfaces.each do |interface|
       network_data[interface] = {
         rx_bytes: metrics.map { |m| { x: m.collected_at.to_i * 1000, y: m.network_rx_bytes(interface) } },
         tx_bytes: metrics.map { |m| { x: m.collected_at.to_i * 1000, y: m.network_tx_bytes(interface) } }
       }
     end
-    
+
     network_data
   end
 
@@ -278,7 +278,7 @@ class NodeDashboardsController < ApplicationController
 
     cpu_values = metrics.map(&:cpu_usage_percent).compact
     memory_values = metrics.map(&:memory_usage_percent).compact
-    
+
     {
       cpu: {
         average: cpu_values.any? ? (cpu_values.sum / cpu_values.size).round(2) : 0,

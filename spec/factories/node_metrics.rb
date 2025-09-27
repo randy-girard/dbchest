@@ -9,7 +9,7 @@ FactoryBot.define do
     swap_total_mb { 2048 }
     swap_used_mb { rand(0..1024) }
     uptime_seconds { rand(3600..604800) } # 1 hour to 1 week
-    
+
     disk_usage do
       {
         '/' => {
@@ -20,7 +20,7 @@ FactoryBot.define do
         }
       }
     end
-    
+
     network_stats do
       {
         'eth0' => {
@@ -31,7 +31,7 @@ FactoryBot.define do
         }
       }
     end
-    
+
     load_average do
       {
         '1min' => rand(0.1..3.0).round(2),

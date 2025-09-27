@@ -3,7 +3,7 @@ require_relative "../cloud_init_generators/postgresql_cloud_init_generator"
 module DatabaseTypes
   class PostgresqlDatabaseType < BaseDatabaseType
     # Register this handler with the base class
-    BaseDatabaseType.register('postgresql', self)
+    BaseDatabaseType.register("postgresql", self)
     def supports_logical_replication?
       major_version >= 10
     end

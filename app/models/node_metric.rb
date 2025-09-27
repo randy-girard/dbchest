@@ -2,7 +2,7 @@ class NodeMetric < ApplicationRecord
   belongs_to :node
 
   validates :collected_at, presence: true
-  validates :cpu_usage_percent, presence: true, 
+  validates :cpu_usage_percent, presence: true,
             numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
   validates :memory_total_mb, presence: true, numericality: { greater_than: 0 }
   validates :memory_used_mb, presence: true, numericality: { greater_than_or_equal_to: 0 }
@@ -12,7 +12,7 @@ class NodeMetric < ApplicationRecord
   # Scopes for efficient querying
   scope :recent, -> { order(collected_at: :desc) }
   scope :for_node, ->(node_id) { where(node_id: node_id) }
-  scope :since, ->(time) { where('collected_at >= ?', time) }
+  scope :since, ->(time) { where("collected_at >= ?", time) }
   scope :between, ->(start_time, end_time) { where(collected_at: start_time..end_time) }
 
   # Class methods for data aggregation
@@ -50,15 +50,15 @@ class NodeMetric < ApplicationRecord
 
   # Load average accessors
   def load_1min
-    load_average&.dig('1min')&.to_f
+    load_average&.dig("1min")&.to_f
   end
 
   def load_5min
-    load_average&.dig('5min')&.to_f
+    load_average&.dig("5min")&.to_f
   end
 
   def load_15min
-    load_average&.dig('15min')&.to_f
+    load_average&.dig("15min")&.to_f
   end
 
   # Network statistics accessors
@@ -66,20 +66,20 @@ class NodeMetric < ApplicationRecord
     network_stats&.keys || []
   end
 
-  def network_rx_bytes(interface = 'eth0')
-    network_stats&.dig(interface, 'rx_bytes')&.to_i || 0
+  def network_rx_bytes(interface = "eth0")
+    network_stats&.dig(interface, "rx_bytes")&.to_i || 0
   end
 
-  def network_tx_bytes(interface = 'eth0')
-    network_stats&.dig(interface, 'tx_bytes')&.to_i || 0
+  def network_tx_bytes(interface = "eth0")
+    network_stats&.dig(interface, "tx_bytes")&.to_i || 0
   end
 
-  def network_rx_packets(interface = 'eth0')
-    network_stats&.dig(interface, 'rx_packets')&.to_i || 0
+  def network_rx_packets(interface = "eth0")
+    network_stats&.dig(interface, "rx_packets")&.to_i || 0
   end
 
-  def network_tx_packets(interface = 'eth0')
-    network_stats&.dig(interface, 'tx_packets')&.to_i || 0
+  def network_tx_packets(interface = "eth0")
+    network_stats&.dig(interface, "tx_packets")&.to_i || 0
   end
 
   # Disk usage accessors
@@ -87,20 +87,20 @@ class NodeMetric < ApplicationRecord
     disk_usage&.keys || []
   end
 
-  def disk_usage_percent(mount = '/')
-    disk_usage&.dig(mount, 'usage_percent')&.to_f || 0
+  def disk_usage_percent(mount = "/")
+    disk_usage&.dig(mount, "usage_percent")&.to_f || 0
   end
 
-  def disk_total_gb(mount = '/')
-    disk_usage&.dig(mount, 'total_gb')&.to_f || 0
+  def disk_total_gb(mount = "/")
+    disk_usage&.dig(mount, "total_gb")&.to_f || 0
   end
 
-  def disk_used_gb(mount = '/')
-    disk_usage&.dig(mount, 'used_gb')&.to_f || 0
+  def disk_used_gb(mount = "/")
+    disk_usage&.dig(mount, "used_gb")&.to_f || 0
   end
 
-  def disk_available_gb(mount = '/')
-    disk_usage&.dig(mount, 'available_gb')&.to_f || 0
+  def disk_available_gb(mount = "/")
+    disk_usage&.dig(mount, "available_gb")&.to_f || 0
   end
 
   # Uptime helpers
@@ -130,44 +130,44 @@ class NodeMetric < ApplicationRecord
   def cpu_status
     case cpu_usage_percent
     when 0..70
-      'healthy'
+      "healthy"
     when 70..85
-      'warning'
+      "warning"
     else
-      'critical'
+      "critical"
     end
   end
 
   def memory_status
     case memory_usage_percent
-    when 0..75
-      'healthy'
-    when 75..90
-      'warning'
+    when 0...75
+      "healthy"
+    when 75...90
+      "warning"
     else
-      'critical'
+      "critical"
     end
   end
 
-  def disk_status(mount = '/')
+  def disk_status(mount = "/")
     usage = disk_usage_percent(mount)
     case usage
     when 0..80
-      'healthy'
+      "healthy"
     when 80..90
-      'warning'
+      "warning"
     else
-      'critical'
+      "critical"
     end
   end
 
   def overall_health_status
-    statuses = [cpu_status, memory_status]
+    statuses = [ cpu_status, memory_status ]
     disk_mounts.each { |mount| statuses << disk_status(mount) }
-    
-    return 'critical' if statuses.include?('critical')
-    return 'warning' if statuses.include?('warning')
-    'healthy'
+
+    return "critical" if statuses.include?("critical")
+    return "warning" if statuses.include?("warning")
+    "healthy"
   end
 
   # JSON serialization for API responses

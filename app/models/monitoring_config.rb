@@ -8,27 +8,27 @@ class MonitoringConfig < ApplicationRecord
 
   # Default threshold configurations
   DEFAULT_THRESHOLDS = {
-    'cpu' => {
-      'warning' => 70.0,
-      'critical' => 85.0
+    "cpu" => {
+      "warning" => 70.0,
+      "critical" => 85.0
     },
-    'memory' => {
-      'warning' => 75.0,
-      'critical' => 90.0
+    "memory" => {
+      "warning" => 75.0,
+      "critical" => 90.0
     },
-    'disk' => {
-      'warning' => 80.0,
-      'critical' => 90.0
+    "disk" => {
+      "warning" => 80.0,
+      "critical" => 90.0
     },
-    'load_average' => {
-      'warning' => 2.0,
-      'critical' => 4.0
+    "load_average" => {
+      "warning" => 2.0,
+      "critical" => 4.0
     },
-    'network' => {
-      'rx_bytes_per_sec_warning' => 100_000_000, # 100 MB/s
-      'rx_bytes_per_sec_critical' => 500_000_000, # 500 MB/s
-      'tx_bytes_per_sec_warning' => 100_000_000,
-      'tx_bytes_per_sec_critical' => 500_000_000
+    "network" => {
+      "rx_bytes_per_sec_warning" => 100_000_000, # 100 MB/s
+      "rx_bytes_per_sec_critical" => 500_000_000, # 500 MB/s
+      "tx_bytes_per_sec_warning" => 100_000_000,
+      "tx_bytes_per_sec_critical" => 500_000_000
     }
   }.freeze
 
@@ -53,29 +53,29 @@ class MonitoringConfig < ApplicationRecord
   # Instance methods
   def warning_threshold(metric = nil)
     if metric
-      thresholds.dig("#{metric}_warning") || thresholds['warning']
+      thresholds.dig("#{metric}_warning") || thresholds["warning"]
     else
-      thresholds['warning']
+      thresholds["warning"]
     end
   end
 
   def critical_threshold(metric = nil)
     if metric
-      thresholds.dig("#{metric}_critical") || thresholds['critical']
+      thresholds.dig("#{metric}_critical") || thresholds["critical"]
     else
-      thresholds['critical']
+      thresholds["critical"]
     end
   end
 
   def check_threshold(value, metric = nil)
-    return 'unknown' unless enabled? && value.present?
+    return "unknown" unless enabled? && value.present?
 
     critical = critical_threshold(metric)
     warning = warning_threshold(metric)
 
-    return 'critical' if critical && value >= critical
-    return 'warning' if warning && value >= warning
-    'healthy'
+    return "critical" if critical && value >= critical
+    return "warning" if warning && value >= warning
+    "healthy"
   end
 
   def update_threshold(level, value, metric = nil)
@@ -86,36 +86,36 @@ class MonitoringConfig < ApplicationRecord
 
   # Validation methods
   def validate_cpu_thresholds
-    return unless config_type == 'cpu'
+    return unless config_type == "cpu" && thresholds.present?
 
-    warning = thresholds['warning']
-    critical = thresholds['critical']
+    warning = thresholds["warning"]
+    critical = thresholds["critical"]
 
-    errors.add(:thresholds, 'CPU warning threshold must be between 0 and 100') if warning && (warning < 0 || warning > 100)
-    errors.add(:thresholds, 'CPU critical threshold must be between 0 and 100') if critical && (critical < 0 || critical > 100)
-    errors.add(:thresholds, 'CPU critical threshold must be greater than warning threshold') if warning && critical && critical <= warning
+    errors.add(:thresholds, "CPU warning threshold must be between 0 and 100") if warning && (warning < 0 || warning > 100)
+    errors.add(:thresholds, "CPU critical threshold must be between 0 and 100") if critical && (critical < 0 || critical > 100)
+    errors.add(:thresholds, "CPU critical threshold must be greater than warning threshold") if warning && critical && critical <= warning
   end
 
   def validate_memory_thresholds
-    return unless config_type == 'memory'
+    return unless config_type == "memory" && thresholds.present?
 
-    warning = thresholds['warning']
-    critical = thresholds['critical']
+    warning = thresholds["warning"]
+    critical = thresholds["critical"]
 
-    errors.add(:thresholds, 'Memory warning threshold must be between 0 and 100') if warning && (warning < 0 || warning > 100)
-    errors.add(:thresholds, 'Memory critical threshold must be between 0 and 100') if critical && (critical < 0 || critical > 100)
-    errors.add(:thresholds, 'Memory critical threshold must be greater than warning threshold') if warning && critical && critical <= warning
+    errors.add(:thresholds, "Memory warning threshold must be between 0 and 100") if warning && (warning < 0 || warning > 100)
+    errors.add(:thresholds, "Memory critical threshold must be between 0 and 100") if critical && (critical < 0 || critical > 100)
+    errors.add(:thresholds, "Memory critical threshold must be greater than warning threshold") if warning && critical && critical <= warning
   end
 
   def validate_disk_thresholds
-    return unless config_type == 'disk'
+    return unless config_type == "disk" && thresholds.present?
 
-    warning = thresholds['warning']
-    critical = thresholds['critical']
+    warning = thresholds["warning"]
+    critical = thresholds["critical"]
 
-    errors.add(:thresholds, 'Disk warning threshold must be between 0 and 100') if warning && (warning < 0 || warning > 100)
-    errors.add(:thresholds, 'Disk critical threshold must be between 0 and 100') if critical && (critical < 0 || critical > 100)
-    errors.add(:thresholds, 'Disk critical threshold must be greater than warning threshold') if warning && critical && critical <= warning
+    errors.add(:thresholds, "Disk warning threshold must be between 0 and 100") if warning && (warning < 0 || warning > 100)
+    errors.add(:thresholds, "Disk critical threshold must be between 0 and 100") if critical && (critical < 0 || critical > 100)
+    errors.add(:thresholds, "Disk critical threshold must be greater than warning threshold") if warning && critical && critical <= warning
   end
 
   validate :validate_cpu_thresholds

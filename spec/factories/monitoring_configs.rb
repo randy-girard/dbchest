@@ -3,7 +3,7 @@ FactoryBot.define do
     association :node
     config_type { 'cpu' }
     enabled { true }
-    
+
     thresholds do
       case config_type
       when 'cpu'

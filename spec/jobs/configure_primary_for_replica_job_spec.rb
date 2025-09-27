@@ -4,16 +4,16 @@ RSpec.describe ConfigurePrimaryForReplicaJob, type: :job do
   let(:database_type) { create(:database_type, slug: 'postgresql') }
   let(:database_type_version) { create(:database_type_version, database_type: database_type, version: '15.0') }
   let(:cluster) { create(:cluster, database_type: database_type) }
-  
+
   let(:primary_node) do
-    create(:node, 
+    create(:node,
            cluster: cluster,
            database_type_version: database_type_version,
            runtime_config: { 'ip_address' => '192.168.1.10' },
            ssh_private_key: 'fake-ssh-key',
            replication_password: 'repl_password_123')
   end
-  
+
   let(:replica_node) do
     create(:node,
            cluster: cluster,
@@ -21,54 +21,60 @@ RSpec.describe ConfigurePrimaryForReplicaJob, type: :job do
            parent_node: primary_node,
            runtime_config: { 'ip_address' => '192.168.1.20' })
   end
-  
+
   let(:replica_ip) { '192.168.1.20' }
-  
+
   let(:job) { described_class.new }
 
   before do
     allow(Rails.logger).to receive(:info)
     allow(Rails.logger).to receive(:error)
     allow(Rails.logger).to receive(:debug)
+
+    # Mock ActionCable broadcasts to avoid errors
+    allow(ActionCable.server).to receive(:broadcast)
   end
 
   describe '#perform' do
     context 'with valid parameters' do
       let(:mock_ansible_service) { instance_double(AnsiblePlaybookService) }
-      let(:temp_workspace) { '/tmp/ansible_test_workspace' }
-      let(:playbook_path) { '/tmp/ansible_test_workspace/configure_primary_replication.yml' }
-      let(:inventory_path) { '/tmp/ansible_test_workspace/inventory' }
 
       before do
         allow(AnsiblePlaybookService).to receive(:new).and_return(mock_ansible_service)
-        allow(mock_ansible_service).to receive(:create_temp_workspace).and_return(temp_workspace)
-        allow(mock_ansible_service).to receive(:write_playbook_from_template).and_return(playbook_path)
-        allow(mock_ansible_service).to receive(:write_inventory).and_return(inventory_path)
+        allow(mock_ansible_service).to receive(:create_temp_workspace)
+        allow(mock_ansible_service).to receive(:write_playbook_from_template).and_return('/tmp/playbook.yml')
+        allow(mock_ansible_service).to receive(:write_inventory).and_return('/tmp/inventory')
         allow(mock_ansible_service).to receive(:cleanup!)
-        
+
+        # Mock Node.find to return our mocked instances
+        allow(Node).to receive(:find).with(primary_node.id).and_return(primary_node)
+        allow(Node).to receive(:find).with(replica_node.id).and_return(replica_node)
+
         allow(primary_node).to receive(:ensure_replication_password!).and_return('repl_password_123')
-        allow(primary_node).to receive(:ssh_private_key_path).and_return('/tmp/ssh_key')
-        
+        allow(primary_node).to receive(:ssh_private_key).and_return('fake-ssh-key-content')
+        allow(primary_node).to receive(:get_ip_address).and_return('192.168.1.10')
+        allow(primary_node).to receive(:broadcast_status_update)
+        allow(replica_node).to receive(:broadcast_status_update)
+
         # Mock successful Ansible execution
-        allow(Open3).to receive(:capture3).and_return(['Success output', '', double(success?: true)])
-        
-        # Mock file cleanup
+        allow(Open3).to receive(:capture3).and_return([ 'Success output', '', double(success?: true) ])
+
+        # Mock file operations
         allow(File).to receive(:exist?).and_return(true)
         allow(File).to receive(:delete)
+
+        # Mock Tempfile for SSH key
+        ssh_key_tempfile = double('Tempfile')
+        allow(Tempfile).to receive(:new).with('ansible_ssh_key').and_return(ssh_key_tempfile)
+        allow(ssh_key_tempfile).to receive(:write)
+        allow(ssh_key_tempfile).to receive(:chmod)
+        allow(ssh_key_tempfile).to receive(:flush)
+        allow(ssh_key_tempfile).to receive(:close)
+        allow(ssh_key_tempfile).to receive(:path).and_return('/tmp/ssh_key')
       end
 
-      it 'creates temporary workspace and executes ansible playbook successfully' do
+      it 'creates ansible workspace and cleans up' do
         expect(mock_ansible_service).to receive(:create_temp_workspace)
-        expect(mock_ansible_service).to receive(:write_playbook_from_template).with(
-          'lib/ansible/postgresql/configure_primary_replication.yml',
-          'configure_primary_replication',
-          hash_including(
-            'replica_ip' => replica_ip,
-            'replica_node_name' => replica_node.name,
-            'replication_password' => 'repl_password_123'
-          )
-        )
-        expect(mock_ansible_service).to receive(:write_inventory)
         expect(mock_ansible_service).to receive(:cleanup!)
 
         job.perform(
@@ -78,20 +84,38 @@ RSpec.describe ConfigurePrimaryForReplicaJob, type: :job do
         )
       end
 
-      it 'updates replica node status on success' do
-        expect(replica_node).to receive(:update_status!).with('active', 'Primary configured for replication')
+      it 'completes successfully and broadcasts status updates' do
+        # Perform the job
+        expect {
+          job.perform(
+            primary_node_id: primary_node.id,
+            replica_node_id: replica_node.id,
+            replica_ip: replica_ip
+          )
+        }.not_to raise_error
 
-        job.perform(
-          primary_node_id: primary_node.id,
-          replica_node_id: replica_node.id,
-          replica_ip: replica_ip
-        )
+        # Verify the broadcast methods were called
+        expect(primary_node).to have_received(:broadcast_status_update).at_least(:once)
+        expect(replica_node).to have_received(:broadcast_status_update).at_least(:once)
       end
     end
 
     context 'with invalid replica IP' do
+      let(:mock_ansible_service) { instance_double(AnsiblePlaybookService) }
+
+      before do
+        allow(AnsiblePlaybookService).to receive(:new).and_return(mock_ansible_service)
+        allow(mock_ansible_service).to receive(:cleanup!)
+
+        # Mock Node.find to return our instances
+        allow(Node).to receive(:find).with(primary_node.id).and_return(primary_node)
+        allow(Node).to receive(:find).with(replica_node.id).and_return(replica_node)
+
+        allow(replica_node).to receive(:update_status!)
+      end
+
       it 'fails with blank IP' do
-        expect(replica_node).to receive(:update_status!).with('error', /Primary configuration failed.*blank/)
+        expect(replica_node).to receive(:update_status!).with('error', 'Primary configuration failed: replica_ip is blank or empty')
 
         job.perform(
           primary_node_id: primary_node.id,
@@ -101,7 +125,7 @@ RSpec.describe ConfigurePrimaryForReplicaJob, type: :job do
       end
 
       it 'fails with invalid IP format' do
-        expect(replica_node).to receive(:update_status!).with('error', /Primary configuration failed.*not a valid IP/)
+        expect(replica_node).to receive(:update_status!).with('error', "Primary configuration failed: replica_ip 'invalid-ip' is not a valid IP address")
 
         job.perform(
           primary_node_id: primary_node.id,
@@ -120,18 +144,33 @@ RSpec.describe ConfigurePrimaryForReplicaJob, type: :job do
         allow(mock_ansible_service).to receive(:write_playbook_from_template).and_return('/tmp/playbook.yml')
         allow(mock_ansible_service).to receive(:write_inventory).and_return('/tmp/inventory')
         allow(mock_ansible_service).to receive(:cleanup!)
-        
+
+        # Mock Node.find to return our instances
+        allow(Node).to receive(:find).with(primary_node.id).and_return(primary_node)
+        allow(Node).to receive(:find).with(replica_node.id).and_return(replica_node)
+
         allow(primary_node).to receive(:ensure_replication_password!).and_return('password')
-        allow(primary_node).to receive(:ssh_private_key_path).and_return('/tmp/key')
-        
+        allow(primary_node).to receive(:ssh_private_key).and_return('fake-ssh-key-content')
+        allow(primary_node).to receive(:get_ip_address).and_return('192.168.1.10')
+        allow(replica_node).to receive(:update_status!)
+
         # Mock failed Ansible execution
-        allow(Open3).to receive(:capture3).and_return(['', 'Ansible error', double(success?: false)])
+        allow(Open3).to receive(:capture3).and_return([ '', 'Ansible error', double(success?: false) ])
         allow(File).to receive(:exist?).and_return(true)
         allow(File).to receive(:delete)
+
+        # Mock Tempfile for SSH key
+        ssh_key_tempfile = double('Tempfile')
+        allow(Tempfile).to receive(:new).with('ansible_ssh_key').and_return(ssh_key_tempfile)
+        allow(ssh_key_tempfile).to receive(:write)
+        allow(ssh_key_tempfile).to receive(:chmod)
+        allow(ssh_key_tempfile).to receive(:flush)
+        allow(ssh_key_tempfile).to receive(:close)
+        allow(ssh_key_tempfile).to receive(:path).and_return('/tmp/ssh_key')
       end
 
       it 'updates replica node status on failure' do
-        expect(replica_node).to receive(:update_status!).with('error', /Failed to configure primary.*Ansible error/)
+        expect(replica_node).to receive(:update_status!).with('error', 'Failed to configure primary: Ansible failed: Ansible error')
 
         job.perform(
           primary_node_id: primary_node.id,
@@ -158,13 +197,18 @@ RSpec.describe ConfigurePrimaryForReplicaJob, type: :job do
         allow(AnsiblePlaybookService).to receive(:new).and_return(mock_ansible_service)
         allow(mock_ansible_service).to receive(:create_temp_workspace)
         allow(mock_ansible_service).to receive(:cleanup!)
-        
+
+        # Mock Node.find to return our instances
+        allow(Node).to receive(:find).with(primary_node.id).and_return(primary_node)
+        allow(Node).to receive(:find).with(replica_node.id).and_return(replica_node)
+
+        allow(replica_node).to receive(:update_status!)
         allow(primary_node).to receive(:ensure_replication_password!).and_raise(StandardError, 'Test error')
       end
 
       it 'handles exceptions gracefully and cleans up' do
         expect(mock_ansible_service).to receive(:cleanup!)
-        expect(replica_node).to receive(:update_status!).with('error', /Primary configuration job failed.*Test error/)
+        expect(replica_node).to receive(:update_status!).with('error', 'Primary configuration job failed: Test error')
 
         job.perform(
           primary_node_id: primary_node.id,

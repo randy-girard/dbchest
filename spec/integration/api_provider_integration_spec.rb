@@ -10,15 +10,15 @@ RSpec.describe "API Provider Integration", type: :request do
         # Mock the Proxmox client to return test data
         mock_client = double('ProxmoxClient')
         allow(ProviderClient::Base).to receive(:for_provider).with(provider).and_return(mock_client)
-        allow(mock_client).to receive(:call).and_return({ 'nodes' => ['pve1', 'pve2'] })
+        allow(mock_client).to receive(:call).and_return({ 'nodes' => [ 'pve1', 'pve2' ] })
 
         get "/api/providers/#{provider.id}", params: { function: 'nodes' }
 
         expect(response).to have_http_status(:success)
         expect(response.content_type).to include('application/json')
-        
+
         json_response = JSON.parse(response.body)
-        expect(json_response['nodes']).to eq(['pve1', 'pve2'])
+        expect(json_response['nodes']).to eq([ 'pve1', 'pve2' ])
       end
 
       it "handles client errors gracefully" do
@@ -30,7 +30,7 @@ RSpec.describe "API Provider Integration", type: :request do
         get "/api/providers/#{provider.id}", params: { function: 'nodes' }
 
         expect(response).to have_http_status(:internal_server_error)
-        
+
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('API call failed: Connection failed')
       end
@@ -44,7 +44,7 @@ RSpec.describe "API Provider Integration", type: :request do
         get "/api/providers/#{unknown_provider.id}", params: { function: 'nodes' }
 
         expect(response).to have_http_status(:unprocessable_content)
-        
+
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to include('Provider client not available')
       end
@@ -57,18 +57,18 @@ RSpec.describe "API Provider Integration", type: :request do
       it "passes function parameter to client" do
         mock_client = double('ProxmoxClient')
         allow(ProviderClient::Base).to receive(:for_provider).with(provider).and_return(mock_client)
-        
+
         expect(mock_client).to receive(:call) do |params|
           expect(params[:function]).to eq('storage')
           expect(params[:node]).to eq('pve1')
-          { 'storage' => ['local', 'shared'] }
+          { 'storage' => [ 'local', 'shared' ] }
         end
 
         get "/api/providers/#{provider.id}", params: { function: 'storage', node: 'pve1' }
 
         expect(response).to have_http_status(:success)
         json_response = JSON.parse(response.body)
-        expect(json_response['storage']).to eq(['local', 'shared'])
+        expect(json_response['storage']).to eq([ 'local', 'shared' ])
       end
     end
   end

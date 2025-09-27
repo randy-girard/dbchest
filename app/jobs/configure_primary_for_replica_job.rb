@@ -80,19 +80,19 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
 
     # Define template variables
     variables = {
-      'replica_ip' => @replica_ip,
-      'replica_node_name' => @replica_node.name,
-      'replication_password' => replication_password,
-      'postgresql_version' => primary_version,
-      'replica_postgresql_version' => replica_version
+      "replica_ip" => @replica_ip,
+      "replica_node_name" => @replica_node.name,
+      "replication_password" => replication_password,
+      "postgresql_version" => primary_version,
+      "replica_postgresql_version" => replica_version
     }
 
     # Use the existing Ansible playbook template
-    template_path = 'lib/ansible/postgresql/configure_primary_replication.yml'
+    template_path = "lib/ansible/postgresql/configure_primary_replication.yml"
 
     @ansible_service.write_playbook_from_template(
       template_path,
-      'configure_primary_replication',
+      "configure_primary_replication",
       variables
     )
   end
@@ -110,10 +110,10 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
 
     # Create inventory using the service
     hosts_config = {
-      'all' => [
+      "all" => [
         {
           ip: primary_ip,
-          user: 'root',
+          user: "root",
           ssh_key: ssh_key_path,
           skip_host_check: true
         }
@@ -159,7 +159,7 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
     key_file.write(@primary_node.ssh_private_key)
     key_file.chmod(0600)
     key_file.flush
-    key_file.close
+    key_file.close(false)  # Don't unlink the file
     key_file.path
   end
 

@@ -7,7 +7,7 @@ class ClusterDashboardsController < ApplicationController
     @cluster_metrics = calculate_cluster_metrics
     @cluster_health = calculate_cluster_health
     @recent_alerts = collect_recent_alerts
-    
+
     respond_to do |format|
       format.html
       format.json do
@@ -24,18 +24,18 @@ class ClusterDashboardsController < ApplicationController
 
   # GET /clusters/:cluster_id/dashboard/metrics_summary
   def metrics_summary
-    time_range = params[:range] || '1h'
+    time_range = params[:range] || "1h"
     start_time = case time_range
-                 when '15m' then 15.minutes.ago
-                 when '1h' then 1.hour.ago
-                 when '6h' then 6.hours.ago
-                 when '24h' then 24.hours.ago
-                 when '7d' then 7.days.ago
-                 else 1.hour.ago
-                 end
+    when "15m" then 15.minutes.ago
+    when "1h" then 1.hour.ago
+    when "6h" then 6.hours.ago
+    when "24h" then 24.hours.ago
+    when "7d" then 7.days.ago
+    else 1.hour.ago
+    end
 
     cluster_metrics = calculate_cluster_metrics_for_period(start_time)
-    
+
     render json: {
       time_range: time_range,
       start_time: start_time.iso8601,
@@ -48,11 +48,11 @@ class ClusterDashboardsController < ApplicationController
   # GET /clusters/:cluster_id/dashboard/live_status
   def live_status
     @nodes = @cluster.nodes.includes(:node_metrics)
-    
+
     render json: {
       cluster_id: @cluster.id,
       timestamp: Time.current.iso8601,
-      nodes: @nodes.map { |node| 
+      nodes: @nodes.map { |node|
         latest_metrics = node.latest_metrics
         {
           id: node.id,
@@ -84,7 +84,7 @@ class ClusterDashboardsController < ApplicationController
       name: @cluster.name,
       database_type: @cluster.database_type.name,
       node_count: @nodes.count,
-      active_nodes: @nodes.where(status: 'active').count,
+      active_nodes: @nodes.where(status: "active").count,
       primary_nodes: @nodes.where(parent_node_id: nil).count,
       replica_nodes: @nodes.where.not(parent_node_id: nil).count,
       created_at: @cluster.created_at.iso8601
@@ -93,7 +93,7 @@ class ClusterDashboardsController < ApplicationController
 
   def node_summary_with_metrics(node)
     latest_metrics = node.latest_metrics
-    
+
     {
       id: node.id,
       name: node.name,
@@ -108,20 +108,20 @@ class ClusterDashboardsController < ApplicationController
   end
 
   def calculate_cluster_metrics
-    active_nodes = @nodes.where(status: 'active')
+    active_nodes = @nodes.where(status: "active")
     nodes_with_metrics = active_nodes.select { |node| node.latest_metrics.present? }
-    
+
     return {} if nodes_with_metrics.empty?
 
     cpu_values = nodes_with_metrics.map { |node| node.latest_metrics.cpu_usage_percent }.compact
     memory_values = nodes_with_metrics.map { |node| node.latest_metrics.memory_usage_percent }.compact
-    
+
     total_memory_mb = nodes_with_metrics.sum { |node| node.latest_metrics.memory_total_mb || 0 }
     used_memory_mb = nodes_with_metrics.sum { |node| node.latest_metrics.memory_used_mb || 0 }
-    
+
     # Calculate disk usage across all nodes
     disk_stats = calculate_cluster_disk_stats(nodes_with_metrics)
-    
+
     {
       cpu: {
         average: cpu_values.any? ? (cpu_values.sum / cpu_values.size).round(2) : 0,
@@ -143,9 +143,9 @@ class ClusterDashboardsController < ApplicationController
         total: @nodes.count,
         active: active_nodes.count,
         with_metrics: nodes_with_metrics.size,
-        healthy: nodes_with_metrics.count { |node| node.current_health_status == 'healthy' },
-        warning: nodes_with_metrics.count { |node| node.current_health_status == 'warning' },
-        critical: nodes_with_metrics.count { |node| node.current_health_status == 'critical' }
+        healthy: nodes_with_metrics.count { |node| node.current_health_status == "healthy" },
+        warning: nodes_with_metrics.count { |node| node.current_health_status == "warning" },
+        critical: nodes_with_metrics.count { |node| node.current_health_status == "critical" }
       }
     }
   end
@@ -154,30 +154,30 @@ class ClusterDashboardsController < ApplicationController
     total_disk_gb = 0
     used_disk_gb = 0
     disk_mount_stats = {}
-    
+
     nodes_with_metrics.each do |node|
       metrics = node.latest_metrics
       next unless metrics
-      
+
       metrics.disk_mounts.each do |mount|
         total_gb = metrics.disk_total_gb(mount)
         used_gb = metrics.disk_used_gb(mount)
-        
+
         total_disk_gb += total_gb
         used_disk_gb += used_gb
-        
+
         disk_mount_stats[mount] ||= { total_gb: 0, used_gb: 0, node_count: 0 }
         disk_mount_stats[mount][:total_gb] += total_gb
         disk_mount_stats[mount][:used_gb] += used_gb
         disk_mount_stats[mount][:node_count] += 1
       end
     end
-    
+
     # Calculate usage percentages for each mount
     disk_mount_stats.each do |mount, stats|
       stats[:usage_percent] = stats[:total_gb] > 0 ? ((stats[:used_gb] / stats[:total_gb]) * 100).round(2) : 0
     end
-    
+
     {
       total_gb: total_disk_gb.round(2),
       used_gb: used_disk_gb.round(2),
@@ -188,61 +188,61 @@ class ClusterDashboardsController < ApplicationController
   end
 
   def calculate_cluster_health
-    active_nodes = @nodes.where(status: 'active')
+    active_nodes = @nodes.where(status: "active")
     nodes_with_metrics = active_nodes.select { |node| node.latest_metrics.present? }
-    
+
     if nodes_with_metrics.empty?
       return {
-        status: 'unknown',
-        message: 'No metrics available',
+        status: "unknown",
+        message: "No metrics available",
         healthy_nodes: 0,
         warning_nodes: 0,
         critical_nodes: 0,
         total_nodes: active_nodes.count
       }
     end
-    
+
     health_counts = {
-      'healthy' => 0,
-      'warning' => 0,
-      'critical' => 0,
-      'unknown' => 0
+      "healthy" => 0,
+      "warning" => 0,
+      "critical" => 0,
+      "unknown" => 0
     }
-    
+
     nodes_with_metrics.each do |node|
       status = node.current_health_status
       health_counts[status] = (health_counts[status] || 0) + 1
     end
-    
+
     # Determine overall cluster health
-    overall_status = if health_counts['critical'] > 0
-                       'critical'
-                     elsif health_counts['warning'] > 0
-                       'warning'
-                     elsif health_counts['healthy'] > 0
-                       'healthy'
-                     else
-                       'unknown'
-                     end
-    
+    overall_status = if health_counts["critical"] > 0
+                       "critical"
+    elsif health_counts["warning"] > 0
+                       "warning"
+    elsif health_counts["healthy"] > 0
+                       "healthy"
+    else
+                       "unknown"
+    end
+
     message = case overall_status
-              when 'critical'
+    when "critical"
                 "#{health_counts['critical']} node(s) in critical state"
-              when 'warning'
+    when "warning"
                 "#{health_counts['warning']} node(s) need attention"
-              when 'healthy'
+    when "healthy"
                 "All nodes operating normally"
-              else
+    else
                 "Unable to determine cluster health"
-              end
-    
+    end
+
     {
       status: overall_status,
       message: message,
-      healthy_nodes: health_counts['healthy'],
-      warning_nodes: health_counts['warning'],
-      critical_nodes: health_counts['critical'],
-      unknown_nodes: health_counts['unknown'],
+      healthy_nodes: health_counts["healthy"],
+      warning_nodes: health_counts["warning"],
+      critical_nodes: health_counts["critical"],
+      unknown_nodes: health_counts["unknown"],
       total_nodes: nodes_with_metrics.size,
       nodes_without_metrics: active_nodes.count - nodes_with_metrics.size
     }
@@ -250,18 +250,18 @@ class ClusterDashboardsController < ApplicationController
 
   def collect_recent_alerts
     alerts = []
-    
+
     @nodes.each do |node|
       latest_metrics = node.latest_metrics
       next unless latest_metrics
-      
+
       # CPU alerts
       if latest_metrics.cpu_usage_percent > 85
         alerts << {
           node_id: node.id,
           node_name: node.name,
-          type: 'critical',
-          category: 'cpu',
+          type: "critical",
+          category: "cpu",
           message: "High CPU usage: #{latest_metrics.cpu_usage_percent}%",
           value: latest_metrics.cpu_usage_percent,
           timestamp: latest_metrics.collected_at.iso8601
@@ -270,22 +270,22 @@ class ClusterDashboardsController < ApplicationController
         alerts << {
           node_id: node.id,
           node_name: node.name,
-          type: 'warning',
-          category: 'cpu',
+          type: "warning",
+          category: "cpu",
           message: "Elevated CPU usage: #{latest_metrics.cpu_usage_percent}%",
           value: latest_metrics.cpu_usage_percent,
           timestamp: latest_metrics.collected_at.iso8601
         }
       end
-      
+
       # Memory alerts
       memory_percent = latest_metrics.memory_usage_percent
       if memory_percent > 90
         alerts << {
           node_id: node.id,
           node_name: node.name,
-          type: 'critical',
-          category: 'memory',
+          type: "critical",
+          category: "memory",
           message: "High memory usage: #{memory_percent}%",
           value: memory_percent,
           timestamp: latest_metrics.collected_at.iso8601
@@ -294,14 +294,14 @@ class ClusterDashboardsController < ApplicationController
         alerts << {
           node_id: node.id,
           node_name: node.name,
-          type: 'warning',
-          category: 'memory',
+          type: "warning",
+          category: "memory",
           message: "Elevated memory usage: #{memory_percent}%",
           value: memory_percent,
           timestamp: latest_metrics.collected_at.iso8601
         }
       end
-      
+
       # Disk alerts
       latest_metrics.disk_mounts.each do |mount|
         usage = latest_metrics.disk_usage_percent(mount)
@@ -309,8 +309,8 @@ class ClusterDashboardsController < ApplicationController
           alerts << {
             node_id: node.id,
             node_name: node.name,
-            type: 'critical',
-            category: 'disk',
+            type: "critical",
+            category: "disk",
             message: "High disk usage on #{mount}: #{usage}%",
             value: usage,
             mount: mount,
@@ -320,8 +320,8 @@ class ClusterDashboardsController < ApplicationController
           alerts << {
             node_id: node.id,
             node_name: node.name,
-            type: 'warning',
-            category: 'disk',
+            type: "warning",
+            category: "disk",
             message: "Elevated disk usage on #{mount}: #{usage}%",
             value: usage,
             mount: mount,
@@ -330,9 +330,9 @@ class ClusterDashboardsController < ApplicationController
         end
       end
     end
-    
+
     # Sort by severity and timestamp
-    alerts.sort_by { |alert| [alert[:type] == 'critical' ? 0 : 1, alert[:timestamp]] }.reverse
+    alerts.sort_by { |alert| [ alert[:type] == "critical" ? 0 : 1, alert[:timestamp] ] }.reverse
   end
 
   def calculate_cluster_metrics_for_period(start_time)
@@ -343,13 +343,13 @@ class ClusterDashboardsController < ApplicationController
 
   def calculate_individual_node_metrics_for_period(start_time)
     node_metrics = {}
-    
+
     @nodes.each do |node|
       metrics = node.metrics_since(start_time).recent.limit(100)
       if metrics.any?
         cpu_values = metrics.map(&:cpu_usage_percent).compact
         memory_values = metrics.map(&:memory_usage_percent).compact
-        
+
         node_metrics[node.id] = {
           node_name: node.name,
           cpu: {
@@ -366,7 +366,7 @@ class ClusterDashboardsController < ApplicationController
         }
       end
     end
-    
+
     node_metrics
   end
 end

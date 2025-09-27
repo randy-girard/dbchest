@@ -18,9 +18,9 @@ class CreateNodeMetrics < ActiveRecord::Migration[8.0]
     end
 
     # Indexes for efficient querying
-    add_index :node_metrics, [:node_id, :collected_at]
+    add_index :node_metrics, [ :node_id, :collected_at ]
     add_index :node_metrics, :collected_at
-    add_index :node_metrics, [:node_id, :created_at]
+    add_index :node_metrics, [ :node_id, :created_at ]
 
     # GIN indexes for JSONB columns
     add_index :node_metrics, :disk_usage, using: :gin

@@ -44,6 +44,7 @@ RSpec.describe MetricsCleanupJob, type: :job do
       it 'logs cleanup information' do
         expect(Rails.logger).to receive(:info).with(/Starting metrics cleanup/)
         expect(Rails.logger).to receive(:info).with(/Found 3 metrics records older than 30 days/)
+        expect(Rails.logger).to receive(:info).with(/Deleted \d+ metrics records/)
         expect(Rails.logger).to receive(:info).with(/Metrics cleanup completed/)
 
         MetricsCleanupJob.perform_now
@@ -54,10 +55,10 @@ RSpec.describe MetricsCleanupJob, type: :job do
       it 'deletes metrics older than specified days' do
         expect {
           MetricsCleanupJob.perform_now(retention_days: 7)
-        }.to change { NodeMetric.count }.by(-4) # 3 old + 1 recent (1 week old)
+        }.to change { NodeMetric.count }.by(-5) # 3 old + 1 week old + 2 weeks old
 
-        # Only very recent metrics should remain
-        expect(NodeMetric.count).to eq(2)
+        # Only very recent metrics should remain (1 day ago)
+        expect(NodeMetric.count).to eq(1)
       end
     end
 
@@ -73,6 +74,8 @@ RSpec.describe MetricsCleanupJob, type: :job do
       end
 
       it 'logs that no cleanup was needed' do
+        expect(Rails.logger).to receive(:info).with(/Starting metrics cleanup/)
+        expect(Rails.logger).to receive(:info).with(/Found 0 metrics records older than 30 days/)
         expect(Rails.logger).to receive(:info).with(/No old metrics records found to clean up/)
         MetricsCleanupJob.perform_now
       end
@@ -99,15 +102,21 @@ RSpec.describe MetricsCleanupJob, type: :job do
       end
 
       it 'deletes records in batches' do
+        expect(Rails.logger).to receive(:info).with(/Starting metrics cleanup/)
+        expect(Rails.logger).to receive(:info).with(/Found \d+ metrics records older than 30 days/)
         expect(Rails.logger).to receive(:info).with(/Deleted \d+ metrics records/).at_least(3).times
-        
+        expect(Rails.logger).to receive(:info).with(/Metrics cleanup completed/)
+
         expect {
           MetricsCleanupJob.perform_now
-        }.to change { NodeMetric.count }.by(-2500)
+        }.to change { NodeMetric.count }.by(-2503) # 2500 + 3 old metrics from setup
       end
 
       it 'includes batch progress logging' do
+        expect(Rails.logger).to receive(:info).with(/Starting metrics cleanup/)
+        expect(Rails.logger).to receive(:info).with(/Found \d+ metrics records older than 30 days/)
         expect(Rails.logger).to receive(:info).with(/total deleted: \d+/).at_least(3).times
+        expect(Rails.logger).to receive(:info).with(/Metrics cleanup completed/)
         MetricsCleanupJob.perform_now
       end
     end
@@ -164,7 +173,7 @@ RSpec.describe MetricsCleanupJob, type: :job do
 
         expect {
           MetricsCleanupJob.perform_now(retention_days: 7)
-        }.to change { NodeMetric.count }.by(-4) # 3 old + 1 from 8 days ago
+        }.to change { NodeMetric.count }.by(-6) # 3 old + 1 week + 2 weeks + 8 days ago
       end
 
       it 'respects 60-day retention' do
@@ -173,7 +182,7 @@ RSpec.describe MetricsCleanupJob, type: :job do
 
         expect {
           MetricsCleanupJob.perform_now(retention_days: 60)
-        }.to change { NodeMetric.count }.by(-2) # Only the 65-day old one
+        }.to change { NodeMetric.count }.by(-1) # Only 65 days ago (35,40,50 days are < 60 days)
       end
     end
 

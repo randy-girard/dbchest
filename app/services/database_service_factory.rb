@@ -50,8 +50,8 @@ class DatabaseServiceFactory
 end
 
 # Register existing services
-DatabaseServiceFactory.register_deployment_service('postgresql', DeploymentServices::PostgresqlDeploymentService)
-DatabaseServiceFactory.register_deployment_service('mysql', DeploymentServices::MysqlDeploymentService)
+DatabaseServiceFactory.register_deployment_service("postgresql", DeploymentServices::PostgresqlDeploymentService)
+DatabaseServiceFactory.register_deployment_service("mysql", DeploymentServices::MysqlDeploymentService)
 
 # Note: Monitoring services would be registered here when they are implemented
 # DatabaseServiceFactory.register_monitoring_service('postgresql', DeploymentServices::PostgresqlMonitoringService)

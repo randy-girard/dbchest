@@ -23,7 +23,7 @@ Rails.application.routes.draw do
     get "nodes/status", to: "nodes_status#index"
 
     # Cluster dashboard
-    resource :dashboard, controller: 'cluster_dashboards', only: [:show] do
+    resource :dashboard, controller: "cluster_dashboards", only: [ :show ] do
       get :metrics_summary
       get :live_status
     end
@@ -37,7 +37,7 @@ Rails.application.routes.draw do
 
   # Node metrics API
   resources :nodes, only: [] do
-    resources :metrics, controller: 'node_metrics', only: [:create, :index] do
+    resources :metrics, controller: "node_metrics", only: [ :create, :index ] do
       collection do
         get :latest
         get :summary
@@ -45,7 +45,7 @@ Rails.application.routes.draw do
     end
 
     # Node dashboard
-    resource :dashboard, controller: 'node_dashboards', only: [:show] do
+    resource :dashboard, controller: "node_dashboards", only: [ :show ] do
       get :metrics_data
       get :live_metrics
     end

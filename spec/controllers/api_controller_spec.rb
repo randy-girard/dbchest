@@ -149,13 +149,13 @@ RSpec.describe ApiController, type: :controller do
         # Mock the actual Proxmox client call
         mock_proxmox_client = double('ProxmoxClient')
         allow(ProviderClient::Base).to receive(:for_provider).with(real_provider).and_return(mock_proxmox_client)
-        allow(mock_proxmox_client).to receive(:call).and_return({ 'nodes' => ['pve1', 'pve2'] })
+        allow(mock_proxmox_client).to receive(:call).and_return({ 'nodes' => [ 'pve1', 'pve2' ] })
 
         get :index, params: { provider_id: real_provider.id, function: 'nodes' }
 
         expect(response).to be_successful
         json_response = JSON.parse(response.body)
-        expect(json_response['nodes']).to eq(['pve1', 'pve2'])
+        expect(json_response['nodes']).to eq([ 'pve1', 'pve2' ])
       end
 
       it "handles unknown provider type gracefully" do
@@ -170,6 +170,4 @@ RSpec.describe ApiController, type: :controller do
       end
     end
   end
-
-
 end

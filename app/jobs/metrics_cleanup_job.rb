@@ -4,34 +4,34 @@ class MetricsCleanupJob < ApplicationJob
   # Clean up old metrics data to keep database performant
   def perform(retention_days: 30)
     cutoff_date = retention_days.days.ago
-    
+
     Rails.logger.info "Starting metrics cleanup for data older than #{cutoff_date}"
-    
+
     # Count records before cleanup
     total_before = NodeMetric.count
-    old_records_count = NodeMetric.where('created_at < ?', cutoff_date).count
-    
+    old_records_count = NodeMetric.where("created_at < ?", cutoff_date).count
+
     Rails.logger.info "Found #{old_records_count} metrics records older than #{retention_days} days (total: #{total_before})"
-    
+
     if old_records_count > 0
       # Delete in batches to avoid long-running transactions
       batch_size = 1000
       deleted_count = 0
-      
+
       loop do
-        batch_deleted = NodeMetric.where('created_at < ?', cutoff_date).limit(batch_size).delete_all
+        batch_deleted = NodeMetric.where("created_at < ?", cutoff_date).limit(batch_size).delete_all
         break if batch_deleted == 0
-        
+
         deleted_count += batch_deleted
         Rails.logger.info "Deleted #{batch_deleted} metrics records (total deleted: #{deleted_count})"
-        
+
         # Small pause between batches to avoid overwhelming the database
         sleep(0.1)
       end
-      
+
       total_after = NodeMetric.count
       Rails.logger.info "Metrics cleanup completed. Deleted #{deleted_count} records. Database size reduced from #{total_before} to #{total_after} records."
-      
+
       # Broadcast cleanup completion to development console
       if Rails.env.development?
         console_data = {
