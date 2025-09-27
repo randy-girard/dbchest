@@ -255,21 +255,21 @@ send_metrics() {
 
 # Main execution
 main() {
-    # Check if required tools are available
+    # Check if required tools are available (should be installed by cloud init)
     if ! command -v bc >/dev/null 2>&1; then
-        log "Error: bc calculator not found. Installing..."
-        apt-get update -qq && apt-get install -y bc
+        log "Error: bc calculator not found. This should have been installed during setup."
+        exit 1
     fi
-    
+
     if ! command -v jq >/dev/null 2>&1; then
-        log "Error: jq not found. Installing..."
-        apt-get update -qq && apt-get install -y jq
+        log "Error: jq not found. This should have been installed during setup."
+        exit 1
     fi
-    
+
     # Collect and send metrics
     log "Starting metrics collection..."
     local metrics_payload=$(collect_metrics)
-    
+
     if [ $? -eq 0 ]; then
         send_metrics "$metrics_payload"
         if [ $? -eq 0 ]; then

@@ -5,6 +5,7 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
     @primary_node = Node.find(primary_node_id)
     @replica_node = Node.find(replica_node_id)
     @replica_ip = replica_ip
+    @ansible_service = AnsiblePlaybookService.new
 
     # Broadcast job start to development console
     broadcast_job_message("Starting primary configuration job for replica at #{@replica_ip}", "info")
@@ -34,11 +35,11 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
       # Ensure primary node has replication password
       replication_password = @primary_node.ensure_replication_password!
 
-      # Generate Ansible playbook for primary configuration
-      playbook_content = generate_primary_configuration_playbook(replication_password)
+      # Create temporary Ansible workspace
+      @ansible_service.create_temp_workspace
 
-      # Write playbook to temporary file
-      playbook_file = write_temp_playbook(playbook_content)
+      # Create playbook from template with variables
+      playbook_file = create_primary_configuration_playbook(replication_password)
 
       # Execute Ansible playbook
       result = execute_ansible_playbook(playbook_file)
@@ -65,115 +66,35 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
       Rails.logger.error e.backtrace.join("\n")
       @replica_node.update_status!("error", "Primary configuration job failed: #{e.message}")
     ensure
-      # Clean up temporary playbook file
-      File.delete(playbook_file) if playbook_file && File.exist?(playbook_file)
+      # Clean up temporary Ansible workspace
+      @ansible_service&.cleanup!
     end
   end
 
   private
 
-  def generate_primary_configuration_playbook(replication_password)
+  def create_primary_configuration_playbook(replication_password)
     # Get database version information
     primary_version = @primary_node.database_type_version&.version || "15"
     replica_version = @replica_node.database_type_version&.version || "15"
 
-    <<~YAML
-      ---
-      - name: Configure PostgreSQL primary for replication from specific replica
-        hosts: all
-        become: yes
-        vars:
-          replica_ip: "#{@replica_ip}"
-          replica_name: "#{@replica_node.name}"
-          replication_password: "#{replication_password}"
-          postgresql_version: "#{primary_version}"
-          replica_postgresql_version: "#{replica_version}"
-      #{'  '}
-        tasks:
-          - name: Validate replica_ip is not empty
-            fail:
-              msg: "replica_ip variable is empty or undefined. Cannot configure pg_hba.conf"
-            when: replica_ip is undefined or replica_ip == "" or replica_ip is none
+    # Define template variables
+    variables = {
+      'replica_ip' => @replica_ip,
+      'replica_node_name' => @replica_node.name,
+      'replication_password' => replication_password,
+      'postgresql_version' => primary_version,
+      'replica_postgresql_version' => replica_version
+    }
 
-          - name: Validate replica_ip format
-            fail:
-              msg: "replica_ip '{{ replica_ip }}' is not a valid IP address format"
-            when: replica_ip is not match("^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$")
-          - name: Check if replication user exists
-            become_user: postgres
-            postgresql_query:
-              db: postgres
-              query: "SELECT 1 FROM pg_user WHERE usename = 'replication'"
-            register: replication_user_exists
-            ignore_errors: yes
+    # Use the existing Ansible playbook template
+    template_path = 'lib/ansible/postgresql/configure_primary_replication.yml'
 
-          - name: Create replication user if not exists
-            become_user: postgres
-            postgresql_user:
-              name: replication
-              password: "{{ replication_password }}"
-              role_attr_flags: REPLICATION,LOGIN
-              conn_limit: 10
-              state: present
-            when: replication_user_exists.query_result | length == 0
-
-          - name: Check if pg_hba.conf entry exists for this replica IP
-            lineinfile:
-              path: /etc/postgresql/*/main/pg_hba.conf
-              regexp: "^host\\s+replication\\s+replication\\s+{{ replica_ip }}/32"
-              state: absent
-            check_mode: yes
-            register: pg_hba_check
-
-          - name: Add pg_hba.conf entry for replica
-            lineinfile:
-              path: /etc/postgresql/*/main/pg_hba.conf
-              line: "# Replication from {{ replica_name }} ({{ replica_ip }})"
-              insertafter: "^# Database administrative login by Unix domain socket"
-              state: present
-            when: pg_hba_check.changed
-
-          - name: Add replication host entry for replica
-            lineinfile:
-              path: /etc/postgresql/*/main/pg_hba.conf
-              line: "host    replication     replication     {{ replica_ip }}/32          md5"
-              insertafter: "# Replication from {{ replica_name }}"
-              state: present
-            when: pg_hba_check.changed
-
-          - name: Reload PostgreSQL configuration
-            systemd:
-              name: postgresql
-              state: reloaded
-            when: pg_hba_check.changed
-
-          - name: Verify PostgreSQL is running
-            systemd:
-              name: postgresql
-              state: started
-              enabled: yes
-
-          - name: Test replication user connection
-            become_user: postgres
-            postgresql_query:
-              db: postgres
-              login_user: replication
-              login_password: "{{ replication_password }}"
-              query: "SELECT 1"
-            register: replication_test
-      #{'      '}
-          - name: Configuration verification
-            debug:
-              msg: "Primary successfully configured for replication from {{ replica_ip }}"
-            when: replication_test is succeeded
-    YAML
-  end
-
-  def write_temp_playbook(content)
-    temp_file = Tempfile.new([ "configure_primary_", ".yml" ])
-    temp_file.write(content)
-    temp_file.close
-    temp_file.path
+    @ansible_service.write_playbook_from_template(
+      template_path,
+      'configure_primary_replication',
+      variables
+    )
   end
 
   def execute_ansible_playbook(playbook_file)
@@ -184,13 +105,27 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
       return { success: false, error: "Primary node IP address not available" }
     end
 
+    # Get SSH private key path (creates temporary file)
+    ssh_key_path = create_temp_ssh_key
+
+    # Create inventory using the service
+    hosts_config = {
+      'all' => [
+        {
+          ip: primary_ip,
+          user: 'root',
+          ssh_key: ssh_key_path,
+          skip_host_check: true
+        }
+      ]
+    }
+
+    inventory_file = @ansible_service.write_inventory(hosts_config)
+
     # Build Ansible command
     ansible_cmd = [
       "ansible-playbook",
-      "-i", "#{primary_ip},",
-      "--private-key", @primary_node.ssh_private_key_path,
-      "--user", "root",
-      "--ssh-common-args", "-o StrictHostKeyChecking=no",
+      "-i", inventory_file,
       playbook_file
     ]
 
@@ -209,9 +144,24 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
     end
   rescue => e
     { success: false, error: "Exception running Ansible: #{e.message}" }
+  ensure
+    # Clean up temporary SSH key file
+    if ssh_key_path && File.exist?(ssh_key_path)
+      File.delete(ssh_key_path)
+      Rails.logger.debug "Cleaned up temporary SSH key file: #{ssh_key_path}"
+    end
   end
 
   private
+
+  def create_temp_ssh_key
+    key_file = Tempfile.new("ansible_ssh_key")
+    key_file.write(@primary_node.ssh_private_key)
+    key_file.chmod(0600)
+    key_file.flush
+    key_file.close
+    key_file.path
+  end
 
   def broadcast_job_message(message, level = "info")
     return unless Rails.env.development?

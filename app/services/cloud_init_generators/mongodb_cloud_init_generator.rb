@@ -1,15 +1,18 @@
 module CloudInitGenerators
   class MongodbCloudInitGenerator < BaseCloudInitGenerator
     def generate(is_replica: false)
+      # MongoDB still uses the inline approach since it's more complex
+      # But we'll make it more modular and add progress reporting
       script_parts = [
         shebang,
+        common_functions,
+        setup_metrics_collection, # Move metrics collection to the beginning
         update_system,
         install_mongodb,
         configure_mongodb(is_replica),
         start_mongodb_service,
         setup_replication(is_replica),
         create_sample_data,
-        setup_metrics_collection,
         final_status_update
       ]
 
@@ -18,21 +21,89 @@ module CloudInitGenerators
 
     private
 
+    def common_functions
+      <<~SCRIPT
+        # Common functions for MongoDB setup
+        log() {
+          local message="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+          echo "$message" | tee -a /var/log/dbchest-setup.log
+        }
+
+        callback() {
+          local status="$1"
+          local message="$2"
+
+          curl -s -X POST "#{callback_url}" \\
+            -H "Content-Type: application/json" \\
+            -d "{\\"status\\": \\"$status\\", \\"message\\": \\"$message\\"}" || true
+        }
+
+        # Simple progress reporter for MongoDB operations
+        start_progress_reporter() {
+          local operation_name="$1"
+
+          {
+            local elapsed=0
+            local interval=10
+
+            while true; do
+              sleep $interval
+              elapsed=$((elapsed + interval))
+
+              if [ $elapsed -eq 10 ]; then
+                callback "configuring" "$operation_name started..."
+              elif [ $elapsed -eq 30 ]; then
+                callback "configuring" "$operation_name in progress..."
+              elif [ $((elapsed % 60)) -eq 0 ]; then
+                local minutes=$((elapsed / 60))
+                callback "configuring" "$operation_name running for ${minutes} minute(s)..."
+              fi
+            done
+          } &
+
+          echo $!
+        }
+
+        stop_progress_reporter() {
+          local reporter_pid="$1"
+          local operation_name="$2"
+          local success="${3:-true}"
+
+          if [ -n "$reporter_pid" ]; then
+            kill "$reporter_pid" 2>/dev/null || true
+          fi
+
+          if [ "$success" = "true" ]; then
+            log "$operation_name completed successfully"
+            callback "configuring" "$operation_name completed successfully"
+          else
+            log "$operation_name failed"
+            callback "error" "$operation_name failed"
+          fi
+        }
+      SCRIPT
+    end
+
     def install_mongodb
       <<~SCRIPT
+        # Install essential packages first
+        echo "Installing essential packages..."
+        apt-get update -y
+        apt-get install -y curl bc jq
+
         # Install MongoDB
         echo "Installing MongoDB #{database_type_handler.version}..."
-        
+
         # Import MongoDB public GPG key
         curl -fsSL https://pgp.mongodb.com/server-#{database_type_handler.major_version}.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-#{database_type_handler.major_version}.gpg --dearmor
-        
+
         # Add MongoDB repository
         echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-#{database_type_handler.major_version}.gpg ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/#{database_type_handler.major_version} multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-#{database_type_handler.major_version}.list
-        
+
         # Update package list and install MongoDB
         apt-get update
         apt-get install -y mongodb-org=#{database_type_handler.version}* mongodb-org-database=#{database_type_handler.version}* mongodb-org-server=#{database_type_handler.version}* mongodb-org-mongos=#{database_type_handler.version}* mongodb-org-tools=#{database_type_handler.version}*
-        
+
         # Hold MongoDB packages to prevent automatic updates
         apt-mark hold mongodb-org mongodb-org-database mongodb-org-server mongodb-org-mongos mongodb-org-tools
       SCRIPT

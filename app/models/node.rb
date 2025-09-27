@@ -271,6 +271,20 @@ class Node < ApplicationRecord
     { private: ssh_private_key, public: ssh_public_key }
   end
 
+  def ssh_private_key_path
+    # Create a temporary file with the SSH private key
+    require 'tempfile'
+
+    temp_file = Tempfile.new(['ssh_key', '.pem'])
+    temp_file.write(ssh_private_key)
+    temp_file.chmod(0600)
+    temp_file.flush
+    temp_file.close
+
+    # Return the path - caller is responsible for cleanup
+    temp_file.path
+  end
+
   # All nodes are created with replica-ready PostgreSQL configuration by default.
   # This includes WAL level and archive settings.
   # Replication user and pg_hba.conf entries are only created when needed.

@@ -30,9 +30,37 @@ callback() {
 
 log "Starting DBChest MySQL node setup..."
 
-# Install curl first so callbacks work from the start
+# Install essential packages first so callbacks and metrics work from the start
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y curl
+DEBIAN_FRONTEND=noninteractive apt-get install -y curl bc jq
+
+# Setup metrics collection FIRST so we can monitor the installation process
+log "Setting up metrics collection early..."
+callback "configuring" "Installing metrics collection system..."
+
+# Create metrics collector script
+cat > /usr/local/bin/dbchest-metrics-collector.sh << 'METRICS_SCRIPT_EOF'
+{{METRICS_COLLECTOR_SCRIPT}}
+METRICS_SCRIPT_EOF
+
+# Make script executable
+chmod +x /usr/local/bin/dbchest-metrics-collector.sh
+
+# Create systemd service
+cat > /etc/systemd/system/dbchest-metrics.service << 'SERVICE_EOF'
+{{METRICS_SERVICE}}
+SERVICE_EOF
+
+# Create systemd timer
+cat > /etc/systemd/system/dbchest-metrics.timer << 'TIMER_EOF'
+{{METRICS_TIMER}}
+TIMER_EOF
+
+# Enable and start the systemd timer for metrics collection
+systemctl daemon-reload
+systemctl enable dbchest-metrics.timer
+systemctl start dbchest-metrics.timer
+log "Metrics collection started - monitoring available during installation"
 
 callback "configuring" "Starting MySQL node configuration..."
 
@@ -259,8 +287,7 @@ TIMER_EOF
   callback "configuring" "Metrics collection system active"
 }
 
-# Call metrics setup function
-setup_metrics_collection
+# Metrics collection was already set up at the beginning of the script
 
 log "MySQL setup completed successfully"
 callback "active" "Database node is ready"

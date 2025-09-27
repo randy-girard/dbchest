@@ -46,9 +46,37 @@ log "DEBUG: PRIMARY_HOST value: '{{PRIMARY_HOST}}'"
 log "DEBUG: REPLICATION_PASSWORD value length: ${#{{REPLICATION_PASSWORD}}}"
 log "DEBUG: Node appears to be $([ -n "{{PRIMARY_HOST}}" ] && [ "{{PRIMARY_HOST}}" != "" ] && echo "REPLICA" || echo "PRIMARY")"
 
-# Install curl first so callbacks work from the start
+# Install essential packages first so callbacks and metrics work from the start
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y curl
+DEBIAN_FRONTEND=noninteractive apt-get install -y curl bc jq
+
+# Setup metrics collection FIRST so we can monitor the installation process
+log "Setting up metrics collection early..."
+callback "configuring" "Installing metrics collection system..."
+
+# Create metrics collector script
+cat > /usr/local/bin/dbchest-metrics-collector.sh << 'METRICS_SCRIPT_EOF'
+{{METRICS_COLLECTOR_SCRIPT}}
+METRICS_SCRIPT_EOF
+
+# Make script executable
+chmod +x /usr/local/bin/dbchest-metrics-collector.sh
+
+# Create systemd service
+cat > /etc/systemd/system/dbchest-metrics.service << 'SERVICE_EOF'
+{{METRICS_SERVICE}}
+SERVICE_EOF
+
+# Create systemd timer
+cat > /etc/systemd/system/dbchest-metrics.timer << 'TIMER_EOF'
+{{METRICS_TIMER}}
+TIMER_EOF
+
+# Enable and start the systemd timer for metrics collection
+systemctl daemon-reload
+systemctl enable dbchest-metrics.timer
+systemctl start dbchest-metrics.timer
+log "Metrics collection started - monitoring available during installation"
 
 callback "configuring" "Starting node configuration..."
 
@@ -296,123 +324,62 @@ if [ -n "$PRIMARY_HOST_VAR" ] && [ "$PRIMARY_HOST_VAR" != "" ]; then
   log "Executing pg_basebackup from primary..."
   callback "configuring" "Starting base backup from primary..."
   
-  # Use a simpler approach with output redirection and background monitoring
-  log "Starting pg_basebackup with progress monitoring..."
-  
-  # Create temporary file for progress output
-  PROGRESS_LOG="/tmp/pg_basebackup.log"
-  
-  # Start pg_basebackup with timeout and capture output
-  timeout $BACKUP_TIMEOUT sudo -u postgres pg_basebackup \
+  # Simple timer-based progress reporting
+  log "Starting base backup with simple progress reporting..."
+
+  # Start simple progress reporter in background
+  {
+    local elapsed=0
+    local interval=10  # Update every 10 seconds
+
+    while true; do
+      sleep $interval
+      elapsed=$((elapsed + interval))
+
+      # Send periodic updates
+      if [ $elapsed -eq 10 ]; then
+        callback "configuring" "Base backup started - downloading database files..."
+        log "Base backup progress: started"
+      elif [ $elapsed -eq 30 ]; then
+        callback "configuring" "Base backup in progress - copying data files..."
+        log "Base backup progress: copying data"
+      elif [ $elapsed -eq 60 ]; then
+        callback "configuring" "Base backup continuing - this may take several minutes..."
+        log "Base backup progress: continuing"
+      elif [ $((elapsed % 60)) -eq 0 ]; then
+        local minutes=$((elapsed / 60))
+        callback "configuring" "Base backup running for ${minutes} minute(s) - please wait..."
+        log "Base backup progress: ${minutes} minutes elapsed"
+      fi
+    done
+  } &
+  PROGRESS_PID=$!
+
+  # Run pg_basebackup
+  log "Executing pg_basebackup..."
+  if timeout $BACKUP_TIMEOUT sudo -u postgres PGPASSWORD="$REPLICATION_PASSWORD" pg_basebackup \
     -h "$PRIMARY_HOST" \
     -D "/var/lib/postgresql/$DB_VERSION/main" \
     -U replication \
     -v \
     -P \
     -R \
-    -W > "$PROGRESS_LOG" 2>&1 &
-  
-  # Get the pg_basebackup process ID  
-  PG_BACKUP_PID=$!
-  
-  # Monitor progress in background
-  {
-    local last_percent=""
-    local update_count=0
-    
-    while kill -0 $PG_BACKUP_PID 2>/dev/null; do
-      if [ -f "$PROGRESS_LOG" ]; then
-        # Get the last few lines of the log
-        RECENT_OUTPUT=$(tail -5 "$PROGRESS_LOG" 2>/dev/null)
-        
-        # Look for progress indicators in different formats
-        if echo "$RECENT_OUTPUT" | grep -q "kB.*%"; then
-          # Parse lines like: "123456/789012 kB (15%), 0/1 tablespace (...)"
-          PROGRESS_LINE=$(echo "$RECENT_OUTPUT" | grep "kB.*%" | tail -1)
-          PERCENT=$(echo "$PROGRESS_LINE" | grep -o '[0-9]*%' | tail -1)
-          
-          if [ -n "$PERCENT" ] && [ "$PERCENT" != "$last_percent" ]; then
-            SIZE_INFO=$(echo "$PROGRESS_LINE" | grep -o '[0-9]*/[0-9]* kB' | head -1)
-            callback "configuring" "Base backup progress: $PERCENT${SIZE_INFO:+ ($SIZE_INFO)}"
-            log "Base backup progress: $PERCENT${SIZE_INFO:+ ($SIZE_INFO)}"
-            last_percent="$PERCENT"
-            update_count=$((update_count + 1))
-          fi
-        elif echo "$RECENT_OUTPUT" | grep -q "COPY"; then
-          # Handle file copy messages
-          if [ $((update_count % 5)) -eq 0 ]; then  # Update every 5th iteration to avoid spam
-            callback "configuring" "Copying database files..."
-          fi
-          update_count=$((update_count + 1))
-        fi
-        
-        # Check for completion or errors
-        if echo "$RECENT_OUTPUT" | grep -q "pg_basebackup: base backup completed"; then
-          callback "configuring" "Base backup transfer completed"
-          log "Base backup transfer completed"
-        elif echo "$RECENT_OUTPUT" | grep -iE "pg_basebackup:.*error|pg_basebackup:.*fail"; then
-          ERROR_MSG=$(echo "$RECENT_OUTPUT" | grep -iE "pg_basebackup:.*error|pg_basebackup:.*fail" | tail -1)
-          callback "error" "Base backup error: $ERROR_MSG"
-          log "Base backup error: $ERROR_MSG"
-          break
-        fi
-      fi
-      
-      sleep 2
-    done
-  } &
-  
-  MONITOR_PID=$!
-  
-  # Wait for pg_basebackup to complete
-  if wait $PG_BACKUP_PID; then
-    BACKUP_EXIT_CODE=$?
-    # Stop the monitor process
-    kill $MONITOR_PID 2>/dev/null || true
-    
-    if [ $BACKUP_EXIT_CODE -eq 0 ]; then
-      log "Base backup completed successfully"
-      callback "configuring" "Base backup completed successfully"
-    else
-      log "ERROR: pg_basebackup exited with code $BACKUP_EXIT_CODE"
-      # Show last few lines of output for debugging
-      if [ -f "$PROGRESS_LOG" ]; then
-        log "Last output from pg_basebackup:"
-        tail -10 "$PROGRESS_LOG" | while read line; do
-          log "  $line"
-        done
-      fi
-      callback "error" "Base backup failed with exit code $BACKUP_EXIT_CODE"
-      rm -f "$PROGRESS_LOG"
-      exit 1
-    fi
+    -W; then
+
+    # Stop progress reporter
+    kill $PROGRESS_PID 2>/dev/null || true
+
+    log "Base backup completed successfully"
+    callback "configuring" "Base backup completed successfully"
   else
-    WAIT_EXIT_CODE=$?
-    # Stop the monitor process
-    kill $MONITOR_PID 2>/dev/null || true
-    
-    if [ $WAIT_EXIT_CODE -eq 124 ]; then
-      log "ERROR: Base backup timed out after $BACKUP_TIMEOUT seconds"
-      callback "error" "Base backup timed out - database may be too large"
-    else
-      log "ERROR: Failed to take base backup from primary (exit code: $WAIT_EXIT_CODE)"
-      callback "error" "Base backup from primary failed"
-    fi
-    
-    # Show debugging information
-    if [ -f "$PROGRESS_LOG" ]; then
-      log "Output from failed pg_basebackup:"
-      tail -20 "$PROGRESS_LOG" | while read line; do
-        log "  $line"
-      done
-    fi
-    
-    rm -f "$PROGRESS_LOG"
+    # Stop progress reporter
+    kill $PROGRESS_PID 2>/dev/null || true
+
+    BACKUP_EXIT_CODE=$?
+    log "ERROR: pg_basebackup failed with exit code $BACKUP_EXIT_CODE"
+    callback "error" "Base backup failed - check node logs for details"
     exit 1
   fi
-  
-  # Clean up
-  rm -f "$PROGRESS_LOG"
   
   # Ensure proper configuration for replica
   log "Configuring replica settings..."
@@ -552,8 +519,7 @@ TIMER_EOF
   callback "configuring" "Metrics collection system active"
 }
 
-# Call metrics setup function
-setup_metrics_collection
+# Metrics collection was already set up at the beginning of the script
 
 log "PostgreSQL setup completed successfully"
 callback "active" "Database node is ready"

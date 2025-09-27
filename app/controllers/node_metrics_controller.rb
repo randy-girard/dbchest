@@ -126,10 +126,11 @@ class NodeMetricsController < ApplicationController
   end
 
   def validate_node_active
-    unless @node.active?
-      render json: { 
-        error: 'Node must be active to submit metrics',
-        current_status: @node.status 
+    # Allow metrics submission during setup and active states
+    unless @node.active? || @node.status == 'configuring' || @node.status == 'installing' || @node.status == 'provisioning'
+      render json: {
+        error: 'Node must be active or configuring to submit metrics',
+        current_status: @node.status
       }, status: :forbidden
       return
     end

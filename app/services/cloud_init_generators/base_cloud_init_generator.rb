@@ -8,16 +8,67 @@ module CloudInitGenerators
     end
 
     def generate(is_replica: false)
-      # Read the complete database-specific cloud-init script
+      # Use modular approach - combine modules with main script
       script_name = self.class.name.split("::").last.gsub("CloudInitGenerator", "").downcase
-      script_path = Rails.root.join("lib", "cloud_init_scripts", "#{script_name}_complete.sh")
-      script_content = File.read(script_path)
 
-      # Create a customized version in the terraform working directory
-      substitute_variables(script_content, is_replica: is_replica)
+      # Read the modular main script
+      main_script_path = Rails.root.join("lib", "cloud_init_scripts", "#{script_name}_modular.sh")
+
+      # If modular script doesn't exist, fall back to complete script
+      if File.exist?(main_script_path)
+        generate_modular_script(script_name, is_replica: is_replica)
+      else
+        # Fallback to old approach for backward compatibility
+        script_path = Rails.root.join("lib", "cloud_init_scripts", "#{script_name}_complete.sh")
+        script_content = File.read(script_path)
+        substitute_variables(script_content, is_replica: is_replica)
+      end
     end
 
     protected
+
+    def generate_modular_script(script_name, is_replica: false)
+      # Read all module files
+      modules_dir = Rails.root.join("lib", "cloud_init_scripts", "modules")
+      common_module = File.read(modules_dir.join("common.sh"))
+      database_module = File.read(modules_dir.join("#{script_name}.sh"))
+
+      # Read main script
+      main_script_path = Rails.root.join("lib", "cloud_init_scripts", "#{script_name}_modular.sh")
+      main_script = File.read(main_script_path)
+
+      # Combine into a single script with embedded modules
+      combined_script = build_combined_script(common_module, database_module, main_script)
+
+      # Apply variable substitutions
+      substitute_variables(combined_script, is_replica: is_replica)
+    end
+
+    def build_combined_script(common_module, database_module, main_script)
+      # Get the database type name from the class
+      db_type_name = self.class.name.split("::").last.gsub("CloudInitGenerator", "").downcase
+
+      <<~SCRIPT
+        #!/bin/bash
+        set -e
+
+        # Write modules to temporary files for sourcing
+        cat > /tmp/common.sh << 'COMMON_MODULE_EOF'
+        #{common_module}
+        COMMON_MODULE_EOF
+
+        cat > /tmp/#{db_type_name}.sh << 'DATABASE_MODULE_EOF'
+        #{database_module}
+        DATABASE_MODULE_EOF
+
+        # Make modules executable
+        chmod +x /tmp/common.sh
+        chmod +x /tmp/#{db_type_name}.sh
+
+        # Execute main script
+        #{main_script.lines[2..-1].join}  # Skip shebang and set -e from main script
+      SCRIPT
+    end
 
     def substitute_variables(script, is_replica: false)
       script_content = script.dup
