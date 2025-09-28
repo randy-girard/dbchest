@@ -1,5 +1,7 @@
 require_relative "deployment_services/postgresql_deployment_service"
 require_relative "deployment_services/mysql_deployment_service"
+require_relative "deployment_services/mongodb_deployment_service"
+require_relative "deployment_services/cassandra_deployment_service"
 
 class DatabaseServiceFactory
   # Service registries
@@ -52,6 +54,8 @@ end
 # Register existing services
 DatabaseServiceFactory.register_deployment_service("postgresql", DeploymentServices::PostgresqlDeploymentService)
 DatabaseServiceFactory.register_deployment_service("mysql", DeploymentServices::MysqlDeploymentService)
+DatabaseServiceFactory.register_deployment_service("mongodb", DeploymentServices::MongodbDeploymentService)
+DatabaseServiceFactory.register_deployment_service("cassandra", DeploymentServices::CassandraDeploymentService)
 
 # Note: Monitoring services would be registered here when they are implemented
 # DatabaseServiceFactory.register_monitoring_service('postgresql', DeploymentServices::PostgresqlMonitoringService)

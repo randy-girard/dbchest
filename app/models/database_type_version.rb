@@ -62,6 +62,36 @@ class DatabaseTypeVersion < ApplicationRecord
     true
   end
 
+  def rendered_config_template(variables = {})
+    return nil unless config_template.present?
+
+    # Merge default variables with provided ones
+    template_variables = default_template_variables.merge(variables)
+
+    # Use ERB to render the template
+    ERB.new(config_template).result_with_hash(template_variables)
+  rescue => e
+    Rails.logger.error "Error rendering config template for #{display_name}: #{e.message}"
+    nil
+  end
+
+  def has_config_template?
+    config_template.present?
+  end
+
+  def default_template_variables
+    {
+      version: version,
+      major_version: major_version,
+      default_port: default_port,
+      service_name: service_name,
+      data_directory: data_directory_pattern,
+      config_file: config_file_pattern,
+      database_type: database_type.slug,
+      database_name: database_type.name
+    }
+  end
+
   private
 
   def ensure_single_default

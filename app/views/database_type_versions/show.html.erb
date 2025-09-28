@@ -1,0 +1,264 @@
+<% content_for :title, "#{@database_type.name} #{@database_type_version.version}" %>
+
+<div class="container-xl">
+  <div class="page-header d-print-none">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">
+          <%= link_to "Database Types", database_types_path, class: "text-muted" %> / 
+          <%= link_to @database_type.name, @database_type, class: "text-muted" %>
+        </div>
+        <h2 class="page-title">
+          <%= @database_type.name %> <%= @database_type_version.version %>
+          <% if @database_type_version.is_default? %>
+            <span class="badge bg-yellow ms-2">Default</span>
+          <% end %>
+        </h2>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <div class="btn-list">
+          <% unless @database_type_version.is_default? %>
+            <%= link_to set_default_database_type_database_type_version_path(@database_type, @database_type_version), 
+                        method: :post, class: "btn btn-outline-warning" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12,2 15.09,8.26 22,9 17,14.74 18.18,21.02 12,17.77 5.82,21.02 7,14.74 2,9 8.91,8.26"/>
+              </svg>
+              Set as Default
+            <% end %>
+          <% end %>
+          <%= link_to edit_database_type_database_type_version_path(@database_type, @database_type_version), class: "btn btn-outline-primary" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/>
+              <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/>
+              <path d="M16 5l3 3"/>
+            </svg>
+            Edit
+          <% end %>
+          <%= link_to test_installation_database_type_database_type_version_path(@database_type, @database_type_version), class: "btn btn-outline-info" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <circle cx="12" cy="12" r="9"/>
+              <polyline points="9,12 11,14 15,10"/>
+            </svg>
+            Test Installation
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row row-deck row-cards">
+    <!-- Version Details -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Version Details</h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Version</label>
+                <div class="form-control-plaintext font-weight-medium"><%= @database_type_version.version %></div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Default Port</label>
+                <div class="form-control-plaintext">
+                  <span class="badge bg-blue-lt"><%= @database_type_version.default_port %></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Service Name</label>
+                <div class="form-control-plaintext"><code><%= @database_type_version.service_name %></code></div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Nodes Using</label>
+                <div class="form-control-plaintext">
+                  <span class="badge bg-purple"><%= @database_type_version.nodes.count %> nodes</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <% if @database_type_version.data_directory_pattern.present? %>
+            <div class="mb-3">
+              <label class="form-label">Data Directory Pattern</label>
+              <div class="form-control-plaintext"><code><%= @database_type_version.data_directory_pattern %></code></div>
+            </div>
+          <% end %>
+          <% if @database_type_version.config_file_pattern.present? %>
+            <div class="mb-3">
+              <label class="form-label">Config File Pattern</label>
+              <div class="form-control-plaintext"><code><%= @database_type_version.config_file_pattern %></code></div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Installation Command -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Installation Command</h3>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Command</label>
+            <div class="form-control-plaintext">
+              <pre class="bg-light p-2 rounded"><code><%= @database_type_version.install_command %></code></pre>
+            </div>
+          </div>
+          <div class="btn-list">
+            <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('<%= j(@database_type_version.install_command) %>')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              Copy Command
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configuration Template -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Configuration Template</h3>
+          <div class="card-actions">
+            <% if @database_type_version.config_template.present? %>
+              <%= link_to preview_config_database_type_database_type_version_path(@database_type, @database_type_version), class: "btn btn-outline-info btn-sm" do %>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <circle cx="12" cy="12" r="2"/>
+                  <path d="M22 12c-2.667 4.667 -6 7 -10 7s-7.333 -2.333 -10 -7c2.667 -4.667 6 -7 10 -7s7.333 2.333 10 7"/>
+                </svg>
+                Preview Template
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+        <div class="card-body">
+          <% if @database_type_version.config_template.present? %>
+            <div class="mb-3">
+              <label class="form-label">Template Content</label>
+              <div class="form-control-plaintext">
+                <pre class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;"><code><%= @database_type_version.config_template %></code></pre>
+              </div>
+            </div>
+            <div class="btn-list">
+              <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('<%= j(@database_type_version.config_template) %>')">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                Copy Template
+              </button>
+            </div>
+          <% else %>
+            <div class="empty">
+              <div class="empty-img"><img src="/static/illustrations/undraw_file_searching_duff.svg" height="128" alt=""></div>
+              <p class="empty-title">No configuration template</p>
+              <p class="empty-subtitle text-muted">
+                This version doesn't have a configuration template defined.
+              </p>
+              <div class="empty-action">
+                <%= link_to edit_database_type_database_type_version_path(@database_type, @database_type_version), class: "btn btn-primary" do %>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/>
+                    <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/>
+                    <path d="M16 5l3 3"/>
+                  </svg>
+                  Add Template
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nodes Using This Version -->
+    <% if @database_type_version.nodes.any? %>
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Nodes Using This Version</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+              <thead>
+                <tr>
+                  <th>Node</th>
+                  <th>Cluster</th>
+                  <th>Status</th>
+                  <th>Type</th>
+                  <th class="w-1"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @database_type_version.nodes.includes(:cluster).each do |node| %>
+                  <tr>
+                    <td>
+                      <div class="font-weight-medium"><%= node.name %></div>
+                    </td>
+                    <td>
+                      <%= link_to node.cluster.name, node.cluster, class: "text-reset" %>
+                    </td>
+                    <td>
+                      <span class="badge bg-<%= node.status == 'active' ? 'green' : 'yellow' %>">
+                        <%= node.status.humanize %>
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge bg-<%= node.replica? ? 'blue' : 'purple' %>">
+                        <%= node.replica? ? 'Replica' : 'Primary' %>
+                      </span>
+                    </td>
+                    <td>
+                      <%= link_to [node.cluster, node], class: "btn btn-white btn-sm" do %>
+                        View
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<% content_for :head do %>
+  <script>
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(function() {
+        // Show success message
+        const toast = document.createElement('div');
+        toast.className = 'alert alert-success position-fixed';
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+        toast.innerHTML = 'Copied to clipboard!';
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+          toast.remove();
+        }, 2000);
+      }).catch(function(err) {
+        console.error('Could not copy text: ', err);
+      });
+    }
+  </script>
+<% end %>

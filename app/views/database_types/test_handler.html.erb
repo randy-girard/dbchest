@@ -1,0 +1,209 @@
+<% content_for :title, "Test Handler - #{@database_type.name}" %>
+
+<div class="container-xl">
+  <div class="page-header d-print-none">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">
+          <%= link_to "Database Types", database_types_path, class: "text-muted" %> / 
+          <%= link_to @database_type.name, @database_type, class: "text-muted" %>
+        </div>
+        <h2 class="page-title">
+          Test Handler
+        </h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="row row-deck row-cards">
+    <!-- Handler Status -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Handler Status</h3>
+        </div>
+        <div class="card-body">
+          <% if @test_results[:handler_found] %>
+            <div class="alert alert-success">
+              <div class="d-flex">
+                <div>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M5 12l5 5l10 -10"/>
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="alert-title">Handler Found</h4>
+                  <div class="text-muted">
+                    Handler class: <code><%= @test_results[:handler_class] %></code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% else %>
+            <div class="alert alert-danger">
+              <div class="d-flex">
+                <div>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M18 6l-12 12"/>
+                    <path d="M6 6l12 12"/>
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="alert-title">Handler Not Found</h4>
+                  <div class="text-muted">
+                    <%= @test_results[:error] %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Handler Capabilities -->
+    <% if @test_results[:handler_found] %>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Handler Capabilities</h3>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item d-flex align-items-center">
+                <span class="status-dot status-<%= @test_results[:supports_logical_replication] ? 'green' : 'red' %> me-2"></span>
+                <div class="flex-fill">
+                  <div class="font-weight-medium">Logical Replication</div>
+                  <div class="text-muted">
+                    <%= @test_results[:supports_logical_replication] ? "✓ Supported" : "✗ Not supported" %>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="list-group-item d-flex align-items-center">
+                <span class="status-dot status-<%= @test_results[:supports_streaming_replication] ? 'green' : 'red' %> me-2"></span>
+                <div class="flex-fill">
+                  <div class="font-weight-medium">Streaming Replication</div>
+                  <div class="text-muted">
+                    <%= @test_results[:supports_streaming_replication] ? "✓ Supported" : "✗ Not supported" %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Playbook Information -->
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Ansible Playbooks</h3>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Primary Playbook</label>
+                  <div class="form-control-plaintext">
+                    <% if @test_results[:primary_playbook] != "Not defined" %>
+                      <code><%= @test_results[:primary_playbook] %></code>
+                    <% else %>
+                      <span class="text-muted">Not defined</span>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Replica Playbook</label>
+                  <div class="form-control-plaintext">
+                    <% if @test_results[:replica_playbook] != "Not defined" %>
+                      <code><%= @test_results[:replica_playbook] %></code>
+                    <% else %>
+                      <span class="text-muted">Not defined</span>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% else %>
+      <!-- Handler Creation Guide -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Create Handler</h3>
+          </div>
+          <div class="card-body">
+            <p class="text-muted">
+              To create a handler for this database type, create a file at:
+            </p>
+            <pre class="bg-light p-2 rounded"><code>app/services/database_types/<%= @database_type.slug %>_database_type.rb</code></pre>
+            
+            <p class="text-muted mt-3">
+              The handler should inherit from <code>BaseDatabaseType</code> and register itself:
+            </p>
+            <pre class="bg-light p-2 rounded"><code>module DatabaseTypes
+  class <%= @database_type.slug.camelize %>DatabaseType < BaseDatabaseType
+    BaseDatabaseType.register("<%= @database_type.slug %>", self)
+    
+    def supports_logical_replication?
+      # Implementation here
+    end
+    
+    def supports_streaming_replication?
+      # Implementation here
+    end
+  end
+end</code></pre>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Actions -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Actions</h3>
+        </div>
+        <div class="card-body">
+          <div class="btn-list">
+            <%= link_to @database_type, class: "btn btn-primary" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <polyline points="9,11 12,14 20,4"/>
+              </svg>
+              Back to Database Type
+            <% end %>
+            <button class="btn btn-outline-secondary" onclick="window.location.reload()">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/>
+                <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/>
+              </svg>
+              Re-run Test
+            </button>
+            <% unless @test_results[:handler_found] %>
+              <%= link_to "https://github.com/your-repo/dbchest/tree/main/app/services/database_types", 
+                          target: "_blank", class: "btn btn-outline-info" do %>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6"/>
+                  <path d="M11 13l9 -9"/>
+                  <path d="M15 4h5v5"/>
+                </svg>
+                View Examples
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,201 @@
+---
+# Cassandra Installation and Configuration
+- name: Install Cassandra
+  hosts: all
+  become: yes
+  vars:
+    cassandra_version: "{{ cassandra_version | default('4.0') }}"
+    cluster_name: "{{ cluster_name | default('dbchest_cluster') }}"
+    seeds: "{{ seeds | default('127.0.0.1') }}"
+    listen_address: "{{ listen_address | default('127.0.0.1') }}"
+    replication_factor: "{{ replication_factor | default(1) }}"
+
+  handlers:
+    - name: Restart Cassandra
+      service:
+        name: cassandra
+        state: restarted
+
+  gather_facts: no
+  pre_tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 30
+
+  tasks:
+    - name: Gather facts manually after SSH is ready
+      ansible.builtin.setup:
+
+    - name: Ensure prerequisites are installed
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - wget
+          - gnupg
+          - curl
+          - openjdk-8-jdk
+        state: present
+        update_cache: yes
+
+    - name: Set JAVA_HOME
+      lineinfile:
+        path: /etc/environment
+        line: 'JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64'
+        state: present
+
+    - name: Source environment
+      shell: source /etc/environment
+      args:
+        executable: /bin/bash
+
+    - name: Add Cassandra repository key
+      apt_key:
+        url: https://downloads.apache.org/cassandra/KEYS
+        state: present
+
+    - name: Add Cassandra repository
+      apt_repository:
+        repo: "deb https://downloads.apache.org/cassandra/debian {{ cassandra_version.split('.')[0] }}x main"
+        state: present
+        filename: cassandra
+
+    - name: Install Cassandra
+      apt:
+        name:
+          - cassandra
+          - cassandra-tools
+        state: present
+        update_cache: yes
+
+    - name: Hold Cassandra packages to prevent automatic updates
+      dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - cassandra
+        - cassandra-tools
+
+    - name: Stop Cassandra for configuration
+      service:
+        name: cassandra
+        state: stopped
+
+    - name: Create Cassandra directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: cassandra
+        group: cassandra
+        mode: '0755'
+      loop:
+        - /var/lib/cassandra
+        - /var/log/cassandra
+        - /etc/cassandra
+
+    - name: Backup original Cassandra configuration
+      copy:
+        src: /etc/cassandra/cassandra.yaml
+        dest: /etc/cassandra/cassandra.yaml.backup
+        remote_src: yes
+        backup: yes
+
+    - name: Configure Cassandra
+      template:
+        src: cassandra.yaml.j2
+        dest: /etc/cassandra/cassandra.yaml
+        owner: cassandra
+        group: cassandra
+        mode: '0644'
+        backup: yes
+      notify: Restart Cassandra
+
+    - name: Configure JVM options
+      template:
+        src: jvm.options.j2
+        dest: /etc/cassandra/jvm.options
+        owner: cassandra
+        group: cassandra
+        mode: '0644'
+      notify: Restart Cassandra
+
+    - name: Set proper ownership for Cassandra directories
+      file:
+        path: "{{ item }}"
+        owner: cassandra
+        group: cassandra
+        recurse: yes
+      loop:
+        - /var/lib/cassandra
+        - /var/log/cassandra
+        - /etc/cassandra
+
+    - name: Start and enable Cassandra service
+      service:
+        name: cassandra
+        state: started
+        enabled: yes
+
+    - name: Wait for Cassandra to be ready
+      wait_for:
+        port: 9042
+        host: "{{ listen_address }}"
+        timeout: 120
+
+    - name: Check Cassandra cluster status
+      command: nodetool status
+      register: cluster_status
+      changed_when: false
+      retries: 5
+      delay: 10
+      until: cluster_status.rc == 0
+
+    - name: Display cluster status
+      debug:
+        var: cluster_status.stdout_lines
+
+    - name: Create sample keyspace
+      command: >
+        cqlsh {{ listen_address }} 9042 -e "
+        CREATE KEYSPACE IF NOT EXISTS dbchest_sample
+        WITH REPLICATION = {
+          'class': 'SimpleStrategy',
+          'replication_factor': {{ replication_factor }}
+        };"
+      register: keyspace_creation
+      changed_when: false
+      retries: 3
+      delay: 5
+      until: keyspace_creation.rc == 0
+
+    - name: Create sample table
+      command: >
+        cqlsh {{ listen_address }} 9042 -e "
+        USE dbchest_sample;
+        CREATE TABLE IF NOT EXISTS sample_data (
+          id UUID PRIMARY KEY,
+          name TEXT,
+          created_at TIMESTAMP
+        );"
+      register: table_creation
+      changed_when: false
+
+    - name: Insert sample data
+      command: >
+        cqlsh {{ listen_address }} 9042 -e "
+        USE dbchest_sample;
+        INSERT INTO sample_data (id, name, created_at)
+        VALUES (uuid(), 'Initial Data', toTimestamp(now()));
+        INSERT INTO sample_data (id, name, created_at)
+        VALUES (uuid(), 'Sample Record', toTimestamp(now()));"
+      register: data_insertion
+      changed_when: false
+
+    - name: Display Cassandra service status
+      command: systemctl status cassandra --no-pager
+      register: cassandra_status
+      changed_when: false
+
+    - name: Show Cassandra status
+      debug:
+        var: cassandra_status.stdout_lines

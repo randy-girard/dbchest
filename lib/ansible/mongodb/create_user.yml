@@ -1,0 +1,86 @@
+---
+# MongoDB User Creation
+- name: Create MongoDB User
+  hosts: all
+  become: yes
+  vars:
+    mongodb_root_password: "{{ mongodb_root_password | default('mysecurepassword') }}"
+    username: "{{ username }}"
+    password: "{{ password }}"
+    database: "{{ database | default('admin') }}"
+    privileges: "{{ privileges | default(['readWrite']) }}"
+
+  gather_facts: no
+  pre_tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 30
+
+  tasks:
+    - name: Gather facts manually after SSH is ready
+      ansible.builtin.setup:
+
+    - name: Ensure MongoDB is running
+      service:
+        name: mongod
+        state: started
+        enabled: yes
+
+    - name: Wait for MongoDB to be ready
+      wait_for:
+        port: 27017
+        host: localhost
+        timeout: 60
+
+    - name: Validate required parameters
+      fail:
+        msg: "Username and password are required"
+      when: username is not defined or password is not defined
+
+    - name: Create MongoDB user
+      mongodb_user:
+        login_host: localhost
+        login_port: 27017
+        login_user: admin
+        login_password: "{{ mongodb_root_password }}"
+        database: "{{ database }}"
+        name: "{{ username }}"
+        password: "{{ password }}"
+        roles: "{{ privileges }}"
+        state: present
+      register: user_creation_result
+
+    - name: Display user creation result
+      debug:
+        msg: "User '{{ username }}' created successfully in database '{{ database }}' with roles: {{ privileges | join(', ') }}"
+      when: user_creation_result is succeeded
+
+    - name: Test user authentication
+      command: >
+        mongosh --host localhost:27017 
+        --username {{ username }} 
+        --password {{ password }} 
+        --authenticationDatabase {{ database }} 
+        --eval "db.runCommand('ping')"
+      register: auth_test
+      changed_when: false
+
+    - name: Display authentication test result
+      debug:
+        msg: "User authentication test: {{ 'SUCCESS' if auth_test.rc == 0 else 'FAILED' }}"
+
+    - name: List user privileges
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "db.getUser('{{ username }}')"
+      register: user_info
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display user information
+      debug:
+        var: user_info.stdout_lines
+      when: user_info.rc == 0

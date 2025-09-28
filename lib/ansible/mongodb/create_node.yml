@@ -1,0 +1,196 @@
+---
+# MongoDB Installation and Configuration
+- name: Install MongoDB
+  hosts: all
+  become: yes
+  vars:
+    mongodb_version: "{{ mongodb_version | default('6.0') }}"
+    mongodb_root_password: "{{ mongodb_root_password | default('mysecurepassword') }}"
+    replica_set_name: "{{ replica_set_name | default('dbchest_rs') }}"
+
+  handlers:
+    - name: Restart MongoDB
+      service:
+        name: mongod
+        state: restarted
+
+  gather_facts: no
+  pre_tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 30
+
+  tasks:
+    - name: Gather facts manually after SSH is ready
+      ansible.builtin.setup:
+
+    - name: Ensure prerequisites are installed
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - wget
+          - gnupg
+          - curl
+        state: present
+        update_cache: yes
+
+    - name: Import MongoDB public GPG key
+      apt_key:
+        url: "https://pgp.mongodb.com/server-{{ mongodb_version }}.asc"
+        state: present
+
+    - name: Add MongoDB repository
+      apt_repository:
+        repo: "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu {{ ansible_lsb.codename }}/mongodb-org/{{ mongodb_version }} multiverse"
+        state: present
+        filename: mongodb-org-{{ mongodb_version }}
+
+    - name: Install MongoDB packages
+      apt:
+        name:
+          - "mongodb-org={{ mongodb_version }}*"
+          - "mongodb-org-database={{ mongodb_version }}*"
+          - "mongodb-org-server={{ mongodb_version }}*"
+          - "mongodb-org-mongos={{ mongodb_version }}*"
+          - "mongodb-org-tools={{ mongodb_version }}*"
+        state: present
+        update_cache: yes
+
+    - name: Hold MongoDB packages to prevent automatic updates
+      dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - mongodb-org
+        - mongodb-org-database
+        - mongodb-org-server
+        - mongodb-org-mongos
+        - mongodb-org-tools
+
+    - name: Create MongoDB configuration file
+      template:
+        src: mongod.conf.j2
+        dest: /etc/mongod.conf
+        backup: yes
+      notify: Restart MongoDB
+
+    - name: Create MongoDB data directory
+      file:
+        path: /var/lib/mongodb
+        state: directory
+        owner: mongodb
+        group: mongodb
+        mode: '0755'
+
+    - name: Create MongoDB log directory
+      file:
+        path: /var/log/mongodb
+        state: directory
+        owner: mongodb
+        group: mongodb
+        mode: '0755'
+
+    - name: Ensure MongoDB is running and enabled
+      service:
+        name: mongod
+        state: started
+        enabled: yes
+
+    - name: Wait for MongoDB to be ready
+      wait_for:
+        port: 27017
+        host: localhost
+        timeout: 60
+
+    - name: Create MongoDB admin user
+      mongodb_user:
+        database: admin
+        name: admin
+        password: "{{ mongodb_root_password }}"
+        roles:
+          - userAdminAnyDatabase
+          - dbAdminAnyDatabase
+          - readWriteAnyDatabase
+        state: present
+      when: mongodb_root_password is defined
+
+    - name: Enable authentication in MongoDB config
+      lineinfile:
+        path: /etc/mongod.conf
+        regexp: '^#security:'
+        line: 'security:'
+        state: present
+      notify: Restart MongoDB
+
+    - name: Configure MongoDB authentication
+      lineinfile:
+        path: /etc/mongod.conf
+        insertafter: '^security:'
+        line: '  authorization: enabled'
+        state: present
+      notify: Restart MongoDB
+
+    - name: Configure replica set in MongoDB config
+      blockinfile:
+        path: /etc/mongod.conf
+        marker: "# {mark} REPLICA SET CONFIG"
+        block: |
+          replication:
+            replSetName: "{{ replica_set_name }}"
+        state: present
+      notify: Restart MongoDB
+
+    - name: Configure network binding
+      lineinfile:
+        path: /etc/mongod.conf
+        regexp: '^  bindIp:'
+        line: '  bindIp: 0.0.0.0'
+        state: present
+      notify: Restart MongoDB
+
+    - name: Flush handlers to restart MongoDB with new config
+      meta: flush_handlers
+
+    - name: Wait for MongoDB to be ready after restart
+      wait_for:
+        port: 27017
+        host: localhost
+        timeout: 60
+
+    - name: Initialize replica set (primary only)
+      mongodb_replicaset:
+        login_host: localhost
+        login_port: 27017
+        login_user: admin
+        login_password: "{{ mongodb_root_password }}"
+        replica_set: "{{ replica_set_name }}"
+        members:
+          - host: "{{ ansible_default_ipv4.address }}:27017"
+            priority: 1
+        validate: no
+      when: replica_set_name is defined
+      ignore_errors: yes
+
+    - name: Create sample database and collection
+      mongodb_user:
+        login_host: localhost
+        login_port: 27017
+        login_user: admin
+        login_password: "{{ mongodb_root_password }}"
+        database: dbchest_sample
+        name: sample_user
+        password: "{{ mongodb_root_password }}"
+        roles:
+          - readWrite
+        state: present
+      when: mongodb_root_password is defined
+
+    - name: Display MongoDB status
+      command: systemctl status mongod --no-pager
+      register: mongodb_status
+      changed_when: false
+
+    - name: Show MongoDB status
+      debug:
+        var: mongodb_status.stdout_lines

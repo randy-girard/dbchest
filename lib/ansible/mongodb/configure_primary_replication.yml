@@ -1,0 +1,137 @@
+---
+# MongoDB Primary Replication Configuration
+- name: Configure MongoDB Primary for Replication
+  hosts: all
+  become: yes
+  vars:
+    mongodb_root_password: "{{ mongodb_root_password | default('mysecurepassword') }}"
+    replica_set_name: "{{ replica_set_name | default('dbchest_rs') }}"
+    replica_ip: "{{ replica_ip }}"
+
+  gather_facts: no
+  pre_tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 30
+
+  tasks:
+    - name: Gather facts manually after SSH is ready
+      ansible.builtin.setup:
+
+    - name: Ensure MongoDB is running
+      service:
+        name: mongod
+        state: started
+        enabled: yes
+
+    - name: Wait for MongoDB to be ready
+      wait_for:
+        port: 27017
+        host: localhost
+        timeout: 60
+
+    - name: Check if replica set is already initialized
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "rs.status()"
+      register: replica_set_status
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Initialize replica set if not already done
+      mongodb_replicaset:
+        login_host: localhost
+        login_port: 27017
+        login_user: admin
+        login_password: "{{ mongodb_root_password }}"
+        replica_set: "{{ replica_set_name }}"
+        members:
+          - host: "{{ ansible_default_ipv4.address }}:27017"
+            priority: 1
+        validate: no
+      when: replica_set_status.rc != 0
+
+    - name: Wait for replica set to be ready
+      pause:
+        seconds: 10
+
+    - name: Add replica member to the replica set
+      mongodb_replicaset:
+        login_host: localhost
+        login_port: 27017
+        login_user: admin
+        login_password: "{{ mongodb_root_password }}"
+        replica_set: "{{ replica_set_name }}"
+        members:
+          - host: "{{ ansible_default_ipv4.address }}:27017"
+            priority: 1
+          - host: "{{ replica_ip }}:27017"
+            priority: 0.5
+        validate: no
+      when: replica_ip is defined
+
+    - name: Wait for replica set reconfiguration
+      pause:
+        seconds: 30
+
+    - name: Check replica set configuration
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "rs.conf()"
+      register: replica_config
+      changed_when: false
+
+    - name: Display replica set configuration
+      debug:
+        var: replica_config.stdout_lines
+
+    - name: Check replica set status
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "rs.status()"
+      register: final_status
+      changed_when: false
+
+    - name: Display final replica set status
+      debug:
+        var: final_status.stdout_lines
+
+    - name: Create replication user for monitoring
+      mongodb_user:
+        login_host: localhost
+        login_port: 27017
+        login_user: admin
+        login_password: "{{ mongodb_root_password }}"
+        database: admin
+        name: replication_monitor
+        password: "{{ mongodb_root_password }}"
+        roles:
+          - clusterMonitor
+          - read
+        state: present
+
+    - name: Test replication connectivity
+      command: >
+        mongosh --host {{ replica_ip }}:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "db.runCommand('ping')"
+      register: replica_connectivity
+      changed_when: false
+      ignore_errors: yes
+      when: replica_ip is defined
+
+    - name: Display replica connectivity test
+      debug:
+        msg: "Replica connectivity: {{ 'SUCCESS' if replica_connectivity.rc == 0 else 'FAILED' }}"
+      when: replica_ip is defined

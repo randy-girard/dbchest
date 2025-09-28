@@ -1,0 +1,109 @@
+<%= form_with(model: database_type, local: true, class: "card") do |form| %>
+  <div class="card-header">
+    <h3 class="card-title"><%= database_type.persisted? ? "Edit" : "New" %> Database Type</h3>
+  </div>
+  <div class="card-body">
+    <% if database_type.errors.any? %>
+      <div class="alert alert-danger">
+        <h4><%= pluralize(database_type.errors.count, "error") %> prohibited this database type from being saved:</h4>
+        <ul class="mb-0">
+          <% database_type.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="mb-3">
+          <%= form.label :name, class: "form-label" %>
+          <%= form.text_field :name, class: "form-control", placeholder: "e.g., PostgreSQL, MySQL, MongoDB" %>
+          <small class="form-hint">The display name for this database type</small>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="mb-3">
+          <%= form.label :slug, class: "form-label" %>
+          <%= form.text_field :slug, class: "form-control", placeholder: "e.g., postgresql, mysql, mongodb" %>
+          <small class="form-hint">
+            Unique identifier (lowercase, letters, numbers, underscores only). 
+            <% unless database_type.persisted? %>
+              Leave blank to auto-generate from name.
+            <% end %>
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <% unless database_type.persisted? %>
+      <div class="alert alert-info">
+        <div class="d-flex">
+          <div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <circle cx="12" cy="12" r="9"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+              <polyline points="11,12 12,12 12,16 13,16"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="alert-title">Next Steps</h4>
+            <div class="text-muted">
+              After creating the database type, you'll be able to add versions with specific installation commands and configuration templates.
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <% if database_type.persisted? && database_type.clusters.any? %>
+      <div class="alert alert-warning">
+        <div class="d-flex">
+          <div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <path d="M12 9v2m0 4v.01"/>
+              <path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="alert-title">Warning</h4>
+            <div class="text-muted">
+              This database type is used by <%= pluralize(database_type.clusters.count, "cluster") %>. 
+              Changing the slug may break existing functionality.
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+  <div class="card-footer text-end">
+    <%= link_to database_type.persisted? ? database_type : database_types_path, class: "btn me-auto" do %>
+      Cancel
+    <% end %>
+    <%= form.submit class: "btn btn-primary" %>
+  </div>
+<% end %>
+
+<% content_for :head do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const nameField = document.getElementById('database_type_name');
+      const slugField = document.getElementById('database_type_slug');
+      
+      // Auto-generate slug from name if slug is empty
+      if (nameField && slugField && !slugField.value) {
+        nameField.addEventListener('input', function() {
+          const slug = this.value
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, '')
+            .replace(/\s+/g, '_')
+            .replace(/_{2,}/g, '_')
+            .replace(/^_|_$/g, '');
+          slugField.value = slug;
+        });
+      }
+    });
+  </script>
+<% end %>

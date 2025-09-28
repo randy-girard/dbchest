@@ -1,0 +1,114 @@
+<% content_for :title, "Database Types" %>
+
+<div class="container-xl">
+  <div class="page-header d-print-none">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <h2 class="page-title">
+          Database Types
+        </h2>
+        <div class="text-muted mt-1">Manage database types and their versions</div>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <%= link_to new_database_type_path, class: "btn btn-primary" do %>
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          New Database Type
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="row row-deck row-cards">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">All Database Types</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-vcenter card-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Slug</th>
+                <th>Versions</th>
+                <th>Default Version</th>
+                <th>Clusters</th>
+                <th>Handler Status</th>
+                <th class="w-1"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @database_types.each do |database_type| %>
+                <tr>
+                  <td>
+                    <div class="d-flex py-1 align-items-center">
+                      <span class="avatar me-2" style="background-image: url(<%= database_type_icon_url(database_type.slug) %>)"></span>
+                      <div class="flex-fill">
+                        <div class="font-weight-medium"><%= database_type.name %></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-blue-lt"><%= database_type.slug %></span>
+                  </td>
+                  <td>
+                    <span class="badge bg-green"><%= database_type.database_type_versions.count %> versions</span>
+                  </td>
+                  <td>
+                    <% if database_type.default_version %>
+                      <span class="badge bg-yellow"><%= database_type.default_version.version %></span>
+                    <% else %>
+                      <span class="text-muted">No default</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <span class="badge bg-purple"><%= database_type.clusters.count %> clusters</span>
+                  </td>
+                  <td>
+                    <%= database_type_status_badge(database_type) %>
+                  </td>
+                  <td>
+                    <div class="btn-list flex-nowrap">
+                      <%= link_to database_type, class: "btn btn-white btn-sm" do %>
+                        View
+                      <% end %>
+                      <%= link_to edit_database_type_path(database_type), class: "btn btn-white btn-sm" do %>
+                        Edit
+                      <% end %>
+                      <%= link_to test_handler_database_type_path(database_type), class: "btn btn-outline-info btn-sm" do %>
+                        Test Handler
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <% if @database_types.empty? %>
+          <div class="empty">
+            <div class="empty-img"><img src="/static/illustrations/undraw_printing_invoices_5r4r.svg" height="128" alt=""></div>
+            <p class="empty-title">No database types found</p>
+            <p class="empty-subtitle text-muted">
+              Get started by creating your first database type.
+            </p>
+            <div class="empty-action">
+              <%= link_to new_database_type_path, class: "btn btn-primary" do %>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Create your first database type
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+

@@ -1,0 +1,123 @@
+---
+# MongoDB Replica Cleanup Configuration
+- name: Cleanup MongoDB Replica Configuration
+  hosts: all
+  become: yes
+  vars:
+    mongodb_root_password: "{{ mongodb_root_password | default('mysecurepassword') }}"
+    replica_set_name: "{{ replica_set_name | default('dbchest_rs') }}"
+    replica_ip: "{{ replica_ip }}"
+
+  gather_facts: no
+  pre_tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 30
+
+  tasks:
+    - name: Gather facts manually after SSH is ready
+      ansible.builtin.setup:
+
+    - name: Check if MongoDB is running
+      service:
+        name: mongod
+        state: started
+      ignore_errors: yes
+
+    - name: Wait for MongoDB to be ready
+      wait_for:
+        port: 27017
+        host: localhost
+        timeout: 30
+      ignore_errors: yes
+
+    - name: Get current replica set configuration
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "rs.conf()"
+      register: current_config
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display current replica set configuration
+      debug:
+        var: current_config.stdout_lines
+      when: current_config.rc == 0
+
+    - name: Remove replica member from replica set
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "rs.remove('{{ replica_ip }}:27017')"
+      register: remove_result
+      when: replica_ip is defined and current_config.rc == 0
+      ignore_errors: yes
+
+    - name: Display removal result
+      debug:
+        var: remove_result.stdout_lines
+      when: remove_result is defined and remove_result.stdout_lines is defined
+
+    - name: Wait for replica set reconfiguration
+      pause:
+        seconds: 15
+      when: remove_result is defined and remove_result.rc == 0
+
+    - name: Check updated replica set status
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "rs.status()"
+      register: updated_status
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display updated replica set status
+      debug:
+        var: updated_status.stdout_lines
+      when: updated_status.rc == 0
+
+    - name: Remove replication configuration from mongod.conf
+      blockinfile:
+        path: /etc/mongod.conf
+        marker: "# {mark} REPLICA SET CONFIG"
+        state: absent
+      notify: Restart MongoDB
+      ignore_errors: yes
+
+    - name: Clean up replica set references
+      lineinfile:
+        path: /etc/mongod.conf
+        regexp: '^\s*replSetName:'
+        state: absent
+      notify: Restart MongoDB
+      ignore_errors: yes
+
+    - name: Remove replication users
+      mongodb_user:
+        login_host: localhost
+        login_port: 27017
+        login_user: admin
+        login_password: "{{ mongodb_root_password }}"
+        database: admin
+        name: replication_monitor
+        state: absent
+      ignore_errors: yes
+
+    - name: Display cleanup completion message
+      debug:
+        msg: "MongoDB replica cleanup completed. The node has been removed from the replica set."
+
+  handlers:
+    - name: Restart MongoDB
+      service:
+        name: mongod
+        state: restarted
+      ignore_errors: yes

@@ -1,0 +1,236 @@
+<% content_for :title, @database_type.name %>
+
+<div class="container-xl">
+  <div class="page-header d-print-none">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">
+          <%= link_to "Database Types", database_types_path, class: "text-muted" %>
+        </div>
+        <h2 class="page-title">
+          <%= @database_type.name %>
+        </h2>
+        <div class="text-muted mt-1">
+          Slug: <code><%= @database_type.slug %></code>
+        </div>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <div class="btn-list">
+          <%= link_to edit_database_type_path(@database_type), class: "btn btn-outline-primary" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/>
+              <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/>
+              <path d="M16 5l3 3"/>
+            </svg>
+            Edit
+          <% end %>
+          <%= link_to new_database_type_database_type_version_path(@database_type), class: "btn btn-primary" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add Version
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row row-deck row-cards">
+    <!-- Database Type Info -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Database Type Information</h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Name</label>
+                <div class="form-control-plaintext"><%= @database_type.name %></div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Slug</label>
+                <div class="form-control-plaintext"><code><%= @database_type.slug %></code></div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Total Versions</label>
+                <div class="form-control-plaintext">
+                  <span class="badge bg-green"><%= @database_type.database_type_versions.count %></span>
+                </div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Clusters Using</label>
+                <div class="form-control-plaintext">
+                  <span class="badge bg-purple"><%= @database_type.clusters.count %></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Handler Status -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Handler Status</h3>
+        </div>
+        <div class="card-body">
+          <% handler_class = DatabaseTypes::BaseDatabaseType.registry[@database_type.slug] %>
+          <% if handler_class %>
+            <div class="alert alert-success">
+              <div class="d-flex">
+                <div>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M5 12l5 5l10 -10"/>
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="alert-title">Handler Available</h4>
+                  <div class="text-muted">Handler class: <code><%= handler_class.name %></code></div>
+                </div>
+              </div>
+            </div>
+            <div class="btn-list">
+              <%= link_to test_handler_database_type_path(@database_type), class: "btn btn-outline-info" do %>
+                Test Handler
+              <% end %>
+            </div>
+          <% else %>
+            <div class="alert alert-warning">
+              <div class="d-flex">
+                <div>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M12 9v2m0 4v.01"/>
+                    <path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75"/>
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="alert-title">No Handler Found</h4>
+                  <div class="text-muted">
+                    No handler class found for database type '<%= @database_type.slug %>'. 
+                    You'll need to create a handler class at 
+                    <code>app/services/database_types/<%= @database_type.slug %>_database_type.rb</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Versions List -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Versions</h3>
+          <div class="card-actions">
+            <%= link_to new_database_type_database_type_version_path(@database_type), class: "btn btn-primary btn-sm" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Add Version
+            <% end %>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-vcenter card-table">
+            <thead>
+              <tr>
+                <th>Version</th>
+                <th>Default Port</th>
+                <th>Service Name</th>
+                <th>Default</th>
+                <th>Nodes</th>
+                <th>Config Template</th>
+                <th class="w-1"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @database_type_versions.each do |version| %>
+                <tr>
+                  <td>
+                    <div class="font-weight-medium"><%= version.version %></div>
+                  </td>
+                  <td>
+                    <span class="badge bg-blue-lt"><%= version.default_port %></span>
+                  </td>
+                  <td>
+                    <code><%= version.service_name %></code>
+                  </td>
+                  <td>
+                    <% if version.is_default? %>
+                      <span class="badge bg-yellow">Default</span>
+                    <% else %>
+                      <span class="text-muted">—</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <span class="badge bg-purple"><%= version.nodes.count %> nodes</span>
+                  </td>
+                  <td>
+                    <% if version.config_template.present? %>
+                      <span class="badge bg-green">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-sm" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                          <path d="M5 12l5 5l10 -10"/>
+                        </svg>
+                        Available
+                      </span>
+                    <% else %>
+                      <span class="badge bg-gray">None</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <div class="btn-list flex-nowrap">
+                      <%= link_to [@database_type, version], class: "btn btn-white btn-sm" do %>
+                        View
+                      <% end %>
+                      <%= link_to edit_database_type_database_type_version_path(@database_type, version), class: "btn btn-white btn-sm" do %>
+                        Edit
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <% if @database_type_versions.empty? %>
+          <div class="empty">
+            <div class="empty-img"><img src="/static/illustrations/undraw_printing_invoices_5r4r.svg" height="128" alt=""></div>
+            <p class="empty-title">No versions found</p>
+            <p class="empty-subtitle text-muted">
+              Get started by adding your first version for this database type.
+            </p>
+            <div class="empty-action">
+              <%= link_to new_database_type_database_type_version_path(@database_type), class: "btn btn-primary" do %>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Add first version
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

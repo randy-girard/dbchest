@@ -1,0 +1,98 @@
+---
+# MongoDB User Deletion
+- name: Delete MongoDB User
+  hosts: all
+  become: yes
+  vars:
+    mongodb_root_password: "{{ mongodb_root_password | default('mysecurepassword') }}"
+    username: "{{ username }}"
+    database: "{{ database | default('admin') }}"
+
+  gather_facts: no
+  pre_tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 30
+
+  tasks:
+    - name: Gather facts manually after SSH is ready
+      ansible.builtin.setup:
+
+    - name: Ensure MongoDB is running
+      service:
+        name: mongod
+        state: started
+
+    - name: Wait for MongoDB to be ready
+      wait_for:
+        port: 27017
+        host: localhost
+        timeout: 60
+
+    - name: Validate required parameters
+      fail:
+        msg: "Username is required"
+      when: username is not defined
+
+    - name: Check if user exists
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "db.getUser('{{ username }}')"
+      register: user_exists
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display user existence check
+      debug:
+        msg: "User '{{ username }}' {{ 'exists' if user_exists.rc == 0 else 'does not exist' }}"
+
+    - name: Delete MongoDB user
+      mongodb_user:
+        login_host: localhost
+        login_port: 27017
+        login_user: admin
+        login_password: "{{ mongodb_root_password }}"
+        database: "{{ database }}"
+        name: "{{ username }}"
+        state: absent
+      register: user_deletion_result
+      when: user_exists.rc == 0
+
+    - name: Display user deletion result
+      debug:
+        msg: "User '{{ username }}' deleted successfully from database '{{ database }}'"
+      when: user_deletion_result is succeeded
+
+    - name: Verify user deletion
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "db.getUser('{{ username }}')"
+      register: deletion_verification
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display deletion verification
+      debug:
+        msg: "User deletion verification: {{ 'SUCCESS - User no longer exists' if deletion_verification.rc != 0 else 'FAILED - User still exists' }}"
+
+    - name: List remaining users in database
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "db.getUsers()"
+      register: remaining_users
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display remaining users
+      debug:
+        var: remaining_users.stdout_lines
+      when: remaining_users.rc == 0

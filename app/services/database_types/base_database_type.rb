@@ -120,6 +120,31 @@ module DatabaseTypes
       }
     end
 
+    # Configuration template methods
+    def rendered_config(variables = {})
+      database_type_version.rendered_config_template(variables)
+    end
+
+    def has_config_template?
+      database_type_version.has_config_template?
+    end
+
+    def config_template_variables(node = nil)
+      variables = database_type_version.default_template_variables
+
+      if node
+        variables.merge!({
+          node_id: node.id,
+          node_name: node.name,
+          cluster_name: node.cluster.name,
+          is_replica: node.replica?,
+          is_primary: node.primary?
+        })
+      end
+
+      variables
+    end
+
     # Registry for database type handlers
     @handlers = {}
 
@@ -140,6 +165,10 @@ module DatabaseTypes
 
     def self.registered_types
       @handlers.keys
+    end
+
+    def self.registry
+      @handlers
     end
   end
 end

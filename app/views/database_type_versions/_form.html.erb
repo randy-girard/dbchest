@@ -1,0 +1,97 @@
+<%= form_with(model: [@database_type, database_type_version], local: true, class: "card") do |form| %>
+  <div class="card-header">
+    <h3 class="card-title">
+      <%= database_type_version.persisted? ? "Edit" : "New" %> Version for <%= @database_type.name %>
+    </h3>
+  </div>
+  <div class="card-body">
+    <% if database_type_version.errors.any? %>
+      <div class="alert alert-danger">
+        <h4><%= pluralize(database_type_version.errors.count, "error") %> prohibited this version from being saved:</h4>
+        <ul class="mb-0">
+          <% database_type_version.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="mb-3">
+          <%= form.label :version, class: "form-label" %>
+          <%= form.text_field :version, class: "form-control", placeholder: "e.g., 14, 8.0, 7.0.5" %>
+          <small class="form-hint">Version number or identifier</small>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="mb-3">
+          <%= form.label :default_port, class: "form-label" %>
+          <%= form.number_field :default_port, class: "form-control", placeholder: "e.g., 5432, 3306, 27017" %>
+          <small class="form-hint">Default port for this database version</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="mb-3">
+          <%= form.label :service_name, class: "form-label" %>
+          <%= form.text_field :service_name, class: "form-control", placeholder: "e.g., postgresql, mysql, mongod" %>
+          <small class="form-hint">System service name</small>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="mb-3">
+          <%= form.label :is_default, class: "form-label" %>
+          <div class="form-check form-switch">
+            <%= form.check_box :is_default, class: "form-check-input" %>
+            <%= form.label :is_default, "Set as default version", class: "form-check-label" %>
+          </div>
+          <small class="form-hint">Default version for new clusters</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="mb-3">
+          <%= form.label :data_directory_pattern, class: "form-label" %>
+          <%= form.text_field :data_directory_pattern, class: "form-control", placeholder: "e.g., /var/lib/postgresql/{version}/main" %>
+          <small class="form-hint">Pattern for data directory (optional)</small>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="mb-3">
+          <%= form.label :config_file_pattern, class: "form-label" %>
+          <%= form.text_field :config_file_pattern, class: "form-control", placeholder: "e.g., /etc/postgresql/{version}/main/postgresql.conf" %>
+          <small class="form-hint">Pattern for config file (optional)</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <%= form.label :install_command, class: "form-label" %>
+      <%= form.text_area :install_command, class: "form-control", rows: 4, 
+                         placeholder: "e.g., apt-get update && apt-get install -y postgresql-14" %>
+      <small class="form-hint">
+        Shell command to install this database version. Use && to chain commands.
+      </small>
+    </div>
+
+    <div class="mb-3">
+      <%= form.label :config_template, class: "form-label" %>
+      <%= form.text_area :config_template, class: "form-control", rows: 12, 
+                         placeholder: "# Configuration template using ERB syntax\n# Available variables: cluster_name, listen_address, default_port, etc." %>
+      <small class="form-hint">
+        ERB template for configuration files. Use ERB syntax for variable substitution.
+      </small>
+    </div>
+  </div>
+  <div class="card-footer text-end">
+    <%= link_to database_type_version.persisted? ? [@database_type, database_type_version] : @database_type, class: "btn me-auto" do %>
+      Cancel
+    <% end %>
+    <%= form.submit class: "btn btn-primary" %>
+  </div>
+<% end %>

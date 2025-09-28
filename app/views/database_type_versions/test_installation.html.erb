@@ -1,0 +1,233 @@
+<% content_for :title, "Test Installation - #{@database_type.name} #{@database_type_version.version}" %>
+
+<div class="container-xl">
+  <div class="page-header d-print-none">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">
+          <%= link_to "Database Types", database_types_path, class: "text-muted" %> / 
+          <%= link_to @database_type.name, @database_type, class: "text-muted" %> /
+          <%= link_to @database_type_version.version, [@database_type, @database_type_version], class: "text-muted" %>
+        </div>
+        <h2 class="page-title">
+          Test Installation
+        </h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="row row-deck row-cards">
+    <!-- Installation Command Analysis -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Installation Command Analysis</h3>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Command</label>
+            <pre class="bg-light p-2 rounded"><code><%= @test_results[:install_command] %></code></pre>
+          </div>
+          
+          <% if @test_results[:command_analysis] %>
+            <div class="mb-3">
+              <label class="form-label">Analysis</label>
+              <div class="list-group list-group-flush">
+                <div class="list-group-item d-flex align-items-center">
+                  <span class="status-dot status-<%= @test_results[:command_analysis][:has_apt_update] ? 'green' : 'red' %> me-2"></span>
+                  <div class="flex-fill">
+                    <div class="font-weight-medium">APT Update</div>
+                    <div class="text-muted">
+                      <%= @test_results[:command_analysis][:has_apt_update] ? "✓ Includes apt-get update" : "✗ Missing apt-get update" %>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="list-group-item d-flex align-items-center">
+                  <span class="status-dot status-<%= @test_results[:command_analysis][:has_repository_setup] ? 'green' : 'yellow' %> me-2"></span>
+                  <div class="flex-fill">
+                    <div class="font-weight-medium">Repository Setup</div>
+                    <div class="text-muted">
+                      <%= @test_results[:command_analysis][:has_repository_setup] ? "✓ Includes repository setup" : "— No custom repository" %>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="list-group-item d-flex align-items-center">
+                  <span class="status-dot status-<%= @test_results[:command_analysis][:has_package_install] ? 'green' : 'red' %> me-2"></span>
+                  <div class="flex-fill">
+                    <div class="font-weight-medium">Package Installation</div>
+                    <div class="text-muted">
+                      <%= @test_results[:command_analysis][:has_package_install] ? "✓ Includes package installation" : "✗ Missing package installation" %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Complexity</label>
+              <span class="badge bg-<%= case @test_results[:command_analysis][:estimated_complexity]
+                                      when 'simple' then 'green'
+                                      when 'medium' then 'yellow'
+                                      when 'complex' then 'red'
+                                      else 'gray'
+                                      end %>">
+                <%= @test_results[:command_analysis][:estimated_complexity].humanize %>
+              </span>
+            </div>
+            
+            <% if @test_results[:command_analysis][:recommendations].any? %>
+              <div class="mb-3">
+                <label class="form-label">Recommendations</label>
+                <ul class="list-unstyled">
+                  <% @test_results[:command_analysis][:recommendations].each do |recommendation| %>
+                    <li class="text-muted">• <%= recommendation %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Version Details -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Version Details</h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Version</label>
+                <div class="form-control-plaintext"><%= @test_results[:version] %></div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Default Port</label>
+                <div class="form-control-plaintext">
+                  <span class="badge bg-blue-lt"><%= @test_results[:default_port] %></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Service Name</label>
+            <div class="form-control-plaintext"><code><%= @test_results[:service_name] %></code></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configuration Template Analysis -->
+    <% if @test_results[:template_analysis] %>
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Configuration Template Analysis</h3>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <label class="form-label">ERB Syntax</label>
+                  <div class="form-control-plaintext">
+                    <span class="badge bg-<%= @test_results[:template_analysis][:has_erb_syntax] ? 'green' : 'red' %>">
+                      <%= @test_results[:template_analysis][:has_erb_syntax] ? "✓ Valid" : "✗ Invalid" %>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <label class="form-label">Template Size</label>
+                  <div class="form-control-plaintext">
+                    <span class="badge bg-blue-lt">
+                      <%= @test_results[:template_analysis][:line_count] %> lines
+                    </span>
+                    <span class="badge bg-gray-lt">
+                      <%= number_to_human_size(@test_results[:template_analysis][:estimated_size]) %>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <label class="form-label">Common Variables</label>
+                  <div class="form-control-plaintext">
+                    <span class="badge bg-<%= @test_results[:template_analysis][:uses_common_variables] ? 'green' : 'yellow' %>">
+                      <%= @test_results[:template_analysis][:uses_common_variables] ? "✓ Uses" : "— None" %>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <% if @test_results[:template_analysis][:recommendations].any? %>
+              <div class="mb-3">
+                <label class="form-label">Template Recommendations</label>
+                <ul class="list-unstyled">
+                  <% @test_results[:template_analysis][:recommendations].each do |recommendation| %>
+                    <li class="text-muted">• <%= recommendation %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+            
+            <div class="btn-list">
+              <%= link_to preview_config_database_type_database_type_version_path(@database_type, @database_type_version), 
+                          class: "btn btn-outline-info" do %>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="2"/>
+                  <path d="M22 12c-2.667 4.667 -6 7 -10 7s-7.333 -2.333 -10 -7c2.667 -4.667 6 -7 10 -7s7.333 2.333 10 7"/>
+                </svg>
+                Preview Template
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Actions -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Actions</h3>
+        </div>
+        <div class="card-body">
+          <div class="btn-list">
+            <%= link_to [@database_type, @database_type_version], class: "btn btn-primary" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <polyline points="9,11 12,14 20,4"/>
+              </svg>
+              Back to Version
+            <% end %>
+            <%= link_to edit_database_type_database_type_version_path(@database_type, @database_type_version), class: "btn btn-outline-primary" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/>
+                <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/>
+                <path d="M16 5l3 3"/>
+              </svg>
+              Edit Version
+            <% end %>
+            <button class="btn btn-outline-secondary" onclick="window.location.reload()">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/>
+                <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/>
+              </svg>
+              Re-run Test
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

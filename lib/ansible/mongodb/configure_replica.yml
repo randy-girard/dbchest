@@ -1,0 +1,115 @@
+---
+# MongoDB Replica Configuration
+- name: Configure MongoDB Replica
+  hosts: all
+  become: yes
+  vars:
+    mongodb_root_password: "{{ mongodb_root_password | default('mysecurepassword') }}"
+    primary_ip: "{{ primary_ip }}"
+    replica_set_name: "{{ replica_set_name | default('dbchest_rs') }}"
+
+  gather_facts: no
+  pre_tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 30
+
+  tasks:
+    - name: Gather facts manually after SSH is ready
+      ansible.builtin.setup:
+
+    - name: Ensure MongoDB is running
+      service:
+        name: mongod
+        state: started
+        enabled: yes
+
+    - name: Wait for MongoDB to be ready
+      wait_for:
+        port: 27017
+        host: localhost
+        timeout: 60
+
+    - name: Wait for primary MongoDB to be available
+      wait_for:
+        port: 27017
+        host: "{{ primary_ip }}"
+        timeout: 300
+      when: primary_ip is defined
+
+    - name: Test connection to primary MongoDB
+      command: >
+        mongosh --host {{ primary_ip }}:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "db.runCommand('ping')"
+      register: primary_connection_test
+      retries: 10
+      delay: 30
+      until: primary_connection_test.rc == 0
+      when: primary_ip is defined
+
+    - name: Add this node to the replica set from primary
+      mongodb_replicaset:
+        login_host: "{{ primary_ip }}"
+        login_port: 27017
+        login_user: admin
+        login_password: "{{ mongodb_root_password }}"
+        replica_set: "{{ replica_set_name }}"
+        members:
+          - host: "{{ ansible_default_ipv4.address }}:27017"
+            priority: 0.5
+        validate: no
+      when: primary_ip is defined
+      delegate_to: localhost
+
+    - name: Wait for replica set synchronization
+      pause:
+        seconds: 30
+
+    - name: Check replica set status
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "rs.status()"
+      register: replica_status
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display replica set status
+      debug:
+        var: replica_status.stdout_lines
+      when: replica_status.stdout_lines is defined
+
+    - name: Verify replication is working
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "rs.isMaster()"
+      register: replication_check
+      changed_when: false
+
+    - name: Display replication status
+      debug:
+        var: replication_check.stdout_lines
+
+    - name: Check replication lag
+      command: >
+        mongosh --host localhost:27017 
+        --username admin 
+        --password {{ mongodb_root_password }} 
+        --authenticationDatabase admin 
+        --eval "rs.printSlaveReplicationInfo()"
+      register: replication_lag
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display replication lag information
+      debug:
+        var: replication_lag.stdout_lines
+      when: replication_lag.stdout_lines is defined

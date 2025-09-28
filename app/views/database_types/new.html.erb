@@ -1,0 +1,22 @@
+<% content_for :title, "New Database Type" %>
+
+<div class="container-xl">
+  <div class="page-header d-print-none">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">
+          <%= link_to "Database Types", database_types_path, class: "text-muted" %>
+        </div>
+        <h2 class="page-title">
+          New Database Type
+        </h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <%= render 'form', database_type: @database_type %>
+    </div>
+  </div>
+</div>

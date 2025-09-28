@@ -9,6 +9,21 @@ Rails.application.routes.draw do
     get :config_partial, on: :collection
   end
 
+  # Database Types Management
+  resources :database_types do
+    member do
+      get :test_handler
+    end
+
+    resources :database_type_versions do
+      member do
+        post :set_default
+        get :test_installation
+        get :preview_config
+      end
+    end
+  end
+
   resources :clusters do
     resources :nodes do
       get :config_partial, on: :collection

@@ -1,0 +1,180 @@
+<% content_for :title, "Preview Config - #{@database_type.name} #{@database_type_version.version}" %>
+
+<div class="container-xl">
+  <div class="page-header d-print-none">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">
+          <%= link_to "Database Types", database_types_path, class: "text-muted" %> / 
+          <%= link_to @database_type.name, @database_type, class: "text-muted" %> /
+          <%= link_to @database_type_version.version, [@database_type, @database_type_version], class: "text-muted" %>
+        </div>
+        <h2 class="page-title">
+          Configuration Preview
+        </h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="row row-deck row-cards">
+    <!-- Sample Variables -->
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Sample Variables</h3>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Variable</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @sample_variables.each do |key, value| %>
+                  <tr>
+                    <td><code><%= key %></code></td>
+                    <td><%= value %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+          <small class="text-muted">
+            These are sample values used for the preview. Actual values will be provided during deployment.
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rendered Configuration -->
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            Rendered Configuration
+            <% if @preview_success %>
+              <span class="badge bg-green ms-2">Success</span>
+            <% else %>
+              <span class="badge bg-red ms-2">Error</span>
+            <% end %>
+          </h3>
+          <div class="card-actions">
+            <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('<%= j(@rendered_config) %>')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              Copy
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <% if @preview_success %>
+            <pre class="bg-light p-3 rounded" style="max-height: 500px; overflow-y: auto;"><code><%= @rendered_config %></code></pre>
+          <% else %>
+            <div class="alert alert-danger">
+              <div class="d-flex">
+                <div>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <circle cx="12" cy="12" r="9"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="alert-title">Template Error</h4>
+                  <div class="text-muted">
+                    <pre><%= @rendered_config %></pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Original Template -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Original Template</h3>
+          <div class="card-actions">
+            <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('<%= j(@database_type_version.config_template) %>')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              Copy Template
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <pre class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;"><code><%= @database_type_version.config_template %></code></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Actions</h3>
+        </div>
+        <div class="card-body">
+          <div class="btn-list">
+            <%= link_to [@database_type, @database_type_version], class: "btn btn-primary" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <polyline points="9,11 12,14 20,4"/>
+              </svg>
+              Back to Version
+            <% end %>
+            <%= link_to edit_database_type_database_type_version_path(@database_type, @database_type_version), class: "btn btn-outline-primary" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/>
+                <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/>
+                <path d="M16 5l3 3"/>
+              </svg>
+              Edit Template
+            <% end %>
+            <button class="btn btn-outline-secondary" onclick="window.location.reload()">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/>
+                <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/>
+              </svg>
+              Refresh Preview
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :head do %>
+  <script>
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(function() {
+        // Show success message
+        const toast = document.createElement('div');
+        toast.className = 'alert alert-success position-fixed';
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+        toast.innerHTML = 'Copied to clipboard!';
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+          toast.remove();
+        }, 2000);
+      }).catch(function(err) {
+        console.error('Could not copy text: ', err);
+      });
+    }
+  </script>
+<% end %>

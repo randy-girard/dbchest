@@ -28,6 +28,14 @@ class DatabaseType < ApplicationRecord
     end
   end
 
+  def handler_available?
+    DatabaseTypes::BaseDatabaseType.registry[slug].present?
+  end
+
+  def handler_class
+    DatabaseTypes::BaseDatabaseType.registry[slug]
+  end
+
   private
 
   def generate_slug
