@@ -58,8 +58,8 @@ module DeploymentServices
 
     def create_user!(username, password, privileges = nil)
       # Cassandra uses roles instead of traditional users
-      default_privileges = privileges || ["LOGIN"]
-      
+      default_privileges = privileges || [ "LOGIN" ]
+
       run_ansible_playbook(database_type_handler.create_user_playbook, {
         username: username,
         password: password,
@@ -77,7 +77,7 @@ module DeploymentServices
     # Cassandra-specific methods
     def create_keyspace!(keyspace_name, replication_factor = nil)
       rf = replication_factor || calculate_replication_factor
-      
+
       run_ansible_playbook("create_keyspace.yml", {
         keyspace_name: keyspace_name,
         replication_factor: rf,
@@ -217,7 +217,7 @@ module DeploymentServices
     def calculate_replication_factor
       # Calculate optimal replication factor based on cluster size
       cluster_size = cluster_nodes.count
-      
+
       case cluster_size
       when 1
         1

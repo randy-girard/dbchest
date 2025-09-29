@@ -51,8 +51,8 @@ module DeploymentServices
     end
 
     def create_user!(username, password, privileges = nil)
-      default_privileges = privileges || ["readWrite"]
-      
+      default_privileges = privileges || [ "readWrite" ]
+
       run_ansible_playbook(database_type_handler.create_user_playbook, {
         username: username,
         password: password,

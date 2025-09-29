@@ -131,7 +131,7 @@ RSpec.describe ProviderClient::DigitalOcean, type: :model do
             "disk" => 25,
             "price_monthly" => 5.0,
             "available" => true,
-            "regions" => ['nyc1', 'sfo2']
+            "regions" => [ 'nyc1', 'sfo2' ]
           },
           {
             "slug" => 's-2vcpu-2gb',
@@ -140,7 +140,7 @@ RSpec.describe ProviderClient::DigitalOcean, type: :model do
             "disk" => 50,
             "price_monthly" => 10.0,
             "available" => true,
-            "regions" => ['nyc1']
+            "regions" => [ 'nyc1' ]
           }
         ]
       }.to_json
@@ -178,7 +178,7 @@ RSpec.describe ProviderClient::DigitalOcean, type: :model do
             distribution: 'Ubuntu',
             public: true,
             status: 'available',
-            regions: ['nyc1', 'sfo2']
+            regions: [ 'nyc1', 'sfo2' ]
           },
           {
             id: 789012,
@@ -187,7 +187,7 @@ RSpec.describe ProviderClient::DigitalOcean, type: :model do
             distribution: 'Ubuntu',
             public: true,
             status: 'available',
-            regions: ['nyc1']
+            regions: [ 'nyc1' ]
           }
         ]
       }
@@ -203,7 +203,7 @@ RSpec.describe ProviderClient::DigitalOcean, type: :model do
             "slug" => 'ubuntu-20-04-x64',
             "public" => true,
             "status" => 'available',
-            "regions" => ['nyc1', 'sfo2']
+            "regions" => [ 'nyc1', 'sfo2' ]
           },
           {
             "id" => 456,
@@ -212,7 +212,7 @@ RSpec.describe ProviderClient::DigitalOcean, type: :model do
             "slug" => 'ubuntu-22-04-x64',
             "public" => true,
             "status" => 'available',
-            "regions" => ['nyc1']
+            "regions" => [ 'nyc1' ]
           }
         ]
       }.to_json

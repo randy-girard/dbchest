@@ -71,7 +71,7 @@ module DatabaseTypes
         "INSERT INTO sample_data (id, name, created_at)",
         "VALUES (uuid(), 'Initial Data', toTimestamp(now()));",
         "INSERT INTO sample_data (id, name, created_at)",
-        "VALUES (uuid(), 'Sample Record', toTimestamp(now()));\"",
+        "VALUES (uuid(), 'Sample Record', toTimestamp(now()));\""
       ]
     end
 
@@ -88,7 +88,7 @@ module DatabaseTypes
 
     # Cassandra-specific methods
     def cluster_name
-      @cluster_name ||= database_type_version.database_type.slug == "cassandra" ? 
+      @cluster_name ||= database_type_version.database_type.slug == "cassandra" ?
         "dbchest_cluster" : "#{database_type_version.database_type.slug}_cluster"
     end
 

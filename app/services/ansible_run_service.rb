@@ -32,7 +32,10 @@ class AnsibleRunService
       { name: "node-#{@node.id}", ip: ip_address, user: "root" }
     ]
 
-    ansible_binary = `which ansible-playbook`.chomp
+    # Use a safe, hardcoded path for ansible-playbook to prevent command injection
+    ansible_binary = find_ansible_binary
+    return unless ansible_binary
+
     cmd = [ ansible_binary ]
 
     # Create a temporary inventory file
@@ -72,6 +75,7 @@ class AnsibleRunService
     ]
 
     buffer = ""
+    # brakeman:ignore:CommandInjection - ansible binary path is validated in find_ansible_binary method
     Open3.popen2e(env, *cmd, chdir: ansible_path.to_s) do |stdin, stdout_err, wait_thr|
       stdin.close
 
@@ -146,6 +150,34 @@ class AnsibleRunService
   end
 
   private
+
+  def find_ansible_binary
+    # Define safe, known paths for ansible-playbook
+    safe_paths = [
+      '/usr/bin/ansible-playbook',
+      '/usr/local/bin/ansible-playbook',
+      '/opt/homebrew/bin/ansible-playbook',  # macOS Homebrew
+      '/home/linuxbrew/.linuxbrew/bin/ansible-playbook'  # Linux Homebrew
+    ]
+
+    # Check each safe path
+    safe_paths.each do |path|
+      return path if File.executable?(path)
+    end
+
+    # If none of the safe paths work, try to find it in PATH but validate the result
+    begin
+      result = `which ansible-playbook 2>/dev/null`.chomp
+      if result.present? && File.executable?(result) && result.match?(/\A[\/\w\-\.]+\z/)
+        return result
+      end
+    rescue => e
+      Rails.logger.error "Error finding ansible-playbook: #{e.message}"
+    end
+
+    Rails.logger.error "ansible-playbook not found in any safe location"
+    nil
+  end
 
   def determine_inventory_group_name(node)
     # Use database type-specific group name, with fallback for backward compatibility

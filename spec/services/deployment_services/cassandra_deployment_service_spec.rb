@@ -72,7 +72,7 @@ RSpec.describe DeploymentServices::CassandraDeploymentService, type: :service do
     before do
       allow(additional_node).to receive(:get_ip_address).and_return('192.168.1.12')
       mock_replicas = double('replicas_relation')
-      allow(mock_replicas).to receive(:where).with(status: "active").and_return([additional_node])
+      allow(mock_replicas).to receive(:where).with(status: "active").and_return([ additional_node ])
       allow(primary_node).to receive(:replicas).and_return(mock_replicas)
     end
 
@@ -133,18 +133,18 @@ RSpec.describe DeploymentServices::CassandraDeploymentService, type: :service do
         {
           username: 'testuser',
           password: 'testpass',
-          privileges: ['LOGIN'],
+          privileges: [ 'LOGIN' ],
           superuser: false
         }
       )
 
-      service.create_user!('testuser', 'testpass', ['LOGIN'])
+      service.create_user!('testuser', 'testpass', [ 'LOGIN' ])
     end
 
     it 'uses default privileges when none provided' do
       expect(service).to receive(:run_ansible_playbook).with(
         'create_user.yml',
-        hash_including(privileges: ['LOGIN'])
+        hash_including(privileges: [ 'LOGIN' ])
       )
 
       service.create_user!('testuser', 'testpass')
@@ -156,7 +156,7 @@ RSpec.describe DeploymentServices::CassandraDeploymentService, type: :service do
         hash_including(superuser: true)
       )
 
-      service.create_user!('testuser', 'testpass', ['SUPERUSER', 'LOGIN'])
+      service.create_user!('testuser', 'testpass', [ 'SUPERUSER', 'LOGIN' ])
     end
   end
 
@@ -330,7 +330,7 @@ RSpec.describe DeploymentServices::CassandraDeploymentService, type: :service do
 
         # Mock cluster_nodes to return the test nodes
         mock_cluster_nodes = double('cluster_nodes_relation')
-        allow(mock_cluster_nodes).to receive(:limit).with(3).and_return([primary_node, node2, node3])
+        allow(mock_cluster_nodes).to receive(:limit).with(3).and_return([ primary_node, node2, node3 ])
         allow(service).to receive(:cluster_nodes).and_return(mock_cluster_nodes)
       end
 

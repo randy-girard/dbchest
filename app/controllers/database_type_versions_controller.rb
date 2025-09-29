@@ -1,6 +1,6 @@
 class DatabaseTypeVersionsController < ApplicationController
   before_action :set_database_type
-  before_action :set_database_type_version, only: [:show, :edit, :update, :destroy, :test_installation, :set_default]
+  before_action :set_database_type_version, only: [ :show, :edit, :update, :destroy, :test_installation, :set_default ]
 
   # GET /database_types/1/database_type_versions
   def index
@@ -14,21 +14,21 @@ class DatabaseTypeVersionsController < ApplicationController
   # GET /database_types/1/database_type_versions/new
   def new
     @database_type_version = @database_type.database_type_versions.build
-    
+
     # Set some sensible defaults based on database type
     case @database_type.slug
-    when 'postgresql'
+    when "postgresql"
       @database_type_version.default_port = 5432
-      @database_type_version.service_name = 'postgresql'
-    when 'mysql'
+      @database_type_version.service_name = "postgresql"
+    when "mysql"
       @database_type_version.default_port = 3306
-      @database_type_version.service_name = 'mysql'
-    when 'mongodb'
+      @database_type_version.service_name = "mysql"
+    when "mongodb"
       @database_type_version.default_port = 27017
-      @database_type_version.service_name = 'mongod'
-    when 'cassandra'
+      @database_type_version.service_name = "mongod"
+    when "cassandra"
       @database_type_version.default_port = 9042
-      @database_type_version.service_name = 'cassandra'
+      @database_type_version.service_name = "cassandra"
     end
   end
 
@@ -41,7 +41,7 @@ class DatabaseTypeVersionsController < ApplicationController
     @database_type_version = @database_type.database_type_versions.build(database_type_version_params)
 
     if @database_type_version.save
-      redirect_to [@database_type, @database_type_version], notice: 'Database type version was successfully created.'
+      redirect_to [ @database_type, @database_type_version ], notice: "Database type version was successfully created."
     else
       render :new, status: :unprocessable_entity
     end
@@ -50,7 +50,7 @@ class DatabaseTypeVersionsController < ApplicationController
   # PATCH/PUT /database_types/1/database_type_versions/1
   def update
     if @database_type_version.update(database_type_version_params)
-      redirect_to [@database_type, @database_type_version], notice: 'Database type version was successfully updated.'
+      redirect_to [ @database_type, @database_type_version ], notice: "Database type version was successfully updated."
     else
       render :edit, status: :unprocessable_entity
     end
@@ -59,23 +59,23 @@ class DatabaseTypeVersionsController < ApplicationController
   # DELETE /database_types/1/database_type_versions/1
   def destroy
     if @database_type_version.nodes.exists?
-      redirect_to [@database_type, @database_type_version], alert: 'Cannot delete version that has nodes. Please delete all nodes first.'
+      redirect_to [ @database_type, @database_type_version ], alert: "Cannot delete version that has nodes. Please delete all nodes first."
       return
     end
 
     @database_type_version.destroy
-    redirect_to database_type_database_type_versions_path(@database_type), notice: 'Database type version was successfully deleted.'
+    redirect_to database_type_database_type_versions_path(@database_type), notice: "Database type version was successfully deleted."
   end
 
   # POST /database_types/1/database_type_versions/1/set_default
   def set_default
     # Remove default from all other versions
     @database_type.database_type_versions.update_all(is_default: false)
-    
+
     # Set this version as default
     @database_type_version.update!(is_default: true)
-    
-    redirect_to [@database_type, @database_type_version], notice: 'Version set as default successfully.'
+
+    redirect_to [ @database_type, @database_type_version ], notice: "Version set as default successfully."
   end
 
   # GET /database_types/1/database_type_versions/1/test_installation
@@ -89,7 +89,7 @@ class DatabaseTypeVersionsController < ApplicationController
 
     # Test if the installation command looks valid
     @test_results[:command_analysis] = analyze_install_command(@database_type_version.install_command)
-    
+
     # Test if config template is valid (if present)
     if @database_type_version.config_template.present?
       @test_results[:template_analysis] = analyze_config_template(@database_type_version.config_template)
@@ -104,16 +104,16 @@ class DatabaseTypeVersionsController < ApplicationController
   # GET /database_types/1/database_type_versions/1/preview_config
   def preview_config
     @database_type_version = @database_type.database_type_versions.find(params[:id])
-    
+
     # Sample variables for preview
     @sample_variables = {
-      'cluster_name' => 'sample_cluster',
-      'listen_address' => '192.168.1.100',
-      'default_port' => @database_type_version.default_port,
-      'bind_ip' => '0.0.0.0',
-      'replica_set_name' => 'sample_rs',
-      'seeds' => '192.168.1.100,192.168.1.101',
-      'auto_bootstrap' => 'true'
+      "cluster_name" => "sample_cluster",
+      "listen_address" => "192.168.1.100",
+      "default_port" => @database_type_version.default_port,
+      "bind_ip" => "0.0.0.0",
+      "replica_set_name" => "sample_rs",
+      "seeds" => "192.168.1.100,192.168.1.101",
+      "auto_bootstrap" => "true"
     }
 
     begin
@@ -131,12 +131,12 @@ class DatabaseTypeVersionsController < ApplicationController
 
     respond_to do |format|
       format.html
-      format.json { 
-        render json: { 
-          rendered_config: @rendered_config, 
+      format.json {
+        render json: {
+          rendered_config: @rendered_config,
           success: @preview_success,
           sample_variables: @sample_variables
-        } 
+        }
       }
     end
   end
@@ -153,23 +153,23 @@ class DatabaseTypeVersionsController < ApplicationController
 
   def database_type_version_params
     params.require(:database_type_version).permit(
-      :version, :install_command, :config_template, :default_port, 
+      :version, :install_command, :config_template, :default_port,
       :service_name, :data_directory_pattern, :config_file_pattern, :is_default
     )
   end
 
   def analyze_install_command(command)
     analysis = {
-      has_apt_update: command.include?('apt-get update') || command.include?('apt update'),
-      has_repository_setup: command.include?('wget') && command.include?('apt-key'),
-      has_package_install: command.include?('apt-get install') || command.include?('apt install'),
-      estimated_complexity: 'simple'
+      has_apt_update: command.include?("apt-get update") || command.include?("apt update"),
+      has_repository_setup: command.include?("wget") && command.include?("apt-key"),
+      has_package_install: command.include?("apt-get install") || command.include?("apt install"),
+      estimated_complexity: "simple"
     }
 
     if analysis[:has_repository_setup]
-      analysis[:estimated_complexity] = 'complex'
+      analysis[:estimated_complexity] = "complex"
     elsif analysis[:has_apt_update]
-      analysis[:estimated_complexity] = 'medium'
+      analysis[:estimated_complexity] = "medium"
     end
 
     analysis[:recommendations] = []
@@ -181,13 +181,13 @@ class DatabaseTypeVersionsController < ApplicationController
 
   def analyze_config_template(template)
     analysis = {
-      has_erb_syntax: template.include?('<%') && template.include?('%>'),
+      has_erb_syntax: template.include?("<%") && template.include?("%>"),
       line_count: template.lines.count,
       estimated_size: template.bytesize
     }
 
     # Check for common template variables
-    common_vars = ['cluster_name', 'listen_address', 'default_port', 'bind_ip']
+    common_vars = [ "cluster_name", "listen_address", "default_port", "bind_ip" ]
     analysis[:uses_common_variables] = common_vars.any? { |var| template.include?(var) }
 
     analysis[:recommendations] = []

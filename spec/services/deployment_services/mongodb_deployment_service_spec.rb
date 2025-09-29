@@ -114,18 +114,18 @@ RSpec.describe DeploymentServices::MongodbDeploymentService, type: :service do
           username: 'testuser',
           password: 'testpass',
           database: 'admin',
-          privileges: ['readWrite'],
+          privileges: [ 'readWrite' ],
           mongodb_root_password: anything
         }
       )
 
-      service.create_user!('testuser', 'testpass', ['readWrite'])
+      service.create_user!('testuser', 'testpass', [ 'readWrite' ])
     end
 
     it 'uses default roles when none provided' do
       expect(service).to receive(:run_ansible_playbook).with(
         'create_user.yml',
-        hash_including(privileges: ['readWrite'])
+        hash_including(privileges: [ 'readWrite' ])
       )
 
       service.create_user!('testuser', 'testpass')
@@ -236,7 +236,5 @@ RSpec.describe DeploymentServices::MongodbDeploymentService, type: :service do
         expect(service.send(:replica_set_name)).to eq(expected_name)
       end
     end
-
-
   end
 end

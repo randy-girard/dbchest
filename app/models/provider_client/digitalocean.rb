@@ -1,5 +1,5 @@
-require 'net/http'
-require 'json'
+require "net/http"
+require "json"
 
 module ProviderClient
   class DigitalOcean < ProviderClient::Base
@@ -48,7 +48,7 @@ module ProviderClient
           "name" => "General Purpose SSD (gp3)"
         },
         {
-          "id" => "gp2", 
+          "id" => "gp2",
           "name" => "General Purpose SSD (gp2)"
         }
       ]
@@ -80,7 +80,7 @@ module ProviderClient
 
         data = JSON.parse(response.body)
         ubuntu_images = data["images"].select do |image|
-          image["distribution"] == "Ubuntu" && 
+          image["distribution"] == "Ubuntu" &&
           image["status"] == "available" &&
           image["public"] == true
         end
@@ -125,7 +125,7 @@ module ProviderClient
 
         data = JSON.parse(response.body)
         vpcs = data["vpcs"].select { |vpc| vpc["region"]["slug"] == region }
-        
+
         vpcs.map do |vpc|
           {
             "id" => vpc["id"],
@@ -148,12 +148,12 @@ module ProviderClient
         vpc_uuid: params[:vpc_uuid],
         user_data: params[:user_data],
         monitoring: true,
-        tags: ["dbchest", "database", params[:database_type]].compact
+        tags: [ "dbchest", "database", params[:database_type] ].compact
       }
 
       begin
         response = api_request("POST", "/v2/droplets", droplet_config.to_json)
-        
+
         if response.code == "202"
           data = JSON.parse(response.body)
           {
@@ -179,7 +179,7 @@ module ProviderClient
     def destroy_droplet(droplet_id)
       begin
         response = api_request("DELETE", "/v2/droplets/#{droplet_id}")
-        
+
         {
           success: response.code == "204",
           message: response.code == "204" ? "Droplet destroyed successfully" : "Failed to destroy droplet"
@@ -196,7 +196,7 @@ module ProviderClient
     def get_droplet_info(droplet_id)
       begin
         response = api_request("GET", "/v2/droplets/#{droplet_id}")
-        
+
         if response.code == "200"
           data = JSON.parse(response.body)
           data["droplet"]
@@ -213,26 +213,26 @@ module ProviderClient
 
     def api_request(method, endpoint, body = nil)
       uri = URI("https://api.digitalocean.com#{endpoint}")
-      
+
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
-      
+
       case method.upcase
       when "GET"
         request = Net::HTTP::Get.new(uri)
       when "POST"
         request = Net::HTTP::Post.new(uri)
         request.body = body if body
-        request['Content-Type'] = 'application/json'
+        request["Content-Type"] = "application/json"
       when "DELETE"
         request = Net::HTTP::Delete.new(uri)
       else
         raise ArgumentError, "Unsupported HTTP method: #{method}"
       end
-      
-      request['Authorization'] = "Bearer #{settings.api_token}"
-      request['User-Agent'] = 'DBChest/1.0'
-      
+
+      request["Authorization"] = "Bearer #{settings.api_token}"
+      request["User-Agent"] = "DBChest/1.0"
+
       http.request(request)
     end
   end

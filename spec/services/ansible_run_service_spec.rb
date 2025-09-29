@@ -89,6 +89,9 @@ RSpec.describe AnsibleRunService, type: :service do
       end
 
       it 'executes ansible-playbook with correct arguments' do
+        # Mock the secure ansible binary finder
+        allow(service).to receive(:find_ansible_binary).and_return('/usr/bin/ansible-playbook')
+
         expected_cmd = [
           '/usr/bin/ansible-playbook',
           '-i', '/tmp/inventory',
@@ -102,6 +105,9 @@ RSpec.describe AnsibleRunService, type: :service do
 
       context 'with variables' do
         it 'creates vars file and includes it in command' do
+          # Mock the secure ansible binary finder
+          allow(service).to receive(:find_ansible_binary).and_return('/usr/bin/ansible-playbook')
+
           expect(vars_file).to receive(:write).with("test_var: test_value\n")
 
           expected_cmd = [

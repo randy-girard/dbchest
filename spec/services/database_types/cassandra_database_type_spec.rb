@@ -170,7 +170,7 @@ RSpec.describe DatabaseTypes::CassandraDatabaseType, type: :service do
     describe '#backup_keyspace_command' do
       it 'returns nodetool snapshot command' do
         allow(Time).to receive(:current).and_return(Time.parse("2023-01-01 12:00:00"))
-        
+
         command = handler.backup_keyspace_command('test_keyspace', '/backup/path')
         expect(command).to include('nodetool snapshot test_keyspace')
         expect(command).to include('-t 20230101_120000')
