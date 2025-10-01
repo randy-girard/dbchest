@@ -7,7 +7,7 @@
 install_postgresql() {
   local db_version="$1"
   local service_name="$2"
-  
+
   log "Installing PostgreSQL version $db_version..."
   callback "configuring" "Installing PostgreSQL $db_version..."
 
@@ -44,7 +44,7 @@ configure_postgresql_auth() {
 configure_postgresql_primary() {
   local db_version="$1"
   local service_name="$2"
-  
+
   log "Configuring PostgreSQL as primary for replication..."
   callback "configuring" "Setting up PostgreSQL replication (primary)..."
 
@@ -72,7 +72,7 @@ configure_postgresql_primary() {
   # Replication configuration
   echo "wal_level = replica" >> "$pg_conf"
   echo "max_wal_senders = 3" >> "$pg_conf"
-  echo "wal_keep_size = 64MB" >> "$pg_conf"
+  #echo "wal_keep_size = 64MB" >> "$pg_conf"
   echo "hot_standby = on" >> "$pg_conf"
 
   # Configure pg_hba.conf for replication
@@ -104,7 +104,7 @@ setup_postgresql_replica() {
   local primary_host="{{PRIMARY_HOST}}"
   local replication_password="{{REPLICATION_PASSWORD}}"
   local backup_timeout="1800"  # 30 minutes
-  
+
   log "Setting up PostgreSQL replica from primary: $primary_host"
   callback "configuring" "Setting up PostgreSQL replica..."
 
@@ -192,7 +192,7 @@ setup_postgresql_replica() {
 
   # Check if we're in recovery mode (using su to avoid sudo issues)
   local in_recovery=$(su - postgres -c "psql -t -c 'SELECT pg_is_in_recovery();'" 2>/dev/null | tr -d ' \n' || echo "")
-  
+
   if [ "$in_recovery" = "t" ]; then
     log "SUCCESS: PostgreSQL replica is in recovery mode"
     callback "configuring" "PostgreSQL replica is running and in recovery mode"

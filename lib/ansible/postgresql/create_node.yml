@@ -116,7 +116,7 @@
         - { key: "listen_addresses", value: "'*'" }
         - { key: "wal_level", value: "replica" }
         - { key: "max_wal_senders", value: "3" }
-        - { key: "wal_keep_size", value: "64MB" }
+        #- { key: "wal_keep_size", value: "64MB" }
         - { key: "archive_mode", value: "on" }
         - { key: "archive_command", value: "'test ! -f /var/lib/postgresql/archive/%f && cp %p /var/lib/postgresql/archive/%f'" }
         - { key: "hot_standby", value: "on" }

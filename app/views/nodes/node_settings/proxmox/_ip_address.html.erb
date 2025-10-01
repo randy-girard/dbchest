@@ -1,5 +1,5 @@
 <% if f.object.new_record? %>
-  <%= f.text_field :value, class: "form-control" %>
+  <%= f.text_field :value, id: "node_#{f.object.key}", class: "form-control" %>
 <% else %>
   <div class="form-control-plaintext">
     <%= f.object.value %>
