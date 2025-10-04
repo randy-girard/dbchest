@@ -42,32 +42,40 @@ RSpec.describe CreateService, type: :service do
     context 'with replica node' do
       before do
         allow(replica_node).to receive(:replica?).and_return(true)
+        allow(replica_node).to receive(:reload).and_return(replica_node)
+        allow(replica_node).to receive(:get_ip_address).and_return('192.168.1.100')
+        allow(replica_node).to receive(:parent_node).and_return(parent_node)
         allow(Node).to receive(:find_by_id).with(replica_node.id).and_return(replica_node)
+        allow(ConfigurePrimaryForReplicaJob).to receive(:perform_later)
       end
 
-      it 'configures primary node for replica when is_replica is true' do
-        replica_config_service = instance_double(ReplicaConfigurationService)
-        expect(ReplicaConfigurationService).to receive(:new).and_return(replica_config_service)
-        expect(replica_config_service).to receive(:configure_primary_for_replica).with(parent_node.id, replica_node.id)
+      it 'triggers ConfigurePrimaryForReplicaJob after Terraform' do
+        expect(ConfigurePrimaryForReplicaJob).to receive(:perform_later).with(
+          primary_node_id: parent_node.id,
+          replica_node_id: replica_node.id,
+          replica_ip: '192.168.1.100'
+        )
 
         service.perform(replica_node.id, true)
       end
 
-      it 'updates status for replica configuration' do
-        allow(Node).to receive(:find_by_id).with(replica_node.id).and_return(replica_node)
-        expect(replica_node).to receive(:update_status!).with('provisioning', 'Starting infrastructure provisioning...')
-        expect(replica_node).to receive(:update_status!).with('provisioning', 'Configuring primary node for specific replica IP...')
+      it 'calls TerraformCreateService for replica' do
+        terraform_service = instance_double(TerraformCreateService)
+        expect(TerraformCreateService).to receive(:new).and_return(terraform_service)
+        expect(terraform_service).to receive(:perform).with(replica_node.id)
+
         service.perform(replica_node.id, true)
       end
 
-      it 'logs replica configuration' do
-        expect(Rails.logger).to receive(:info).with(/Configuring primary node #{parent_node.id} for new replica #{replica_node.id}/)
+      it 'reloads node to get IP address from Terraform' do
+        expect(replica_node).to receive(:reload)
         service.perform(replica_node.id, true)
       end
 
-      it 'does not configure primary when is_replica is false' do
-        expect_any_instance_of(ReplicaConfigurationService).not_to receive(:configure_primary_for_replica)
-        service.perform(replica_node.id, false)
+      it 'does not trigger job if replica has no IP' do
+        allow(replica_node).to receive(:get_ip_address).and_return(nil)
+        expect(ConfigurePrimaryForReplicaJob).not_to receive(:perform_later)
+        service.perform(replica_node.id, true)
       end
     end
 

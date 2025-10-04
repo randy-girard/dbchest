@@ -31,6 +31,7 @@ module CloudInitGenerators
       # Read all module files
       modules_dir = Rails.root.join("lib", "cloud_init_scripts", "modules")
       common_module = File.read(modules_dir.join("common.sh"))
+      version_compatibility_module = File.read(modules_dir.join("version_compatibility.sh"))
       database_module = File.read(modules_dir.join("#{script_name}.sh"))
 
       # Read main script
@@ -38,13 +39,13 @@ module CloudInitGenerators
       main_script = File.read(main_script_path)
 
       # Combine into a single script with embedded modules
-      combined_script = build_combined_script(common_module, database_module, main_script)
+      combined_script = build_combined_script(common_module, version_compatibility_module, database_module, main_script)
 
       # Apply variable substitutions
       substitute_variables(combined_script, is_replica: is_replica)
     end
 
-    def build_combined_script(common_module, database_module, main_script)
+    def build_combined_script(common_module, version_compatibility_module, database_module, main_script)
       # Get the database type name from the class
       db_type_name = self.class.name.split("::").last.gsub("CloudInitGenerator", "").downcase
 
@@ -57,12 +58,17 @@ module CloudInitGenerators
         #{common_module}
         COMMON_MODULE_EOF
 
+        cat > /tmp/version_compatibility.sh << 'VERSION_COMPATIBILITY_MODULE_EOF'
+        #{version_compatibility_module}
+        VERSION_COMPATIBILITY_MODULE_EOF
+
         cat > /tmp/#{db_type_name}.sh << 'DATABASE_MODULE_EOF'
         #{database_module}
         DATABASE_MODULE_EOF
 
         # Make modules executable
         chmod +x /tmp/common.sh
+        chmod +x /tmp/version_compatibility.sh
         chmod +x /tmp/#{db_type_name}.sh
 
         # Execute main script
@@ -116,8 +122,12 @@ module CloudInitGenerators
         end
       else
         Rails.logger.debug "BaseCloudInitGenerator: Generating primary script for node #{node.id}"
-        # For primary nodes, ensure replica variables are empty
-        script_content.gsub!("{{REPLICATION_PASSWORD}}", "")
+        # For primary nodes, generate and use the replication password
+        # This creates the replication user with the password for future replicas
+        replication_password = node.ensure_replication_password!
+        Rails.logger.debug "BaseCloudInitGenerator: Primary replication password length: #{replication_password.length}"
+        script_content.gsub!("{{REPLICATION_PASSWORD}}", replication_password)
+        # PRIMARY_HOST is empty for primary nodes (they don't connect to another primary)
         script_content.gsub!("{{PRIMARY_HOST}}", "")
       end
 

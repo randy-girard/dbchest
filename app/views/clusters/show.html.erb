@@ -174,16 +174,23 @@
                   </td>
                   <td>
                     <div>
-                      <span class="<%= node_status_badge_class(node) %>" 
-                            data-node-id="<%= node.id %>" 
+                      <span class="<%= node_status_badge_class(node) %>"
+                            data-node-id="<%= node.id %>"
                             data-node-status="<%= node.id %>">
                         <%= node_status_display(node) %>
                       </span>
-                      <div class="small text-muted mt-1" 
-                           data-node-status-message="<%= node.id %>" 
+                      <div class="small text-muted mt-1"
+                           data-node-status-message="<%= node.id %>"
                            style="display: none;">
                         <span class="status-message-text"></span>
                       </div>
+                      <% if node.error? && node.error_details.present? %>
+                        <div class="small text-danger mt-1"
+                             data-node-error-details="<%= node.id %>"
+                             style="max-width: 400px; white-space: pre-wrap; font-family: monospace; font-size: 0.75rem;">
+                          <%= node.error_details.truncate(200) %>
+                        </div>
+                      <% end %>
                     </div>
                   </td>
                   <td>
@@ -206,7 +213,12 @@
                         </svg>
                       <% end %>
                       <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                type="button"
+                                data-bs-toggle="dropdown"
+                                data-bs-auto-close="true"
+                                data-bs-boundary="viewport"
+                                data-bs-reference="parent">
                           <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                             <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                             <circle cx="12" cy="12" r="1"/>
@@ -214,7 +226,7 @@
                             <circle cx="12" cy="5" r="1"/>
                           </svg>
                         </button>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dropdown-menu-end" data-bs-popper="static">
                           <% if node.credentials.any? %>
                             <li>
                               <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#credentialsModal-<%= node.id %>">

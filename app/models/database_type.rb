@@ -8,7 +8,7 @@ class DatabaseType < ApplicationRecord
 
   before_validation :generate_slug, if: -> { slug.blank? && name.present? }
 
-  scope :active, -> { joins(:database_type_versions) }
+  scope :active, -> { joins(:database_type_versions).distinct }
 
   def default_version
     database_type_versions.find_by(is_default: true) || database_type_versions.first

@@ -226,6 +226,18 @@ export default class extends Controller {
       }
     })
 
+    // Update error details if present
+    if (data.error_details) {
+      const errorDetailsElements = document.querySelectorAll(`[data-node-error-details="${nodeId}"]`)
+      errorDetailsElements.forEach(element => {
+        element.style.display = 'block'
+        const errorText = element.querySelector('.error-details-text')
+        if (errorText) {
+          errorText.textContent = data.error_details
+        }
+      })
+    }
+
     // Handle special status states
     this.handleSpecialStatuses(data)
 

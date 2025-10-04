@@ -320,9 +320,10 @@ RSpec.describe NodesController, type: :controller do
         post :create_replica, params: { cluster_id: cluster.to_param, id: node.to_param, node: replica_attributes }
       end
 
-      it "redirects to the parent node" do
+      it "redirects to the newly created replica node" do
         post :create_replica, params: { cluster_id: cluster.to_param, id: node.to_param, node: replica_attributes }
-        expect(response).to redirect_to([ cluster, node ])
+        created_replica = Node.last
+        expect(response).to redirect_to([ cluster, created_replica ])
       end
     end
 

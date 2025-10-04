@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_28_164038) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_03_004719) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -122,6 +122,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_28_164038) do
     t.bigint "database_type_version_id", null: false
     t.string "root_password"
     t.string "metrics_api_key"
+    t.text "error_details"
     t.index ["cluster_id"], name: "index_nodes_on_cluster_id"
     t.index ["database_type_version_id"], name: "index_nodes_on_database_type_version_id"
     t.index ["metrics_api_key"], name: "index_nodes_on_metrics_api_key", unique: true
@@ -201,8 +202,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_28_164038) do
   add_foreign_key "clusters", "database_types"
   add_foreign_key "credentials", "nodes"
   add_foreign_key "database_type_versions", "database_types"
-  add_foreign_key "monitoring_configs", "nodes"
-  add_foreign_key "node_metrics", "nodes"
+  add_foreign_key "monitoring_configs", "nodes", on_delete: :cascade
+  add_foreign_key "node_metrics", "nodes", on_delete: :cascade
   add_foreign_key "node_settings", "nodes"
   add_foreign_key "node_settings", "provider_type_node_options"
   add_foreign_key "nodes", "clusters"

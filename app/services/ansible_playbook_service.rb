@@ -55,11 +55,39 @@ class AnsiblePlaybookService
   def write_vars_file(variables)
     ensure_temp_workspace_exists
 
+    # Validate critical variables before writing
+    variables.each do |key, value|
+      if key.to_s.match?(/password/i)
+        if value.nil? || value.to_s.strip.empty?
+          Rails.logger.error "CRITICAL: Variable '#{key}' is nil or empty! Value: #{value.inspect}"
+          raise ArgumentError, "Variable '#{key}' cannot be nil or empty"
+        end
+        Rails.logger.info "Password variable '#{key}' validated: length=#{value.to_s.length}"
+      end
+    end
+
     vars_path = File.join(@temp_dir, "vars.yml")
     vars_content = variables.to_yaml
 
+    # Log the vars file keys (with password values hidden)
+    safe_vars = variables.transform_keys(&:to_s).transform_values do |value|
+      "[HIDDEN - length: #{value.to_s.length}]"
+    end
+    Rails.logger.info "Writing vars file with keys: #{safe_vars.keys.inspect}"
+    safe_vars.each do |key, value|
+      if key.match?(/password/i)
+        Rails.logger.info "  #{key}: #{value}"
+      else
+        Rails.logger.info "  #{key}: #{variables[key]}"
+      end
+    end
+
     File.write(vars_path, vars_content)
     @temp_files << vars_path
+
+    # Verify the file was written correctly
+    written_content = File.read(vars_path)
+    Rails.logger.debug "Vars file content (first 500 chars): #{written_content[0..500]}"
 
     Rails.logger.info "Created vars file: #{vars_path}"
     vars_path
@@ -92,16 +120,22 @@ class AnsiblePlaybookService
     @temp_dir
   end
 
-  private
-
+  # Ensure temporary workspace exists (public for external use)
   def ensure_temp_workspace_exists
     create_temp_workspace unless @temp_dir
   end
+
+  private
 
   def process_template_variables(content, variables)
     processed_content = content.dup
 
     variables.each do |key, value|
+      # Validate that critical variables are not nil or blank
+      if value.nil? || (value.respond_to?(:empty?) && value.empty?)
+        Rails.logger.warn "Template variable '#{key}' is nil or empty, replacing with empty string"
+      end
+
       # Handle both {{ key }} and {{key}} formats
       processed_content.gsub!(/\{\{\s*#{Regexp.escape(key.to_s)}\s*\}\}/, value.to_s)
     end

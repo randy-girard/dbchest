@@ -178,6 +178,18 @@
   opacity: 1;
 }
 
+/* Fix dropdown clipping in table-responsive containers */
+/* Allow vertical overflow for dropdowns while maintaining horizontal scroll */
+.table-responsive {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+/* Ensure dropdowns have proper z-index to appear above other content */
+.dropdown-menu {
+  z-index: 1050;
+}
+
 /* Form validation improvements */
 .is-invalid {
   border-color: #dc3545;

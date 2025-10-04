@@ -24,20 +24,13 @@ class ClusterDashboardsController < ApplicationController
 
   # GET /clusters/:cluster_id/dashboard/metrics_summary
   def metrics_summary
-    time_range = params[:range] || "1h"
-    start_time = case time_range
-    when "15m" then 15.minutes.ago
-    when "1h" then 1.hour.ago
-    when "6h" then 6.hours.ago
-    when "24h" then 24.hours.ago
-    when "7d" then 7.days.ago
-    else 1.hour.ago
-    end
+    time_parser = TimeRangeParser.new(params[:range])
+    start_time = time_parser.start_time
 
     cluster_metrics = calculate_cluster_metrics_for_period(start_time)
 
     render json: {
-      time_range: time_range,
+      time_range: time_parser.range,
       start_time: start_time.iso8601,
       end_time: Time.current.iso8601,
       cluster_metrics: cluster_metrics,
@@ -113,32 +106,17 @@ class ClusterDashboardsController < ApplicationController
 
     return {} if nodes_with_metrics.empty?
 
-    cpu_values = nodes_with_metrics.map { |node| node.latest_metrics.cpu_usage_percent }.compact
-    memory_values = nodes_with_metrics.map { |node| node.latest_metrics.memory_usage_percent }.compact
-
-    total_memory_mb = nodes_with_metrics.sum { |node| node.latest_metrics.memory_total_mb || 0 }
-    used_memory_mb = nodes_with_metrics.sum { |node| node.latest_metrics.memory_used_mb || 0 }
-
-    # Calculate disk usage across all nodes
-    disk_stats = calculate_cluster_disk_stats(nodes_with_metrics)
+    calculator = MetricsStatisticsCalculator.for_nodes(nodes_with_metrics)
+    memory_totals = calculator.memory_totals
 
     {
-      cpu: {
-        average: cpu_values.any? ? (cpu_values.sum / cpu_values.size).round(2) : 0,
-        max: cpu_values.max || 0,
-        min: cpu_values.min || 0,
-        nodes_reporting: cpu_values.size
-      },
-      memory: {
-        average: memory_values.any? ? (memory_values.sum / memory_values.size).round(2) : 0,
-        max: memory_values.max || 0,
-        min: memory_values.min || 0,
-        total_mb: total_memory_mb,
-        used_mb: used_memory_mb,
-        usage_percent: total_memory_mb > 0 ? ((used_memory_mb.to_f / total_memory_mb) * 100).round(2) : 0,
-        nodes_reporting: memory_values.size
-      },
-      disk: disk_stats,
+      cpu: calculator.cpu_statistics,
+      memory: calculator.memory_statistics.merge(
+        total_mb: memory_totals[:total_mb],
+        used_mb: memory_totals[:used_mb],
+        usage_percent: memory_totals[:total_mb] > 0 ? ((memory_totals[:used_mb].to_f / memory_totals[:total_mb]) * 100).round(2) : 0
+      ),
+      disk: calculator.disk_statistics,
       nodes: {
         total: @nodes.count,
         active: active_nodes.count,
@@ -147,43 +125,6 @@ class ClusterDashboardsController < ApplicationController
         warning: nodes_with_metrics.count { |node| node.current_health_status == "warning" },
         critical: nodes_with_metrics.count { |node| node.current_health_status == "critical" }
       }
-    }
-  end
-
-  def calculate_cluster_disk_stats(nodes_with_metrics)
-    total_disk_gb = 0
-    used_disk_gb = 0
-    disk_mount_stats = {}
-
-    nodes_with_metrics.each do |node|
-      metrics = node.latest_metrics
-      next unless metrics
-
-      metrics.disk_mounts.each do |mount|
-        total_gb = metrics.disk_total_gb(mount)
-        used_gb = metrics.disk_used_gb(mount)
-
-        total_disk_gb += total_gb
-        used_disk_gb += used_gb
-
-        disk_mount_stats[mount] ||= { total_gb: 0, used_gb: 0, node_count: 0 }
-        disk_mount_stats[mount][:total_gb] += total_gb
-        disk_mount_stats[mount][:used_gb] += used_gb
-        disk_mount_stats[mount][:node_count] += 1
-      end
-    end
-
-    # Calculate usage percentages for each mount
-    disk_mount_stats.each do |mount, stats|
-      stats[:usage_percent] = stats[:total_gb] > 0 ? ((stats[:used_gb] / stats[:total_gb]) * 100).round(2) : 0
-    end
-
-    {
-      total_gb: total_disk_gb.round(2),
-      used_gb: used_disk_gb.round(2),
-      available_gb: (total_disk_gb - used_disk_gb).round(2),
-      usage_percent: total_disk_gb > 0 ? ((used_disk_gb / total_disk_gb) * 100).round(2) : 0,
-      mount_stats: disk_mount_stats
     }
   end
 
@@ -249,90 +190,7 @@ class ClusterDashboardsController < ApplicationController
   end
 
   def collect_recent_alerts
-    alerts = []
-
-    @nodes.each do |node|
-      latest_metrics = node.latest_metrics
-      next unless latest_metrics
-
-      # CPU alerts
-      if latest_metrics.cpu_usage_percent > 85
-        alerts << {
-          node_id: node.id,
-          node_name: node.name,
-          type: "critical",
-          category: "cpu",
-          message: "High CPU usage: #{latest_metrics.cpu_usage_percent}%",
-          value: latest_metrics.cpu_usage_percent,
-          timestamp: latest_metrics.collected_at.iso8601
-        }
-      elsif latest_metrics.cpu_usage_percent > 70
-        alerts << {
-          node_id: node.id,
-          node_name: node.name,
-          type: "warning",
-          category: "cpu",
-          message: "Elevated CPU usage: #{latest_metrics.cpu_usage_percent}%",
-          value: latest_metrics.cpu_usage_percent,
-          timestamp: latest_metrics.collected_at.iso8601
-        }
-      end
-
-      # Memory alerts
-      memory_percent = latest_metrics.memory_usage_percent
-      if memory_percent > 90
-        alerts << {
-          node_id: node.id,
-          node_name: node.name,
-          type: "critical",
-          category: "memory",
-          message: "High memory usage: #{memory_percent}%",
-          value: memory_percent,
-          timestamp: latest_metrics.collected_at.iso8601
-        }
-      elsif memory_percent > 75
-        alerts << {
-          node_id: node.id,
-          node_name: node.name,
-          type: "warning",
-          category: "memory",
-          message: "Elevated memory usage: #{memory_percent}%",
-          value: memory_percent,
-          timestamp: latest_metrics.collected_at.iso8601
-        }
-      end
-
-      # Disk alerts
-      latest_metrics.disk_mounts.each do |mount|
-        usage = latest_metrics.disk_usage_percent(mount)
-        if usage > 90
-          alerts << {
-            node_id: node.id,
-            node_name: node.name,
-            type: "critical",
-            category: "disk",
-            message: "High disk usage on #{mount}: #{usage}%",
-            value: usage,
-            mount: mount,
-            timestamp: latest_metrics.collected_at.iso8601
-          }
-        elsif usage > 80
-          alerts << {
-            node_id: node.id,
-            node_name: node.name,
-            type: "warning",
-            category: "disk",
-            message: "Elevated disk usage on #{mount}: #{usage}%",
-            value: usage,
-            mount: mount,
-            timestamp: latest_metrics.collected_at.iso8601
-          }
-        end
-      end
-    end
-
-    # Sort by severity and timestamp
-    alerts.sort_by { |alert| [ alert[:type] == "critical" ? 0 : 1, alert[:timestamp] ] }.reverse
+    AlertGenerationService.for_nodes(@nodes)
   end
 
   def calculate_cluster_metrics_for_period(start_time)
@@ -346,25 +204,16 @@ class ClusterDashboardsController < ApplicationController
 
     @nodes.each do |node|
       metrics = node.metrics_since(start_time).recent.limit(100)
-      if metrics.any?
-        cpu_values = metrics.map(&:cpu_usage_percent).compact
-        memory_values = metrics.map(&:memory_usage_percent).compact
+      next unless metrics.any?
 
-        node_metrics[node.id] = {
-          node_name: node.name,
-          cpu: {
-            average: cpu_values.any? ? (cpu_values.sum / cpu_values.size).round(2) : 0,
-            max: cpu_values.max || 0,
-            min: cpu_values.min || 0
-          },
-          memory: {
-            average: memory_values.any? ? (memory_values.sum / memory_values.size).round(2) : 0,
-            max: memory_values.max || 0,
-            min: memory_values.min || 0
-          },
-          data_points: metrics.size
-        }
-      end
+      calculator = MetricsStatisticsCalculator.new(metrics)
+
+      node_metrics[node.id] = {
+        node_name: node.name,
+        cpu: calculator.cpu_statistics.except(:nodes_reporting),
+        memory: calculator.memory_statistics.except(:nodes_reporting),
+        data_points: metrics.size
+      }
     end
 
     node_metrics

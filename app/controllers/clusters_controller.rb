@@ -13,12 +13,12 @@ class ClustersController < ApplicationController
   # GET /clusters/new
   def new
     @cluster = Cluster.new
-    @database_types = DatabaseType.joins(:database_type_versions).distinct.order(:name)
+    @database_types = DatabaseType.active.order(:name)
   end
 
   # GET /clusters/1/edit
   def edit
-    @database_types = DatabaseType.joins(:database_type_versions).distinct.order(:name)
+    @database_types = DatabaseType.active.order(:name)
   end
 
   # POST /clusters or /clusters.json
@@ -30,7 +30,7 @@ class ClustersController < ApplicationController
         format.html { redirect_to @cluster, notice: "Cluster was successfully created." }
         format.json { render :show, status: :created, location: @cluster }
       else
-        @database_types = DatabaseType.joins(:database_type_versions).distinct.order(:name)
+        @database_types = DatabaseType.active.order(:name)
         format.html { render :new, status: :unprocessable_content }
         format.json { render json: @cluster.errors, status: :unprocessable_content }
       end
@@ -44,7 +44,7 @@ class ClustersController < ApplicationController
         format.html { redirect_to @cluster, notice: "Cluster was successfully updated.", status: :see_other }
         format.json { render :show, status: :ok, location: @cluster }
       else
-        @database_types = DatabaseType.joins(:database_type_versions).distinct.order(:name)
+        @database_types = DatabaseType.active.order(:name)
         format.html { render :edit, status: :unprocessable_content }
         format.json { render json: @cluster.errors, status: :unprocessable_content }
       end

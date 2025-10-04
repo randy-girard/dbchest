@@ -1,0 +1,151 @@
+---
+# PostgreSQL Installation and Configuration (Version 2 - Refactored)
+# This playbook uses modular roles and handles version compatibility
+- name: Install PostgreSQL with version compatibility checks
+  hosts: all
+  become: yes
+  vars:
+    postgresql_version: "{{ postgresql_version | default('15') }}"
+    postgres_password: "{{ postgres_password | default('mysecurepassword') }}"
+    service_user: "postgres"
+    service_group: "postgres"
+    service_name: "postgresql"
+    service_user_home: "/var/lib/postgresql"
+
+  handlers:
+    - name: Restart postgresql
+      service:
+        name: postgresql
+        state: restarted
+
+  gather_facts: no
+  
+  pre_tasks:
+    - name: Include common role
+      include_role:
+        name: common
+
+    - name: Check PostgreSQL version compatibility with Ubuntu
+      block:
+        - name: Get Ubuntu version
+          set_fact:
+            ubuntu_version: "{{ ansible_distribution_version }}"
+            ubuntu_codename: "{{ ansible_lsb.codename }}"
+
+        - name: Validate PostgreSQL 16+ requires Ubuntu 22.04+
+          fail:
+            msg: |
+              ERROR: PostgreSQL {{ postgresql_version }} is not compatible with Ubuntu {{ ubuntu_version }}.
+              PostgreSQL 16 and 17 require Ubuntu 22.04 or later.
+              Available PostgreSQL versions for Ubuntu 20.04: 12, 13, 14, 15
+              Please select a different PostgreSQL version or upgrade your Ubuntu version.
+          when:
+            - postgresql_version | int >= 16
+            - ubuntu_codename == "focal"
+
+        - name: Display compatibility check result
+          debug:
+            msg: "✓ PostgreSQL {{ postgresql_version }} is compatible with Ubuntu {{ ubuntu_version }}"
+
+  tasks:
+    - name: Install PostgreSQL packages
+      block:
+        - name: Add PostgreSQL public key
+          apt_key:
+            url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+            state: present
+
+        - name: Determine PostgreSQL repository
+          set_fact:
+            pg_repo_url: "{{ 'http://apt.postgresql.org/pub/repos/apt/' if postgresql_version | int >= 16 else 'http://apt-archive.postgresql.org/pub/repos/apt/' }}"
+
+        - name: Add PostgreSQL APT repository
+          apt_repository:
+            repo: "deb {{ pg_repo_url }} {{ ubuntu_codename }}-pgdg main"
+            state: present
+            filename: pgdg
+
+        - name: Update apt cache
+          apt:
+            update_cache: yes
+
+        - name: Install PostgreSQL and dependencies
+          apt:
+            name:
+              - "postgresql-{{ postgresql_version }}"
+              - "postgresql-contrib-{{ postgresql_version }}"
+              - python3-psycopg2
+            state: present
+
+    - name: Configure PostgreSQL
+      block:
+        - name: Ensure PostgreSQL is running
+          service:
+            name: postgresql
+            state: started
+            enabled: yes
+
+        - name: Get PostgreSQL configuration paths
+          become_user: postgres
+          shell: |
+            psql -t -P format=unaligned -c 'SHOW {{ item }};'
+          register: pg_paths
+          loop:
+            - config_file
+            - data_directory
+            - hba_file
+          changed_when: false
+
+        - name: Set PostgreSQL paths as facts
+          set_fact:
+            postgresql_config_file: "{{ pg_paths.results[0].stdout.strip() }}"
+            postgresql_data_dir: "{{ pg_paths.results[1].stdout.strip() }}"
+            postgresql_hba_file: "{{ pg_paths.results[2].stdout.strip() }}"
+
+        - name: Display detected paths
+          debug:
+            msg:
+              - "Config file: {{ postgresql_config_file }}"
+              - "Data directory: {{ postgresql_data_dir }}"
+              - "HBA file: {{ postgresql_hba_file }}"
+
+    - name: Configure PostgreSQL for replication
+      lineinfile:
+        path: "{{ postgresql_config_file }}"
+        regexp: "^#?{{ item.key }}"
+        line: "{{ item.key }} = {{ item.value }}"
+        state: present
+      loop:
+        - { key: "listen_addresses", value: "'*'" }
+        - { key: "wal_level", value: "replica" }
+        - { key: "max_wal_senders", value: "3" }
+        - { key: "archive_mode", value: "on" }
+        - { key: "archive_command", value: "'test ! -f /var/lib/postgresql/archive/%f && cp %p /var/lib/postgresql/archive/%f'" }
+        - { key: "hot_standby", value: "on" }
+        - { key: "max_standby_streaming_delay", value: "30s" }
+        - { key: "wal_receiver_status_interval", value: "10s" }
+        - { key: "hot_standby_feedback", value: "on" }
+      notify: Restart postgresql
+
+    - name: Create archive directory
+      file:
+        path: /var/lib/postgresql/archive
+        state: directory
+        owner: postgres
+        group: postgres
+        mode: '0700'
+
+    - name: Configure remote connections
+      lineinfile:
+        path: "{{ postgresql_hba_file }}"
+        line: "host all all 0.0.0.0/0 md5"
+        state: present
+      notify: Restart postgresql
+
+    - name: Set postgres password
+      become: yes
+      become_user: postgres
+      shell: |
+        psql -c "ALTER USER postgres PASSWORD '{{ postgres_password }}';" postgres
+      no_log: true
+

@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # DBChest MySQL Cloud Init Script (Modular Version)
 # This script sets up a MySQL node using modular components
@@ -8,20 +7,24 @@ set -e
 source /tmp/common.sh
 source /tmp/mysql.sh
 
-# Initialize
+# Initialize error handling FIRST
 check_root
-setup_cleanup_trap
+setup_error_handling
 
-log "Starting DBChest MySQL node setup..."
+log "========================================="
+log "DBChest MySQL Node Setup"
+log "========================================="
 log "Script started with PID: $$, running as user: $(whoami)"
 log "MySQL version: {{DB_VERSION}}"
 log "Service name: {{SERVICE_NAME}}"
-log "DEBUG: PRIMARY_HOST value: '{{PRIMARY_HOST}}'"
-log "DEBUG: REPLICATION_PASSWORD value length: ${#{{REPLICATION_PASSWORD}}}"
-log "DEBUG: Node appears to be $([ -n "{{PRIMARY_HOST}}" ] && [ "{{PRIMARY_HOST}}" != "" ] && echo "REPLICA" || echo "PRIMARY")"
+log "Node type: $([ -n "{{PRIMARY_HOST}}" ] && [ "{{PRIMARY_HOST}}" != "" ] && echo "REPLICA" || echo "PRIMARY")"
+log "========================================="
 
-# Step 1: Install essential packages
+# Step 1: Install essential packages (including curl for callbacks)
 install_essential_packages
+
+# Now that curl is installed, send initial callback
+callback "configuring" "Starting MySQL installation"
 
 # Step 2: Setup metrics collection early
 setup_metrics_collection
@@ -30,49 +33,46 @@ setup_metrics_collection
 configure_ssh_access
 
 # Step 4: Install MySQL
+set_step "Installing MySQL {{DB_VERSION}}"
 install_mysql "{{DB_VERSION}}" "{{SERVICE_NAME}}"
 
 # Step 5: Configure MySQL authentication
+set_step "Configuring MySQL authentication"
 configure_mysql_auth
 
 # Step 6: Determine if this is a primary or replica setup
 if [ -n "{{PRIMARY_HOST}}" ] && [ "{{PRIMARY_HOST}}" != "" ]; then
   # This is a replica node
-  log "Setting up as MySQL replica"
-  callback "configuring" "Configuring as MySQL replica..."
-  
+  # Primary configuration is triggered by CreateService after Terraform completes
+  set_step "Configuring as MySQL replica"
   setup_mysql_replica "{{SERVICE_NAME}}"
-  
-  # Notify primary to configure for this replica
-  callback "configure_primary_for_replica" "Configure primary for replica at $(hostname -I | awk '{print $1}')"
 else
   # This is a primary node
-  log "Setting up as MySQL primary"
-  callback "configuring" "Configuring as MySQL primary..."
-  
+  set_step "Configuring as MySQL primary"
   configure_mysql_primary "{{SERVICE_NAME}}"
 fi
 
 # Step 7: Final verification
-log "Verifying MySQL installation..."
-callback "configuring" "Verifying MySQL installation..."
+set_step "Verifying MySQL installation"
 
-if systemctl is-active --quiet "{{SERVICE_NAME}}"; then
-  log "SUCCESS: MySQL is running and active"
-  
-  # Test database connection
-  if mysql -u root -p"{{ROOT_PASSWORD}}" -e "SELECT VERSION();" >/dev/null 2>&1; then
-    log "SUCCESS: Database connection test passed"
-    callback "active" "MySQL node is ready and operational"
-  else
-    log "WARNING: Database connection test failed"
-    callback "error" "MySQL installed but connection test failed"
-    exit 1
-  fi
-else
+log "Checking if MySQL service is active..."
+if ! systemctl is-active --quiet "{{SERVICE_NAME}}"; then
   log "ERROR: MySQL service is not running"
-  callback "error" "MySQL service failed to start"
+  systemctl status "{{SERVICE_NAME}}" --no-pager || true
+  journalctl -u "{{SERVICE_NAME}}" -n 50 --no-pager || true
+  # This will trigger error handler
   exit 1
 fi
 
-log "MySQL node setup completed successfully"
+log "MySQL service is running - testing database connection..."
+# Test database connection
+if ! mysql -u root -p"{{ROOT_PASSWORD}}" -e "SELECT VERSION();" >/dev/null 2>&1; then
+  log "ERROR: Database connection test failed"
+  # This will trigger error handler
+  exit 1
+fi
+
+log "========================================="
+log "SUCCESS: MySQL node setup completed"
+log "========================================="
+callback "active" "MySQL node is ready and operational"

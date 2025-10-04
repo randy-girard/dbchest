@@ -14,6 +14,8 @@ RSpec.describe Node, type: :model do
     it { should belong_to(:parent_node).class_name('Node').optional }
     it { should have_many(:credentials).dependent(:destroy) }
     it { should have_many(:node_settings).dependent(:destroy) }
+    it { should have_many(:node_metrics).dependent(:destroy) }
+    it { should have_many(:monitoring_configs).dependent(:destroy) }
     it { should have_many(:replicas).class_name('Node').with_foreign_key('parent_node_id').dependent(:destroy) }
   end
 
@@ -457,6 +459,68 @@ RSpec.describe Node, type: :model do
     it 'creates active node with trait' do
       active_node = build(:node, :active, cluster: cluster, provider: provider, database_type_version: database_type_version)
       expect(active_node.status).to eq('active')
+    end
+  end
+
+  describe 'dependent destroy' do
+    let(:test_node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
+
+    before do
+      # Clear any default monitoring configs that might be created
+      test_node.monitoring_configs.destroy_all
+    end
+
+    it 'destroys associated node_metrics when node is destroyed' do
+      # Create some metrics for the node
+      create(:node_metric, node: test_node)
+      create(:node_metric, node: test_node)
+
+      expect {
+        test_node.destroy
+      }.to change { NodeMetric.count }.by(-2)
+    end
+
+    it 'destroys associated monitoring_configs when node is destroyed' do
+      # Create some monitoring configs for the node (after clearing defaults)
+      MonitoringConfig.create!(node: test_node, config_type: 'cpu', thresholds: { warning: 70, critical: 85 })
+      MonitoringConfig.create!(node: test_node, config_type: 'memory', thresholds: { warning: 75, critical: 90 })
+
+      expect {
+        test_node.destroy
+      }.to change { MonitoringConfig.count }.by(-2)
+    end
+
+    it 'destroys associated credentials when node is destroyed' do
+      # Create some credentials for the node
+      create(:credential, node: test_node)
+
+      expect {
+        test_node.destroy
+      }.to change { Credential.count }.by(-1)
+    end
+
+    it 'destroys associated node_settings when node is destroyed' do
+      # Node settings are created automatically, just verify they're destroyed
+      initial_count = test_node.node_settings.count
+
+      expect {
+        test_node.destroy
+      }.to change { NodeSetting.count }.by(-initial_count)
+    end
+
+    it 'destroys all associated records when node is destroyed' do
+      # Create all types of associated records
+      create(:node_metric, node: test_node)
+      MonitoringConfig.create!(node: test_node, config_type: 'cpu', thresholds: { warning: 70, critical: 85 })
+      create(:credential, node: test_node)
+      initial_settings_count = test_node.node_settings.count
+
+      expect {
+        test_node.destroy
+      }.to change { NodeMetric.count }.by(-1)
+        .and change { MonitoringConfig.count }.by(-1)
+        .and change { Credential.count }.by(-1)
+        .and change { NodeSetting.count }.by(-initial_settings_count)
     end
   end
 end

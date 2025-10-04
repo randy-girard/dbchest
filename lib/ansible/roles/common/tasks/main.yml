@@ -1,0 +1,44 @@
+---
+# Common tasks for all database installations
+# This role contains shared tasks that are used across all database types
+
+- name: Wait for SSH connection
+  ansible.builtin.wait_for_connection:
+    timeout: 30
+
+- name: Gather facts after SSH is ready
+  ansible.builtin.setup:
+
+- name: Display system information
+  debug:
+    msg: "Installing on {{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_lsb.codename }})"
+
+- name: Ensure prerequisites are installed
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - wget
+      - gnupg
+      - lsb-release
+      - python3-pip
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Create remote_tmp directory for service user
+  file:
+    path: "{{ service_user_home }}/.ansible/tmp"
+    state: directory
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0700'
+  when: service_user is defined
+
+- name: Ensure service is running
+  service:
+    name: "{{ service_name }}"
+    state: started
+    enabled: yes
+  when: service_name is defined and ensure_service_running | default(true)
+

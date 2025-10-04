@@ -1,4 +1,6 @@
 class NodesController < ApplicationController
+  include ReplicaSettingsPopulator
+
   before_action :set_cluster
   before_action :set_providers, only: %i[ new create edit update add_replica create_replica ]
   before_action :set_node, only: %i[ show edit update destroy confirm_destroy add_replica create_replica ]
@@ -127,17 +129,8 @@ class NodesController < ApplicationController
     )
     @providers = Provider.all
 
-    # Build initial settings for the default provider (parent's provider)
-    @replica.build_node_settings!
-
-    # Pre-populate with parent values, except for network settings
-    network_settings = %w[ip_address gateway network subnet cidr]
-    @node.node_settings.includes(:provider_type_node_option).each do |parent_setting|
-      replica_setting = @replica.node_settings.find { |rs| rs.key == parent_setting.key }
-      if replica_setting && !network_settings.include?(parent_setting.key)
-        replica_setting.value = parent_setting.value
-      end
-    end
+    # Pre-populate replica settings from parent node
+    populate_replica_settings_from_parent(@replica, @node)
   end
 
   def create_replica
@@ -158,22 +151,12 @@ class NodesController < ApplicationController
         # All settings now come from the form - no need to copy from parent
 
         @replica.provision_replica!
-        format.html { redirect_to [ @cluster, @node ], notice: "Replica is being created." }
+        format.html { redirect_to [ @cluster, @replica ], notice: "Replica is being created." }
         format.json { render :show, status: :created, location: [ @cluster, @replica ] }
       else
         @providers = Provider.all
         # Ensure node settings are built for the failed replica
-        if @replica.node_settings.empty?
-          @replica.build_node_settings!
-          # Re-populate with parent values, except for network settings
-          network_settings = %w[ip_address gateway network subnet cidr]
-          @node.node_settings.includes(:provider_type_node_option).each do |parent_setting|
-            replica_setting = @replica.node_settings.find { |rs| rs.key == parent_setting.key }
-            if replica_setting && !network_settings.include?(parent_setting.key)
-              replica_setting.value = parent_setting.value
-            end
-          end
-        end
+        populate_replica_settings_from_parent(@replica, @node) if @replica.node_settings.empty?
         format.html { render :add_replica, status: :unprocessable_entity }
         format.json { render json: @replica.errors, status: :unprocessable_entity }
       end
@@ -190,16 +173,9 @@ class NodesController < ApplicationController
           # This is a replica being created
           parent_node = @cluster.nodes.find(params[:parent_node_id])
           @replica = @cluster.nodes.new(provider: @provider, parent_node: parent_node)
-          @replica.build_node_settings!
 
-          # Pre-populate with parent values, except for network settings
-          network_settings = %w[ip_address gateway network subnet cidr]
-          parent_node.node_settings.includes(:provider_type_node_option).each do |parent_setting|
-            replica_setting = @replica.node_settings.find { |rs| rs.key == parent_setting.key }
-            if replica_setting && !network_settings.include?(parent_setting.key)
-              replica_setting.value = parent_setting.value
-            end
-          end
+          # Pre-populate replica settings from parent node
+          populate_replica_settings_from_parent(@replica, parent_node)
 
           format.html { render "nodes/replica_config_display", layout: false if request.xhr? }
           format.turbo_stream { render "nodes/replica_config_display" }

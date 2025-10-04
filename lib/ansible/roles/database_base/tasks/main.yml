@@ -1,0 +1,56 @@
+---
+# Base tasks for database installations
+# This role contains common database setup tasks
+
+- name: Detect database configuration paths
+  block:
+    - name: Get database configuration file path
+      become_user: "{{ service_user }}"
+      shell: |
+        {{ config_detection_command }}
+      register: db_config_file
+      changed_when: false
+      when: config_detection_command is defined
+
+    - name: Get database data directory path
+      become_user: "{{ service_user }}"
+      shell: |
+        {{ data_dir_detection_command }}
+      register: db_data_directory
+      changed_when: false
+      when: data_dir_detection_command is defined
+
+    - name: Set database paths
+      set_fact:
+        database_config_file: "{{ db_config_file.stdout.strip() if db_config_file is defined else config_file_path }}"
+        database_data_dir: "{{ db_data_directory.stdout.strip() if db_data_directory is defined else data_directory_path }}"
+  when: detect_paths | default(false)
+
+- name: Configure database for replication
+  lineinfile:
+    path: "{{ database_config_file }}"
+    regexp: "^#?{{ item.key }}"
+    line: "{{ item.key }} = {{ item.value }}"
+    state: present
+  loop: "{{ replication_config }}"
+  notify: "Restart {{ service_name }}"
+  when: replication_config is defined
+
+- name: Create required directories
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default(service_user) }}"
+    group: "{{ item.group | default(service_group) }}"
+    mode: "{{ item.mode | default('0700') }}"
+  loop: "{{ required_directories }}"
+  when: required_directories is defined
+
+- name: Set database password
+  become: yes
+  become_user: "{{ service_user }}"
+  shell: |
+    {{ password_set_command }}
+  when: password_set_command is defined
+  no_log: true
+

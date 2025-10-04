@@ -62,6 +62,34 @@ RSpec.describe DatabaseType, type: :model do
         expect(DatabaseType.active).to include(db_type_with_versions)
         expect(DatabaseType.active).not_to include(db_type_without_versions)
       end
+
+      it 'does not return duplicate database types when multiple versions exist' do
+        # Create a database type with multiple versions
+        db_type = create(:database_type)
+        create(:database_type_version, database_type: db_type, version: '15')
+        create(:database_type_version, database_type: db_type, version: '16')
+        create(:database_type_version, database_type: db_type, version: '17')
+
+        # Should return only one instance of the database type, not one per version
+        active_types = DatabaseType.active.to_a
+        db_type_count = active_types.count { |dt| dt.id == db_type.id }
+
+        expect(db_type_count).to eq(1), "Expected database type to appear once, but appeared #{db_type_count} times"
+      end
+
+      it 'returns correct count when database types have different numbers of versions' do
+        # PostgreSQL with 6 versions
+        pg = create(:database_type, name: 'PostgreSQL', slug: 'postgresql')
+        6.times { |i| create(:database_type_version, database_type: pg, version: "#{12 + i}") }
+
+        # MySQL with 2 versions
+        mysql = create(:database_type, name: 'MySQL', slug: 'mysql')
+        2.times { |i| create(:database_type_version, database_type: mysql, version: "#{5.7 + i * 2.3}") }
+
+        # Should return 2 database types, not 8 (6 + 2)
+        expect(DatabaseType.active.count).to eq(2)
+        expect(DatabaseType.active.to_a.uniq.count).to eq(2)
+      end
     end
   end
 

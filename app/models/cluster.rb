@@ -8,6 +8,11 @@ class Cluster < ApplicationRecord
   delegate :name, :slug, to: :database_type, prefix: true
   delegate :database_type_versions, to: :database_type
 
+  # Scopes
+  scope :recent, -> { order(created_at: :desc) }
+  scope :with_database_type, ->(type_slug) { joins(:database_type).where(database_types: { slug: type_slug }) }
+  scope :with_active_nodes, -> { joins(:nodes).where(nodes: { status: "active" }).distinct }
+
   # Set default database type to PostgreSQL if not specified
   before_validation :set_default_database_type, on: :create
 

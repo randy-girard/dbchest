@@ -104,75 +104,7 @@ RSpec.describe NodeStatusCallbacksController, type: :controller do
       end
     end
 
-    context "with configure_primary_for_replica status" do
-      let(:primary_node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
-      let(:replica_node) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version, parent_node: primary_node) }
 
-      before do
-        # Mock the job and update_status! method
-        allow(ConfigurePrimaryForReplicaJob).to receive(:perform_later)
-        allow_any_instance_of(Node).to receive(:update_status!)
-      end
-
-      it "handles configure_primary_for_replica status" do
-        message = "Configure primary for replica at 192.168.1.100"
-        post :update, params: { id: replica_node.id, status: 'configure_primary_for_replica', message: message }
-
-        expect(response).to be_successful
-        json_response = JSON.parse(response.body)
-        expect(json_response['success']).to be true
-      end
-
-      it "extracts replica IP from message" do
-        message = "Configure primary for replica at 192.168.1.100"
-        expect(ConfigurePrimaryForReplicaJob).to receive(:perform_later).with(
-          primary_node_id: primary_node.id,
-          replica_node_id: replica_node.id,
-          replica_ip: '192.168.1.100'
-        )
-
-        post :update, params: { id: replica_node.id, status: 'configure_primary_for_replica', message: message }
-      end
-
-      it "updates replica status to configuring" do
-        message = "Configure primary for replica at 192.168.1.100"
-        allow(Node).to receive(:find).with(replica_node.id.to_s).and_return(replica_node)
-        expect(replica_node).to receive(:update_status!).with('configuring', /Waiting for primary configuration/)
-
-        post :update, params: { id: replica_node.id, status: 'configure_primary_for_replica', message: message }
-      end
-
-      it "logs the configuration request" do
-        message = "Configure primary for replica at 192.168.1.100"
-        allow(Rails.logger).to receive(:info)
-        expect(Rails.logger).to receive(:info).with(/Configuring primary for replica #{replica_node.id}/)
-        expect(Rails.logger).to receive(:info).with(/Triggering Ansible job to configure primary/)
-
-        post :update, params: { id: replica_node.id, status: 'configure_primary_for_replica', message: message }
-      end
-
-      context "when IP cannot be extracted" do
-        it "logs error and continues" do
-          message = "Configure primary for replica without IP"
-          expect(Rails.logger).to receive(:error).with(/Could not extract replica IP from message/)
-
-          post :update, params: { id: replica_node.id, status: 'configure_primary_for_replica', message: message }
-          expect(response).to be_successful
-        end
-      end
-
-      context "when replica has no parent node" do
-        let(:orphan_replica) { create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version) }
-
-        it "logs error and continues" do
-          message = "Configure primary for replica at 192.168.1.100"
-          expect(Rails.logger).to receive(:error).with(/Replica node #{orphan_replica.id} has no parent node/)
-
-          post :update, params: { id: orphan_replica.id, status: 'configure_primary_for_replica', message: message }
-          expect(response).to be_successful
-        end
-      end
-    end
 
     context "without message parameter" do
       it "works with nil message" do

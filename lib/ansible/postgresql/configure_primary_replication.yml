@@ -2,7 +2,7 @@
 # Configure Primary Node for Replication
 # Dynamically detects pg_hba.conf path for portability
 - name: Configure PostgreSQL Primary for Specific Replica
-  hosts: postgres_servers
+  hosts: all
   become: yes
   vars:
     postgresql_version: "{{ postgresql_version | default('15') }}"

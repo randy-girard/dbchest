@@ -13,6 +13,10 @@ class Provider < ApplicationRecord
   validates :name, presence: true
   validate :provider_type_exists
 
+  # Scopes
+  scope :recent, -> { order(created_at: :desc) }
+  scope :by_type, ->(type_name) { joins(:provider_type).where(provider_types: { name: type_name }) }
+
   def build_provider_settings!
     provider_type.provider_type_options.each do |option|
       existing_setting = provider_settings.find { |ps| ps.key == option.key }

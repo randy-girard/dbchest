@@ -9,20 +9,32 @@ class CreateService
     if @node
       @node.update_status!("provisioning", "Starting infrastructure provisioning...")
 
-      # Create infrastructure with cloud-init setup (includes replication setup for replicas)
+      # Create infrastructure with cloud-init setup
       TerraformCreateService.new.perform(@node.id)
 
-      # For replicas, configure the primary node now that replica has an IP address
+      # For replicas, configure the primary node now that we have the replica IP from Terraform
       if is_replica && @node.replica?
-        Rails.logger.info "Configuring primary node #{@node.parent_node.id} for new replica #{@node.id} (replica now has IP)"
-        @node.update_status!("provisioning", "Configuring primary node for specific replica IP...")
+        # Reload to get the IP address from Terraform outputs
+        @node.reload
+        replica_ip = @node.get_ip_address
 
-        # Add replication user and pg_hba entry for this specific replica IP
-        ReplicaConfigurationService.new.configure_primary_for_replica(@node.parent_node.id, @node.id)
+        if replica_ip.present?
+          Rails.logger.info "Triggering primary configuration for replica #{@node.id} at IP #{replica_ip}"
+          @node.update_status!("provisioning", "Configuring primary node for replication...")
+
+          # Queue Ansible job to configure primary for this specific replica IP
+          # This runs while cloud-init is still installing PostgreSQL on the replica
+          ConfigurePrimaryForReplicaJob.perform_later(
+            primary_node_id: @node.parent_node.id,
+            replica_node_id: @node.id,
+            replica_ip: replica_ip
+          )
+        else
+          Rails.logger.warn "Replica #{@node.id} has no IP address after Terraform, skipping primary configuration"
+        end
       end
 
       # Status updates will come via callback API from cloud-init
-      # For replicas, the cloud-init script will trigger primary configuration when it has an IP
     end
   rescue => e
     Rails.logger.error "Error in CreateService for node #{node_id}: #{e.message}"

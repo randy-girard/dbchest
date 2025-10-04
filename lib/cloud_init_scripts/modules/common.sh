@@ -3,6 +3,11 @@
 # DBChest Cloud Init - Common Functions Module
 # This module contains shared functions used across all cloud init scripts
 
+# Global variables for error tracking
+CURRENT_STEP=""
+LAST_COMMAND=""
+ERROR_REPORTED=false
+
 # Ensure we're running as root
 check_root() {
   if [ "$EUID" -ne 0 ]; then
@@ -11,12 +16,54 @@ check_root() {
   fi
 }
 
+# Error handler - called when any command fails
+error_handler() {
+  local exit_code=$?
+  local line_number=$1
+
+  # Prevent duplicate error reporting
+  if [ "$ERROR_REPORTED" = true ]; then
+    return
+  fi
+  ERROR_REPORTED=true
+
+  # Build detailed error message
+  local error_msg="Installation failed at line $line_number"
+
+  if [ -n "$CURRENT_STEP" ]; then
+    error_msg="$error_msg during step: $CURRENT_STEP"
+  fi
+
+  if [ -n "$LAST_COMMAND" ]; then
+    error_msg="$error_msg. Last command: $LAST_COMMAND"
+  fi
+
+  error_msg="$error_msg (exit code: $exit_code)"
+
+  # Log the error
+  log "ERROR: $error_msg"
+  log "ERROR: Installation aborted due to failure"
+
+  # Report error to callback URL
+  callback "error" "$error_msg"
+
+  # Give callback time to complete
+  sleep 2
+
+  # Exit with error code
+  exit $exit_code
+}
+
 # Cleanup function
 cleanup() {
   local exit_code=$?
-  if [ $exit_code -ne 0 ]; then
-    log "Script failed with exit code: $exit_code"
+
+  if [ $exit_code -ne 0 ] && [ "$ERROR_REPORTED" = false ]; then
+    log "Script failed with exit code: $exit_code (error handler may not have been triggered)"
+    callback "error" "Installation failed with exit code: $exit_code"
+    ERROR_REPORTED=true
   fi
+
   log "Cleaning up on exit..."
   rm -f /tmp/dbchest_setup.sh 2>/dev/null || true
   rm -f /tmp/dbchest_wrapper.sh 2>/dev/null || true
@@ -24,81 +71,126 @@ cleanup() {
   log "Cleanup completed"
 }
 
-# Set up cleanup trap for various exit scenarios
-setup_cleanup_trap() {
+# Set up comprehensive error trapping
+setup_error_handling() {
+  # Exit immediately if a command exits with a non-zero status
+  set -e
+
+  # Exit on undefined variable usage
+  set -u
+
+  # Pipe failures cause script to fail
+  set -o pipefail
+
+  # Set up error trap - captures line number where error occurred
+  trap 'error_handler ${LINENO}' ERR
+
+  # Set up cleanup trap for various exit scenarios
   trap cleanup EXIT INT TERM
+
+  log "Error handling initialized - script will fail-fast on any error"
 }
 
-# Logging function
+# Update current step (for better error context)
+set_step() {
+  CURRENT_STEP="$1"
+  log "=== STEP: $CURRENT_STEP ==="
+  callback "configuring" "$CURRENT_STEP"
+}
+
+# Execute command with error tracking
+safe_exec() {
+  LAST_COMMAND="$*"
+  "$@"
+  LAST_COMMAND=""
+}
+
+# Logging function - only write to log file, don't echo (cloud-init already captures stdout)
 log() {
   local message="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
-  echo "$message" | tee -a /var/log/dbchest-setup.log
+  echo "$message" >> /var/log/dbchest-setup.log
 }
 
 # Callback function to update node status
+# Note: curl must be installed before this is called
 callback() {
   local status="$1"
   local message="$2"
-  
-  curl -s -X POST "{{CALLBACK_URL}}" \
-    -H "Content-Type: application/json" \
-    -d "{\"status\": \"$status\", \"message\": \"$message\"}" || true
+
+  # Check if curl is available, if not skip callback (will be available after install_essential_packages)
+  if command -v curl >/dev/null 2>&1; then
+    curl -s -X POST "{{CALLBACK_URL}}" \
+      -H "Content-Type: application/json" \
+      -d "{\"status\": \"$status\", \"message\": \"$message\"}" || true
+  fi
 }
 
 # Install essential packages
 install_essential_packages() {
-  log "Installing essential packages..."
-  apt-get update -qq
-  DEBIAN_FRONTEND=noninteractive apt-get install -y curl bc jq wget gnupg2 lsb-release netcat-openbsd
-  log "Essential packages installed"
+  set_step "Installing essential packages"
+
+  log "Updating package lists..."
+  safe_exec apt-get update -qq
+
+  log "Installing required packages..."
+  safe_exec env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    curl bc jq wget gnupg2 lsb-release netcat-openbsd
+
+  log "Essential packages installed successfully"
 }
 
 # Setup metrics collection system
 setup_metrics_collection() {
-  log "Setting up metrics collection early..."
-  callback "configuring" "Installing metrics collection system..."
+  set_step "Setting up metrics collection system"
 
   # Create metrics collector script
-  cat > /usr/local/bin/dbchest-metrics-collector.sh << 'METRICS_SCRIPT_EOF'
+  log "Creating metrics collector script..."
+  safe_exec cat > /usr/local/bin/dbchest-metrics-collector.sh << 'METRICS_SCRIPT_EOF'
 {{METRICS_COLLECTOR_SCRIPT}}
 METRICS_SCRIPT_EOF
 
   # Make script executable
-  chmod +x /usr/local/bin/dbchest-metrics-collector.sh
+  safe_exec chmod +x /usr/local/bin/dbchest-metrics-collector.sh
 
   # Create systemd service
-  cat > /etc/systemd/system/dbchest-metrics.service << 'SERVICE_EOF'
+  log "Creating systemd service..."
+  safe_exec cat > /etc/systemd/system/dbchest-metrics.service << 'SERVICE_EOF'
 {{METRICS_SERVICE}}
 SERVICE_EOF
 
   # Create systemd timer
-  cat > /etc/systemd/system/dbchest-metrics.timer << 'TIMER_EOF'
+  log "Creating systemd timer..."
+  safe_exec cat > /etc/systemd/system/dbchest-metrics.timer << 'TIMER_EOF'
 {{METRICS_TIMER}}
 TIMER_EOF
 
   # Enable and start the systemd timer for metrics collection
-  systemctl daemon-reload
-  systemctl enable dbchest-metrics.timer
-  systemctl start dbchest-metrics.timer
+  log "Enabling and starting metrics collection..."
+  safe_exec systemctl daemon-reload
+  safe_exec systemctl enable dbchest-metrics.timer
+  safe_exec systemctl start dbchest-metrics.timer
+
   log "Metrics collection started - monitoring available during installation"
 }
 
 # Configure SSH access
 configure_ssh_access() {
-  log "Configuring SSH access..."
-  
+  set_step "Configuring SSH access"
+
   # Set root password for SSH access
-  echo "root:{{ROOT_PASSWORD}}" | chpasswd
-  log "Root password configured for SSH access"
+  log "Setting root password..."
+  echo "root:{{ROOT_PASSWORD}}" | safe_exec chpasswd
+  log "Root password configured"
 
   # Ensure SSH directory exists
-  mkdir -p /root/.ssh
-  chmod 700 /root/.ssh
+  log "Setting up SSH directory..."
+  safe_exec mkdir -p /root/.ssh
+  safe_exec chmod 700 /root/.ssh
 
   # SSH key will be handled by Proxmox directly, skipping manual setup
   chmod 600 /root/.ssh/authorized_keys 2>/dev/null || true
-  
-  log "SSH access configured"
+
+  log "SSH access configured successfully"
 }
 
 # Wait for service to be ready
@@ -106,9 +198,9 @@ wait_for_service() {
   local service_name="$1"
   local max_attempts="${2:-30}"
   local wait_interval="${3:-2}"
-  
+
   log "Waiting for $service_name to be ready..."
-  
+
   for i in $(seq 1 $max_attempts); do
     if systemctl is-active --quiet "$service_name"; then
       log "$service_name is active and ready"
@@ -117,8 +209,15 @@ wait_for_service() {
     log "Waiting for $service_name to start... ($i/$max_attempts)"
     sleep $wait_interval
   done
-  
+
+  # Service failed to start - get detailed error information
   log "ERROR: $service_name failed to start within expected time"
+  log "Service status:"
+  systemctl status "$service_name" --no-pager || true
+  log "Recent journal entries:"
+  journalctl -u "$service_name" -n 50 --no-pager || true
+
+  # This will trigger the error handler
   return 1
 }
 
