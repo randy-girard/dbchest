@@ -9,34 +9,331 @@
  * Consider organizing styles into separate files for maintainability.
  */
 
-/* Custom dbChest styles */
-.card-status-top {
-  height: 3px;
-  border-radius: 0;
+/* ============================================
+   DBCHEST PAAS ADMIN PLATFORM STYLES
+   Professional, data-dense administrative UI
+   ============================================ */
+
+/* ============================================
+   LAYOUT & SPACING
+   ============================================ */
+
+.page-pretitle {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  margin-bottom: 0.375rem;
+  color: #6c757d;
 }
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 0.25rem;
+}
+
+.page-header {
+  padding: 1.5rem 0 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.page-body {
+  padding-bottom: 2rem;
+}
+
+/* Compact container spacing */
+.container-xl {
+  max-width: 1320px;
+}
+
+/* ============================================
+   TABLES - PRIMARY DATA DISPLAY
+   ============================================ */
+
+/* Professional table styling */
+.table {
+  font-size: 0.875rem;
+  margin-bottom: 0;
+}
+
+.table td,
+.table th {
+  vertical-align: middle;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.table thead th {
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6c757d;
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  padding: 0.625rem 1rem;
+  white-space: nowrap;
+}
+
+.table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Compact table variant for high data density */
+.table-sm td,
+.table-sm th {
+  padding: 0.5rem 0.75rem;
+}
+
+/* Table in cards */
+.card .table {
+  margin-bottom: 0;
+}
+
+.card .table thead th {
+  background-color: transparent;
+  border-top: none;
+}
+
+.card .table tbody tr:first-child td {
+  border-top: none;
+}
+
+/* Table responsive wrapper */
+.table-responsive {
+  border-radius: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================
+   CARDS - MINIMAL USE
+   ============================================ */
+
+.card {
+  border: 1px solid #e9ecef;
+  border-radius: 0.25rem;
+  box-shadow: none;
+  margin-bottom: 1.5rem;
+}
+
+.card-header {
+  background-color: #fff;
+  border-bottom: 1px solid #e9ecef;
+  padding: 1rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0;
+  color: #1e293b;
+}
+
+.card-subtitle {
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
+.card-body {
+  padding: 1.25rem;
+}
+
+.card-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  padding: 0.875rem 1.25rem;
+}
+
+.card-footer.bg-transparent {
+  background-color: transparent !important;
+  border-top: 1px solid #e9ecef;
+}
+
+/* ============================================
+   BUTTONS & ACTIONS
+   ============================================ */
+
+.btn {
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  transition: all 0.15s ease;
+}
+
+.btn-sm {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.btn-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-list .btn {
+  margin: 0;
+}
+
+/* Action buttons in tables */
+.table .btn-list {
+  gap: 0.375rem;
+  justify-content: flex-end;
+}
+
+.table .btn-list .btn {
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+}
+
+/* ============================================
+   BADGES & STATUS INDICATORS
+   ============================================ */
+
+.badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  transition: all 0.15s ease;
+}
+
+/* Status-specific badge colors */
+.badge.bg-success {
+  background-color: #10b981 !important;
+}
+
+.badge.bg-warning {
+  background-color: #f59e0b !important;
+}
+
+.badge.bg-danger {
+  background-color: #ef4444 !important;
+}
+
+.badge.bg-info {
+  background-color: #3b82f6 !important;
+}
+
+.badge.bg-primary {
+  background-color: #6366f1 !important;
+}
+
+/* ============================================
+   STATISTICS & METRICS
+   ============================================ */
+
+.stat-card {
+  padding: 1rem;
+  border: 1px solid #e9ecef;
+  border-radius: 0.25rem;
+  background: #fff;
+}
+
+.stat-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6c757d;
+  margin-bottom: 0.375rem;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1e293b;
+}
+
+.stat-change {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+/* ============================================
+   AVATARS & ICONS
+   ============================================ */
 
 .avatar {
   background-size: cover;
   background-position: center;
+  flex-shrink: 0;
 }
 
-.page-pretitle {
+.avatar-sm {
+  width: 2rem;
+  height: 2rem;
   font-size: 0.75rem;
+}
+
+.avatar-md {
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 0.875rem;
+}
+
+/* ============================================
+   EMPTY STATES
+   ============================================ */
+
+.empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+
+.empty-img {
+  margin-bottom: 1.5rem;
+  opacity: 0.6;
+}
+
+.empty-title {
+  font-size: 1.125rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  line-height: 1.4;
-  margin-bottom: 0.25rem;
-  color: #6c757d;
-}
-
-.btn-list .btn {
-  margin-right: 0.5rem;
   margin-bottom: 0.5rem;
+  color: #1e293b;
 }
 
-.btn-list .btn:last-child {
-  margin-right: 0;
+.empty-subtitle {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+  max-width: 32rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ============================================
+   FORMS
+   ============================================ */
+
+.form-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-bottom: 0.375rem;
+  color: #1e293b;
 }
 
 .form-label.required::after {
@@ -44,32 +341,53 @@
   color: #dc3545;
 }
 
-.progress {
-  height: 0.5rem;
+.form-control {
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
 }
 
-.card-footer.bg-transparent {
-  background-color: transparent !important;
-  border-top: 1px solid #dee2e6;
+.form-control:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
-.empty {
-  text-align: center;
-  padding: 3rem 1rem;
+.is-invalid {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
 }
 
-.empty-img {
-  margin-bottom: 1.5rem;
+.invalid-feedback {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: #dc3545;
 }
 
-.empty-title {
-  font-size: 1.25rem;
-  font-weight: 600;
+/* ============================================
+   BREADCRUMBS & NAVIGATION
+   ============================================ */
+
+.breadcrumb {
+  font-size: 0.8125rem;
   margin-bottom: 0.75rem;
+  padding: 0;
+  background: transparent;
 }
 
-.empty-subtitle {
-  margin-bottom: 1.5rem;
+.breadcrumb-item {
+  color: #6c757d;
+}
+
+.breadcrumb-item.active {
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  color: #9ca3af;
 }
 
 .navbar-brand-image {
@@ -77,52 +395,109 @@
   width: auto;
 }
 
-/* Better spacing for cards */
-.row-cards {
-  margin: -0.75rem;
+/* ============================================
+   DROPDOWNS
+   ============================================ */
+
+.dropdown-menu {
+  font-size: 0.875rem;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  z-index: 1050;
 }
 
-.row-cards > [class*="col"] {
-  padding: 0.75rem;
+.dropdown-item {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
 }
 
-/* Improved table styling */
-.table td, .table th {
-  vertical-align: middle;
+.dropdown-item-icon {
+  margin-right: 0.5rem;
+  opacity: 0.7;
+  width: 1rem;
+  height: 1rem;
 }
 
-.table-responsive {
-  border-radius: 0.5rem;
+.dropdown-item:hover .dropdown-item-icon {
+  opacity: 1;
 }
 
-/* Alert improvements */
+/* ============================================
+   MODALS
+   ============================================ */
+
+.modal-blur {
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  border: none;
+  box-shadow: 0 1.25rem 2.5rem rgba(0, 0, 0, 0.2);
+  border-radius: 0.375rem;
+}
+
+.modal-header {
+  border-bottom: 1px solid #e9ecef;
+  padding: 1.25rem 1.5rem;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid #e9ecef;
+  padding: 1rem 1.5rem;
+  background-color: #f8f9fa;
+}
+
+/* ============================================
+   ALERTS
+   ============================================ */
+
+.alert {
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+  border: 1px solid transparent;
+}
+
 .alert-dismissible .btn-close {
   position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 2;
-  padding: 1rem;
+  top: 0.75rem;
+  right: 0.75rem;
+  padding: 0.5rem;
 }
 
-/* Breadcrumb improvements */
-.breadcrumb {
-  margin-bottom: 0.5rem;
+/* ============================================
+   UTILITIES
+   ============================================ */
+
+.text-muted {
+  color: #6c757d !important;
 }
 
-.breadcrumb-item + .breadcrumb-item::before {
-  color: #6c757d;
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Loading states */
 .btn.loading::after {
   content: "";
   display: inline-block;
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
   border: 2px solid transparent;
   border-top-color: currentColor;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.6s linear infinite;
   margin-left: 0.5rem;
 }
 
@@ -132,134 +507,73 @@
   }
 }
 
-/* Modal improvements */
-.modal-blur {
-  backdrop-filter: blur(4px);
-}
-
-.modal-content {
-  border: none;
-  box-shadow: 0 1rem 3rem rgba(0,0,0,.175);
-}
-
-.modal-header {
-  border-bottom: 1px solid #dee2e6;
-  padding: 1.5rem;
-}
-
-.modal-body {
-  padding: 1.5rem;
-}
-
-.modal-footer {
-  border-top: 1px solid #dee2e6;
-  padding: 1rem 1.5rem;
-}
-
-/* Password field improvements */
-.input-group .btn {
-  z-index: 3;
-}
-
-/* Node and credential specific styles */
-.node-details .avatar,
-.credential-details .avatar,
-.provider-details .avatar {
-  flex-shrink: 0;
-}
-
-/* Dropdown improvements */
-.dropdown-item-icon {
-  margin-right: 0.5rem;
-  opacity: 0.7;
-}
-
-.dropdown-item:hover .dropdown-item-icon {
-  opacity: 1;
-}
-
-/* Fix dropdown clipping in table-responsive containers */
-/* Allow vertical overflow for dropdowns while maintaining horizontal scroll */
-.table-responsive {
-  overflow-x: auto;
-  overflow-y: visible;
-}
-
-/* Ensure dropdowns have proper z-index to appear above other content */
-.dropdown-menu {
-  z-index: 1050;
-}
-
-/* Form validation improvements */
-.is-invalid {
-  border-color: #dc3545;
-  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
-}
-
-.invalid-feedback {
-  display: block;
-  width: 100%;
-  margin-top: 0.25rem;
-  font-size: 0.875em;
-  color: #dc3545;
-}
-
-/* Card status improvements */
-.card-status-top {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-}
-
-/* Badge improvements */
-.badge.fs-6 {
-  font-size: 0.875em !important;
-}
-
-/* Responsive improvements */
-@media (max-width: 768px) {
-  .btn-list .btn {
-    width: 100%;
-    margin-right: 0;
-    margin-bottom: 0.5rem;
-  }
-  
-  .card-footer .btn-list {
-    flex-direction: column;
-  }
-  
-  .table-responsive {
-    font-size: 0.875rem;
-  }
-  
-  .modal-dialog {
-    margin: 0.5rem;
-  }
-  
-  .modal-dialog-centered {
-    min-height: calc(100% - 1rem);
-  }
-  
-  .btn-list.flex-nowrap {
-    flex-wrap: wrap !important;
-  }
-}
-
 /* Node Status Live Updates */
 .node-status-notification {
-  transition: all 0.3s ease-in-out;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.badge {
-  transition: all 0.3s ease-in-out;
+  transition: all 0.2s ease-in-out;
 }
 
 .status-message {
-  transition: opacity 0.3s ease-in-out;
+  transition: opacity 0.2s ease-in-out;
 }
 
 .status-message:empty {
   display: none !important;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 768px) {
+  .page-header {
+    padding: 1rem 0 0.75rem;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .btn-list {
+    width: 100%;
+  }
+
+  .btn-list .btn {
+    flex: 1;
+  }
+
+  .table {
+    font-size: 0.8125rem;
+  }
+
+  .table td,
+  .table th {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .table thead th {
+    font-size: 0.6875rem;
+  }
+
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+
+  .modal-dialog-centered {
+    min-height: calc(100% - 1rem);
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .table .btn-list {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .table .btn-list .btn {
+    width: 100%;
+  }
 }

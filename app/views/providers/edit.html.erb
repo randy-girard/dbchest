@@ -2,7 +2,22 @@
 
 <div class="page-header d-print-none">
   <div class="container-xl">
-    <h1 class="page-title">Editing Provider</h1>
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><%= link_to "Providers", providers_path %></li>
+            <li class="breadcrumb-item"><%= link_to @provider.name, provider_path(@provider) %></li>
+            <li class="breadcrumb-item active" aria-current="page">Edit</li>
+          </ol>
+        </nav>
+        <div class="page-pretitle">Infrastructure Management</div>
+        <h2 class="page-title">Edit Provider: <%= @provider.name %></h2>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <%= link_to "Cancel", provider_path(@provider), class: "btn btn-outline-secondary" %>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -11,10 +26,6 @@
     <div class="card">
       <div class="card-body">
         <%= render "form", provider: @provider %>
-      </div>
-      <div class="card-footer d-flex gap-2">
-        <%= link_to "Show this provider", @provider, class: "btn btn-outline-primary" %>
-        <%= link_to "Back to providers", providers_path, class: "btn btn-outline-secondary" %>
       </div>
     </div>
   </div>

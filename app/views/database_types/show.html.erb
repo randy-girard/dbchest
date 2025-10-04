@@ -1,43 +1,68 @@
 <% content_for :title, @database_type.name %>
 
-<div class="container-xl">
-  <div class="page-header d-print-none">
+<div class="page-header d-print-none">
+  <div class="container-xl">
     <div class="row g-2 align-items-center">
       <div class="col">
-        <div class="page-pretitle">
-          <%= link_to "Database Types", database_types_path, class: "text-muted" %>
-        </div>
-        <h2 class="page-title">
-          <%= @database_type.name %>
-        </h2>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><%= link_to "Database Types", database_types_path %></li>
+            <li class="breadcrumb-item active" aria-current="page"><%= @database_type.name %></li>
+          </ol>
+        </nav>
+        <div class="page-pretitle">Database Management</div>
+        <h2 class="page-title"><%= @database_type.name %></h2>
         <div class="text-muted mt-1">
-          Slug: <code><%= @database_type.slug %></code>
+          Slug: <code><%= @database_type.slug %></code> •
+          <%= pluralize(@database_type.database_type_versions.count, 'version') %> •
+          <%= pluralize(@database_type.clusters.count, 'cluster') %>
         </div>
       </div>
       <div class="col-auto ms-auto d-print-none">
         <div class="btn-list">
           <%= link_to edit_database_type_path(@database_type), class: "btn btn-outline-primary" do %>
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
               <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
               <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/>
               <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/>
-              <path d="M16 5l3 3"/>
             </svg>
             Edit
           <% end %>
           <%= link_to new_database_type_database_type_version_path(@database_type), class: "btn btn-primary" do %>
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
             Add Version
           <% end %>
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <circle cx="12" cy="12" r="1"/>
+                <circle cx="12" cy="19" r="1"/>
+                <circle cx="12" cy="5" r="1"/>
+              </svg>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <% handler_class = DatabaseTypes::BaseDatabaseType.registry[@database_type.slug] %>
+              <% if handler_class %>
+                <li><%= link_to "Test Handler", test_handler_database_type_path(@database_type), class: "dropdown-item" %></li>
+                <li><hr class="dropdown-divider"></li>
+              <% end %>
+              <li><%= link_to "Back to Database Types", database_types_path, class: "dropdown-item" %></li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <div class="row row-deck row-cards">
+<div class="page-body">
+  <div class="container-xl">
+    <div class="row row-deck row-cards">
     <!-- Database Type Info -->
     <div class="col-md-6">
       <div class="card">
