@@ -1,22 +1,30 @@
 <% content_for :title, "Test Installation - #{@database_type.name} #{@database_type_version.version}" %>
 
-<div class="container-xl">
-  <div class="page-header d-print-none">
+<div class="page-header d-print-none">
+  <div class="container-xl">
     <div class="row g-2 align-items-center">
       <div class="col">
-        <div class="page-pretitle">
-          <%= link_to "Database Types", database_types_path, class: "text-muted" %> / 
-          <%= link_to @database_type.name, @database_type, class: "text-muted" %> /
-          <%= link_to @database_type_version.version, [@database_type, @database_type_version], class: "text-muted" %>
-        </div>
-        <h2 class="page-title">
-          Test Installation
-        </h2>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><%= link_to "Database Types", database_types_path %></li>
+            <li class="breadcrumb-item"><%= link_to @database_type.name, database_type_path(@database_type) %></li>
+            <li class="breadcrumb-item"><%= link_to @database_type_version.version, database_type_database_type_version_path(@database_type, @database_type_version) %></li>
+            <li class="breadcrumb-item active" aria-current="page">Test Installation</li>
+          </ol>
+        </nav>
+        <div class="page-pretitle">Database Version Management</div>
+        <h2 class="page-title">Test Installation</h2>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <%= link_to "Back to Version", database_type_database_type_version_path(@database_type, @database_type_version), class: "btn btn-outline-secondary" %>
       </div>
     </div>
   </div>
+</div>
 
-  <div class="row row-deck row-cards">
+<div class="page-body">
+  <div class="container-xl">
+    <div class="row row-deck row-cards">
     <!-- Installation Command Analysis -->
     <div class="col-md-6">
       <div class="card">

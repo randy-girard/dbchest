@@ -1,54 +1,70 @@
 <% content_for :title, "#{@database_type.name} #{@database_type_version.version}" %>
 
-<div class="container-xl">
-  <div class="page-header d-print-none">
+<div class="page-header d-print-none">
+  <div class="container-xl">
     <div class="row g-2 align-items-center">
       <div class="col">
-        <div class="page-pretitle">
-          <%= link_to "Database Types", database_types_path, class: "text-muted" %> / 
-          <%= link_to @database_type.name, @database_type, class: "text-muted" %>
-        </div>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><%= link_to "Database Types", database_types_path %></li>
+            <li class="breadcrumb-item"><%= link_to @database_type.name, database_type_path(@database_type) %></li>
+            <li class="breadcrumb-item active" aria-current="page"><%= @database_type_version.version %></li>
+          </ol>
+        </nav>
+        <div class="page-pretitle">Database Version Management</div>
         <h2 class="page-title">
           <%= @database_type.name %> <%= @database_type_version.version %>
           <% if @database_type_version.is_default? %>
             <span class="badge bg-yellow ms-2">Default</span>
           <% end %>
         </h2>
+        <div class="text-muted mt-1">
+          Port: <%= @database_type_version.default_port %> •
+          Service: <code><%= @database_type_version.service_name %></code> •
+          <%= pluralize(@database_type_version.nodes.count, 'node') %>
+        </div>
       </div>
       <div class="col-auto ms-auto d-print-none">
         <div class="btn-list">
-          <% unless @database_type_version.is_default? %>
-            <%= link_to set_default_database_type_database_type_version_path(@database_type, @database_type_version), 
-                        method: :post, class: "btn btn-outline-warning" do %>
-              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="12,2 15.09,8.26 22,9 17,14.74 18.18,21.02 12,17.77 5.82,21.02 7,14.74 2,9 8.91,8.26"/>
-              </svg>
-              Set as Default
-            <% end %>
-          <% end %>
           <%= link_to edit_database_type_database_type_version_path(@database_type, @database_type_version), class: "btn btn-outline-primary" do %>
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
               <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
               <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/>
               <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/>
-              <path d="M16 5l3 3"/>
             </svg>
             Edit
           <% end %>
-          <%= link_to test_installation_database_type_database_type_version_path(@database_type, @database_type_version), class: "btn btn-outline-info" do %>
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-              <circle cx="12" cy="12" r="9"/>
-              <polyline points="9,12 11,14 15,10"/>
-            </svg>
-            Test Installation
-          <% end %>
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <circle cx="12" cy="12" r="1"/>
+                <circle cx="12" cy="19" r="1"/>
+                <circle cx="12" cy="5" r="1"/>
+              </svg>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <% unless @database_type_version.is_default? %>
+                <li><%= link_to "Set as Default", set_default_database_type_database_type_version_path(@database_type, @database_type_version), method: :post, class: "dropdown-item" %></li>
+                <li><hr class="dropdown-divider"></li>
+              <% end %>
+              <li><%= link_to "Test Installation", test_installation_database_type_database_type_version_path(@database_type, @database_type_version), class: "dropdown-item" %></li>
+              <% if @database_type_version.config_template.present? %>
+                <li><%= link_to "Preview Config", preview_config_database_type_database_type_version_path(@database_type, @database_type_version), class: "dropdown-item" %></li>
+              <% end %>
+              <li><hr class="dropdown-divider"></li>
+              <li><%= link_to "Back to Database Type", database_type_path(@database_type), class: "dropdown-item" %></li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <div class="row row-deck row-cards">
+<div class="page-body">
+  <div class="container-xl">
+    <div class="row row-deck row-cards">
     <!-- Version Details -->
     <div class="col-md-6">
       <div class="card">

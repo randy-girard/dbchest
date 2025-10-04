@@ -1,23 +1,32 @@
 <% content_for :title, "New Version for #{@database_type.name}" %>
 
-<div class="container-xl">
-  <div class="page-header d-print-none">
+<div class="page-header d-print-none">
+  <div class="container-xl">
     <div class="row g-2 align-items-center">
       <div class="col">
-        <div class="page-pretitle">
-          <%= link_to "Database Types", database_types_path, class: "text-muted" %> / 
-          <%= link_to @database_type.name, @database_type, class: "text-muted" %>
-        </div>
-        <h2 class="page-title">
-          New Version
-        </h2>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><%= link_to "Database Types", database_types_path %></li>
+            <li class="breadcrumb-item"><%= link_to @database_type.name, database_type_path(@database_type) %></li>
+            <li class="breadcrumb-item active" aria-current="page">New Version</li>
+          </ol>
+        </nav>
+        <div class="page-pretitle">Database Version Management</div>
+        <h2 class="page-title">Add New Version to <%= @database_type.name %></h2>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <%= link_to "Cancel", database_type_path(@database_type), class: "btn btn-outline-secondary" %>
       </div>
     </div>
   </div>
+</div>
 
-  <div class="row justify-content-center">
-    <div class="col-md-10">
-      <%= render 'form', database_type_version: @database_type_version %>
+<div class="page-body">
+  <div class="container-xl">
+    <div class="row justify-content-center">
+      <div class="col-md-10">
+        <%= render 'form', database_type_version: @database_type_version %>
+      </div>
     </div>
   </div>
 </div>
