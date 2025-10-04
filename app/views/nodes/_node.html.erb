@@ -1,128 +1,68 @@
-<div id="<%= dom_id node %>" class="node-details">
-  <div class="row">
-    <div class="col-md-6">
-      <dl class="row">
-        <dt class="col-sm-4">Node Name:</dt>
-        <dd class="col-sm-8"><strong><%= node.name %></strong></dd>
-        
-        <dt class="col-sm-4">Provider:</dt>
-        <dd class="col-sm-8">
-          <% if node.provider.present? %>
-            <div class="d-flex align-items-center">
-              <span class="avatar avatar-xs me-2" style="background-image: url(https://ui-avatars.com/api/?name=<%= node.provider.name %>&background=17a2b8&color=fff)"></span>
-              <span class="badge bg-info fs-6"><%= node.provider.name %></span>
-            </div>
-          <% else %>
-            <span class="text-muted">No provider assigned</span>
-          <% end %>
-        </dd>
-        
-        <dt class="col-sm-4">Status:</dt>
-        <dd class="col-sm-8">
-          <%= node_status_badge(node) %>
-          <%= node_status_message_area(node, class: 'mt-1') %>
-        </dd>
-
-        <dt class="col-sm-4">Credentials:</dt>
-        <dd class="col-sm-8">
-          <span class="badge bg-dark"><%= pluralize(node.credentials.count, 'credential') %></span>
-        </dd>
-        
-        <dt class="col-sm-4">Node Type:</dt>
-        <dd class="col-sm-8">
-          <% if node.replica? %>
-            <span class="badge bg-warning">Replica</span>
-            <small class="text-muted d-block">Replica of <%= node.parent_node.name %></small>
-          <% else %>
-            <span class="badge bg-primary">Primary</span>
-            <% if node.has_replicas? %>
-              <small class="text-muted d-block"><%= pluralize(node.replicas.count, 'replica') %></small>
-            <% end %>
-          <% end %>
-        </dd>
-      </dl>
-    </div>
-    
-    <div class="col-md-6">
-      <dl class="row">
-        <dt class="col-sm-4">Created:</dt>
-        <dd class="col-sm-8">
-          <%= node.created_at.strftime("%B %d, %Y at %I:%M %p") %>
-          <small class="text-muted d-block">(<%= time_ago_in_words(node.created_at) %> ago)</small>
-        </dd>
-        
-        <dt class="col-sm-4">Updated:</dt>
-        <dd class="col-sm-8">
-          <%= node.updated_at.strftime("%B %d, %Y at %I:%M %p") %>
-          <small class="text-muted d-block">(<%= time_ago_in_words(node.updated_at) %> ago)</small>
-        </dd>
-
-        <dt class="col-sm-4">Cluster:</dt>
-        <dd class="col-sm-8">
-          <% if defined?(@cluster) && @cluster %>
-            <%= link_to @cluster.name, cluster_path(@cluster), class: "text-decoration-none" %>
-          <% elsif node.respond_to?(:cluster) && node.cluster %>
-            <%= link_to node.cluster.name, cluster_path(node.cluster), class: "text-decoration-none" %>
-          <% else %>
-            <span class="text-muted">No cluster</span>
-          <% end %>
-        </dd>
-      </dl>
-    </div>
-  </div>
-  
-  <!-- Node Configuration Summary -->
-  <div class="mt-4">
-    <div class="card bg-light">
-      <div class="card-header">
-        <h4 class="card-title">Configuration Overview</h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-3">
-            <div class="text-muted small">Provider Type</div>
-            <div class="fw-bold">
+<div id="<%= dom_id node %>">
+  <div class="table-responsive">
+    <table class="table">
+      <tbody>
+        <tr>
+          <th style="width: 200px;">Provider</th>
+          <td>
+            <% if node.provider.present? %>
+              <span class="badge bg-info"><%= node.provider.name %></span>
               <% if node.provider&.provider_type %>
-                <%= node.provider.provider_type.name %>
-              <% else %>
-                Not configured
+                <span class="text-muted ms-2">(<%= node.provider.provider_type.name %>)</span>
               <% end %>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="text-muted small">Node Settings</div>
-            <div class="fw-bold">
-              <% if node.respond_to?(:node_settings) %>
-                <%= pluralize(node.node_settings.count, 'setting') %>
-              <% else %>
-                0 settings
+            <% else %>
+              <span class="text-muted">No provider assigned</span>
+            <% end %>
+          </td>
+        </tr>
+        <tr>
+          <th>Status</th>
+          <td>
+            <%= node_status_badge(node) %>
+            <%= node_status_message_area(node, class: 'ms-2') %>
+          </td>
+        </tr>
+        <tr>
+          <th>Node Type</th>
+          <td>
+            <% if node.replica? %>
+              <span class="badge bg-warning">Replica</span>
+              <span class="text-muted ms-2">Replica of <%= node.parent_node.name %></span>
+            <% else %>
+              <span class="badge bg-primary">Primary</span>
+              <% if node.has_replicas? %>
+                <span class="text-muted ms-2"><%= pluralize(node.replicas.count, 'replica') %></span>
               <% end %>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="text-muted small">Credentials</div>
-            <div class="fw-bold">
-              <%= pluralize(node.credentials.count, 'credential') %>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="text-muted small">
-              <% if node.replica? %>
-                Primary Node
-              <% else %>
-                Replicas
-              <% end %>
-            </div>
-            <div class="fw-bold">
-              <% if node.replica? %>
-                <%= link_to node.parent_node.name, [@cluster, node.parent_node], class: "text-decoration-none" %>
-              <% else %>
-                <%= pluralize(node.replicas.count, 'replica') %>
-              <% end %>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            <% end %>
+          </td>
+        </tr>
+        <tr>
+          <th>Cluster</th>
+          <td>
+            <% if defined?(@cluster) && @cluster %>
+              <%= link_to @cluster.name, cluster_path(@cluster) %>
+            <% elsif node.respond_to?(:cluster) && node.cluster %>
+              <%= link_to node.cluster.name, cluster_path(node.cluster) %>
+            <% else %>
+              <span class="text-muted">No cluster</span>
+            <% end %>
+          </td>
+        </tr>
+        <tr>
+          <th>Created</th>
+          <td>
+            <%= node.created_at.strftime("%B %d, %Y at %I:%M %p") %>
+            <span class="text-muted">(<%= time_ago_in_words(node.created_at) %> ago)</span>
+          </td>
+        </tr>
+        <tr>
+          <th>Last Updated</th>
+          <td>
+            <%= node.updated_at.strftime("%B %d, %Y at %I:%M %p") %>
+            <span class="text-muted">(<%= time_ago_in_words(node.updated_at) %> ago)</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </div>
