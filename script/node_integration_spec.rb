@@ -104,7 +104,7 @@ def create_cluster(database_type_name, cluster_name)
   puts "  📦 Creating cluster: #{cluster_name}"
 
   click_link "Clusters"
-  click_link "New Cluster"
+  first(:link, "New Cluster").click
 
   fill_in "cluster_name", with: cluster_name
   select database_type_name, from: "Database Type"
@@ -162,10 +162,10 @@ def wait_for_node_status
   result = ""
 
   success = wait_until(timeout: 600) do
-    if page.has_text?("Active")
+    if page.has_text?(/\bActive\b/, wait: 0)
       result = "Active"
       true
-    elsif page.has_text?("Error") || page.has_text?("Errored")
+    elsif page.has_text?(/\bError(ed)?\b/, wait: 0)
       result = "Error"
       true
     else
@@ -181,10 +181,10 @@ def cleanup_node(node_name)
   puts "  🗑️  Deleting node: #{node_name}"
 
   within(:xpath, "//tr[td[contains(., '#{node_name}')]]") do
-    find("a.btn-outline-primary").click
+    find("button.dropdown-toggle").click
   end
 
-  click_button "Delete node"
+  click_button "Delete"
 
   wait_until do
     !page.has_text?(node_name)
@@ -196,7 +196,11 @@ end
 def cleanup_node_replica(node_name)
   puts "  🗑️  Deleting node replica: #{node_name}"
 
-  click_button "Delete node"
+  within(:xpath, "//div[@class='dropdown']") do
+    find("button.dropdown-toggle").click
+  end
+
+  click_button "Delete Node"
 
   wait_until do
     !page.has_text?(node_name)
@@ -208,7 +212,11 @@ end
 def cleanup_cluster
   puts "  🗑️  Deleting cluster"
 
-  click_button "Delete cluster"
+  within(:xpath, "//div.dropdown") do
+    find("button.dropdown-toggle").click
+  end
+
+  click_button "Delete Cluster"
 
   puts "  ✅ Cluster deleted"
 end
