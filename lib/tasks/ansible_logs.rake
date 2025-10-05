@@ -70,7 +70,7 @@ namespace :ansible do
   end
 
   desc "Show logs for a specific node"
-  task :node, [:node_id] => :environment do |t, args|
+  task :node, [ :node_id ] => :environment do |t, args|
     unless args[:node_id]
       puts "Usage: rake ansible:node[NODE_ID]"
       exit 1
@@ -99,4 +99,3 @@ namespace :ansible do
     end
   end
 end
-

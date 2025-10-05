@@ -95,4 +95,3 @@ class MetricsStatisticsCalculator
     end
   end
 end
-

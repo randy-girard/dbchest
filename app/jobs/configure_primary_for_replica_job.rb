@@ -133,7 +133,7 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
       ansible_log.flush
 
       # Create SSH private key file (keep file handle to prevent deletion)
-      ssh_key_file = Tempfile.new(["ansible_ssh_key", ".pem"])
+      ssh_key_file = Tempfile.new([ "ansible_ssh_key", ".pem" ])
       ssh_key_file.write(@primary_node.ssh_private_key)
       ssh_key_file.chmod(0600)
       ssh_key_file.flush
@@ -161,7 +161,7 @@ class ConfigurePrimaryForReplicaJob < ApplicationJob
 
       # Log variables (excluding password)
       ansible_log.puts "\nAnsible Variables:"
-      @playbook_variables.except('replication_password').each do |key, value|
+      @playbook_variables.except("replication_password").each do |key, value|
         ansible_log.puts "  #{key}: #{value}"
       end
       ansible_log.puts "  replication_password: [HIDDEN - length: #{@playbook_variables['replication_password']&.length || 0}]"

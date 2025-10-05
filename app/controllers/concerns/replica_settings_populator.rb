@@ -21,4 +21,3 @@ module ReplicaSettingsPopulator
     end
   end
 end
-

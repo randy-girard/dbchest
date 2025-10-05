@@ -202,7 +202,7 @@ RSpec.describe CloudInitGenerators::PostgresqlCloudInitGenerator do
   describe "integration with version compatibility service" do
     it "generates script that would validate PostgreSQL 15 on Ubuntu 20.04" do
       script = generator.generate(is_replica: false)
-      
+
       # Script should include validation logic
       expect(script).to include("validate_database_version")
       expect(script).to include("postgresql")
@@ -210,11 +210,10 @@ RSpec.describe CloudInitGenerators::PostgresqlCloudInitGenerator do
 
     it "includes compatibility error handling" do
       script = generator.generate(is_replica: false)
-      
+
       # Should have error handling for incompatible versions
       expect(script).to include("callback")
       expect(script).to include("error")
     end
   end
 end
-

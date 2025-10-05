@@ -198,4 +198,3 @@ RSpec.describe "Cloud Init Version Compatibility Module" do
     end
   end
 end
-

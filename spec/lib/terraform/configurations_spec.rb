@@ -216,16 +216,16 @@ RSpec.describe "Terraform Configurations" do
 
     it "all modules have proper variable definitions" do
       module_dirs = Dir.glob(terraform_dir.join("modules", "*"))
-      
+
       module_dirs.each do |module_dir|
         main_tf = File.join(module_dir, "main.tf")
         next unless File.exist?(main_tf)
-        
+
         content = File.read(main_tf)
-        
+
         # If it uses var.something, it should define that variable
         var_references = content.scan(/var\.(\w+)/).flatten.uniq
-        
+
         var_references.each do |var_name|
           expect(content).to include("variable \"#{var_name}\""),
             "Module #{module_dir} uses var.#{var_name} but doesn't define it"
@@ -237,13 +237,13 @@ RSpec.describe "Terraform Configurations" do
   describe "resource naming" do
     it "uses descriptive resource names" do
       tf_files = Dir.glob(terraform_dir.join("**", "*.tf"))
-      
+
       tf_files.each do |tf_file|
         content = File.read(tf_file)
-        
+
         # Check for generic names like "main" or "default"
         resources = content.scan(/resource\s+"[^"]+"\s+"([^"]+)"/).flatten
-        
+
         resources.each do |resource_name|
           expect(resource_name).not_to eq("main"),
             "Avoid using 'main' as resource name in #{tf_file}"
@@ -257,13 +257,13 @@ RSpec.describe "Terraform Configurations" do
   describe "output definitions" do
     it "all main.tf files have outputs" do
       main_tf_files = Dir.glob(terraform_dir.join("**", "main.tf"))
-      
+
       main_tf_files.each do |main_tf_file|
         content = File.read(main_tf_file)
-        
+
         # Skip if it's just a module reference file
         next unless content.include?("resource")
-        
+
         expect(content).to include("output"),
           "#{main_tf_file} should define outputs"
       end
@@ -271,13 +271,13 @@ RSpec.describe "Terraform Configurations" do
 
     it "outputs have descriptions" do
       tf_files = Dir.glob(terraform_dir.join("**", "*.tf"))
-      
+
       tf_files.each do |tf_file|
         content = File.read(tf_file)
-        
+
         # Find all output blocks
         outputs = content.scan(/output\s+"([^"]+)"\s+{([^}]+)}/m)
-        
+
         outputs.each do |output_name, output_block|
           expect(output_block).to include("description"),
             "Output '#{output_name}' in #{tf_file} should have a description"
@@ -286,4 +286,3 @@ RSpec.describe "Terraform Configurations" do
     end
   end
 end
-

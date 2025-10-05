@@ -157,7 +157,7 @@ RSpec.describe "Cloud Init Modules" do
     it "all modules use consistent function naming" do
       common = File.read(modules_dir.join("common.sh"))
       postgresql = File.read(modules_dir.join("postgresql.sh"))
-      
+
       # PostgreSQL module should use functions from common module
       expect(postgresql).to include("log ")
       expect(postgresql).to include("callback ")
@@ -165,10 +165,9 @@ RSpec.describe "Cloud Init Modules" do
 
     it "version_compatibility module uses common functions" do
       version_compat = File.read(modules_dir.join("version_compatibility.sh"))
-      
+
       expect(version_compat).to include("log ")
       expect(version_compat).to include("callback ")
     end
   end
 end
-

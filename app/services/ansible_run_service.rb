@@ -223,17 +223,17 @@ class AnsibleRunService
     log_dir = Rails.root.join("log", "ansible")
     FileUtils.mkdir_p(log_dir)
     # Sanitize playbook name for filename
-    safe_playbook_name = playbook_name.gsub(/[^a-zA-Z0-9_-]/, '_')
+    safe_playbook_name = playbook_name.gsub(/[^a-zA-Z0-9_-]/, "_")
     log_dir.join("node_#{node_id}_#{safe_playbook_name}_#{Time.current.strftime('%Y%m%d_%H%M%S')}.log")
   end
 
   def find_ansible_binary
     # Define safe, known paths for ansible-playbook
     safe_paths = [
-      '/usr/bin/ansible-playbook',
-      '/usr/local/bin/ansible-playbook',
-      '/opt/homebrew/bin/ansible-playbook',  # macOS Homebrew
-      '/home/linuxbrew/.linuxbrew/bin/ansible-playbook'  # Linux Homebrew
+      "/usr/bin/ansible-playbook",
+      "/usr/local/bin/ansible-playbook",
+      "/opt/homebrew/bin/ansible-playbook",  # macOS Homebrew
+      "/home/linuxbrew/.linuxbrew/bin/ansible-playbook"  # Linux Homebrew
     ]
 
     # Check each safe path

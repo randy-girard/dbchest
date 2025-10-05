@@ -47,35 +47,35 @@ REPLICA_NETWORK_CONFIG = {
 DATABASE_TEST_CONFIGS = {
   postgresql: {
     name: "PostgreSQL",
-    versions: [12],#, 13, 14, 15, 16, 17],
+    versions: [ 12 ], # , 13, 14, 15, 16, 17],
     cluster_prefix: "postgres",
     node_prefix: "postgres-node",
     enabled: true
   },
   mysql: {
     name: "MySQL",
-    versions: ["5.7", "8.0"],
+    versions: [ "5.7", "8.0" ],
     cluster_prefix: "mysql",
     node_prefix: "mysql-node",
     enabled: false # Enable when MySQL support is ready
   },
   mongodb: {
     name: "MongoDB",
-    versions: ["4.4", "5.0", "6.0"],
+    versions: [ "4.4", "5.0", "6.0" ],
     cluster_prefix: "mongodb",
     node_prefix: "mongodb-node",
     enabled: false # Enable when MongoDB support is ready
   },
   cassandra: {
     name: "Cassandra",
-    versions: ["3.11", "4.0"],
+    versions: [ "3.11", "4.0" ],
     cluster_prefix: "cassandra",
     node_prefix: "cassandra-node",
     enabled: false # Enable when Cassandra support is ready
   },
   redis: {
     name: "Redis",
-    versions: ["6.2", "7.0"],
+    versions: [ "6.2", "7.0" ],
     cluster_prefix: "redis",
     node_prefix: "redis-node",
     enabled: false # Enable when Redis support is ready
@@ -266,7 +266,7 @@ def fetch_cloud_init_logs(node_name)
     puts "  🔌 Connecting to #{ip_address}..."
 
     # Create temporary file for SSH key
-    key_file = Tempfile.new(['ssh_key', '.pem'])
+    key_file = Tempfile.new([ 'ssh_key', '.pem' ])
     key_file.write(node.ssh_private_key)
     key_file.chmod(0600)
     key_file.flush
@@ -275,11 +275,10 @@ def fetch_cloud_init_logs(node_name)
     # Fetch the log file via SSH
     log_content = nil
     Net::SSH.start(ip_address, 'root',
-                   keys: [key_file.path],
+                   keys: [ key_file.path ],
                    timeout: 10,
                    non_interactive: true,
                    verify_host_key: :never) do |ssh|
-
       # Check if log file exists
       result = ssh.exec!("test -f /var/log/dbchest-setup.log && echo 'exists' || echo 'missing'")
 

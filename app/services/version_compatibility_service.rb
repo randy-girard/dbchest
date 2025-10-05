@@ -6,19 +6,19 @@ class VersionCompatibilityService
   POSTGRESQL_UBUNTU_COMPATIBILITY = {
     "20.04" => {
       codename: "focal",
-      supported_versions: [12, 13, 14, 15],
+      supported_versions: [ 12, 13, 14, 15 ],
       max_version: 15,
       repository: "http://apt-archive.postgresql.org/pub/repos/apt/"
     },
     "22.04" => {
       codename: "jammy",
-      supported_versions: [12, 13, 14, 15, 16, 17],
+      supported_versions: [ 12, 13, 14, 15, 16, 17 ],
       max_version: 17,
       repository: "http://apt.postgresql.org/pub/repos/apt/"
     },
     "24.04" => {
       codename: "noble",
-      supported_versions: [12, 13, 14, 15, 16, 17],
+      supported_versions: [ 12, 13, 14, 15, 16, 17 ],
       max_version: 17,
       repository: "http://apt.postgresql.org/pub/repos/apt/"
     }
@@ -28,17 +28,17 @@ class VersionCompatibilityService
   MYSQL_UBUNTU_COMPATIBILITY = {
     "20.04" => {
       codename: "focal",
-      supported_versions: ["5.7", "8.0"],
+      supported_versions: [ "5.7", "8.0" ],
       default_version: "8.0"
     },
     "22.04" => {
       codename: "jammy",
-      supported_versions: ["8.0"],
+      supported_versions: [ "8.0" ],
       default_version: "8.0"
     },
     "24.04" => {
       codename: "noble",
-      supported_versions: ["8.0"],
+      supported_versions: [ "8.0" ],
       default_version: "8.0"
     }
   }.freeze
@@ -83,7 +83,7 @@ class VersionCompatibilityService
       return nil unless compatibility
 
       major_version = extract_major_version(pg_version)
-      
+
       # PostgreSQL 16+ uses main repository, older versions use archive
       if major_version >= 16
         "http://apt.postgresql.org/pub/repos/apt/"
@@ -111,7 +111,7 @@ class VersionCompatibilityService
     # Validate database type version compatibility
     def validate_compatibility!(database_type, version, ubuntu_version)
       info = compatibility_info(database_type, version, ubuntu_version)
-      
+
       unless info[:compatible]
         raise VersionCompatibilityError, info[:error_message]
       end
@@ -122,7 +122,7 @@ class VersionCompatibilityService
     # Generate installation command with version-aware repository selection
     def generate_postgresql_install_command(version, ubuntu_version = nil)
       major_version = extract_major_version(version)
-      
+
       # Check compatibility if Ubuntu version provided
       if ubuntu_version && !postgresql_compatible?(version, ubuntu_version)
         return generate_compatibility_error_command(version, ubuntu_version)
@@ -130,7 +130,7 @@ class VersionCompatibilityService
 
       # Determine repository based on version
       repo_url = postgresql_repository_url(version, ubuntu_version || "22.04")
-      
+
       <<~CMD.strip
         # PostgreSQL #{version} installation with version-aware repository
         wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
@@ -155,14 +155,14 @@ class VersionCompatibilityService
       unless compatibility
         return {
           compatible: false,
-          notes: ["Unknown Ubuntu version: #{ubuntu_version}"],
+          notes: [ "Unknown Ubuntu version: #{ubuntu_version}" ],
           error_message: "Ubuntu version #{ubuntu_version} is not in the compatibility matrix"
         }
       end
 
       if compatibility[:supported_versions].include?(major_version)
         notes = []
-        
+
         # Add informational notes
         if major_version >= 16
           notes << "PostgreSQL #{version} requires Ubuntu 22.04 or later"
@@ -195,7 +195,7 @@ class VersionCompatibilityService
       unless compatibility
         return {
           compatible: false,
-          notes: ["Unknown Ubuntu version: #{ubuntu_version}"],
+          notes: [ "Unknown Ubuntu version: #{ubuntu_version}" ],
           error_message: "Ubuntu version #{ubuntu_version} is not in the compatibility matrix"
         }
       end
@@ -221,7 +221,7 @@ class VersionCompatibilityService
 
     def generate_compatibility_error_command(version, ubuntu_version)
       compatibility = POSTGRESQL_UBUNTU_COMPATIBILITY[ubuntu_version]
-      supported = compatibility ? compatibility[:supported_versions].join(', ') : 'unknown'
+      supported = compatibility ? compatibility[:supported_versions].join(", ") : "unknown"
 
       <<~CMD.strip
         # PostgreSQL #{version} compatibility check
@@ -236,4 +236,3 @@ class VersionCompatibilityService
   # Custom error class for version compatibility issues
   class VersionCompatibilityError < StandardError; end
 end
-

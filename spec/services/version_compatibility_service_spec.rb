@@ -56,7 +56,7 @@ RSpec.describe VersionCompatibilityService do
       let(:ubuntu_version) { "24.04" }
 
       it "returns true for all supported PostgreSQL versions" do
-        [12, 13, 14, 15, 16, 17].each do |version|
+        [ 12, 13, 14, 15, 16, 17 ].each do |version|
           expect(described_class.postgresql_compatible?(version, ubuntu_version)).to be true
         end
       end
@@ -99,7 +99,7 @@ RSpec.describe VersionCompatibilityService do
     context "for PostgreSQL" do
       it "returns compatible info for PostgreSQL 15 on Ubuntu 20.04" do
         info = described_class.compatibility_info("postgresql", 15, "20.04")
-        
+
         expect(info[:compatible]).to be true
         expect(info[:notes]).to be_an(Array)
         expect(info[:repository]).to include("apt-archive.postgresql.org")
@@ -108,7 +108,7 @@ RSpec.describe VersionCompatibilityService do
 
       it "returns incompatible info for PostgreSQL 16 on Ubuntu 20.04" do
         info = described_class.compatibility_info("postgresql", 16, "20.04")
-        
+
         expect(info[:compatible]).to be false
         expect(info[:notes]).to include(match(/not compatible/))
         expect(info[:error_message]).to include("not available")
@@ -116,7 +116,7 @@ RSpec.describe VersionCompatibilityService do
 
       it "returns compatible info for PostgreSQL 16 on Ubuntu 22.04" do
         info = described_class.compatibility_info("postgresql", 16, "22.04")
-        
+
         expect(info[:compatible]).to be true
         expect(info[:notes]).to include(match(/requires Ubuntu 22.04/))
         expect(info[:repository]).to include("apt.postgresql.org")
@@ -126,14 +126,14 @@ RSpec.describe VersionCompatibilityService do
     context "for MySQL" do
       it "returns compatible info for MySQL 8.0 on Ubuntu 22.04" do
         info = described_class.compatibility_info("mysql", "8.0", "22.04")
-        
+
         expect(info[:compatible]).to be true
         expect(info[:default_version]).to eq("8.0")
       end
 
       it "returns incompatible info for MySQL 5.7 on Ubuntu 22.04" do
         info = described_class.compatibility_info("mysql", "5.7", "22.04")
-        
+
         expect(info[:compatible]).to be false
         expect(info[:error_message]).to include("not available")
       end
@@ -142,7 +142,7 @@ RSpec.describe VersionCompatibilityService do
     context "for unknown database type" do
       it "returns compatible by default" do
         info = described_class.compatibility_info("mongodb", "6.0", "22.04")
-        
+
         expect(info[:compatible]).to be true
         expect(info[:notes]).to eq([])
       end
@@ -192,12 +192,12 @@ RSpec.describe VersionCompatibilityService do
   describe ".supported_postgresql_versions" do
     it "returns correct versions for Ubuntu 20.04" do
       versions = described_class.supported_postgresql_versions("20.04")
-      expect(versions).to eq([12, 13, 14, 15])
+      expect(versions).to eq([ 12, 13, 14, 15 ])
     end
 
     it "returns correct versions for Ubuntu 22.04" do
       versions = described_class.supported_postgresql_versions("22.04")
-      expect(versions).to eq([12, 13, 14, 15, 16, 17])
+      expect(versions).to eq([ 12, 13, 14, 15, 16, 17 ])
     end
 
     it "returns empty array for unknown Ubuntu version" do
@@ -228,7 +228,7 @@ RSpec.describe VersionCompatibilityService do
   describe ".generate_postgresql_install_command" do
     it "generates correct command for PostgreSQL 15 on Ubuntu 20.04" do
       command = described_class.generate_postgresql_install_command(15, "20.04")
-      
+
       expect(command).to include("postgresql-15")
       expect(command).to include("apt-archive.postgresql.org")
       expect(command).to include("apt-get install")
@@ -236,7 +236,7 @@ RSpec.describe VersionCompatibilityService do
 
     it "generates correct command for PostgreSQL 16 on Ubuntu 22.04" do
       command = described_class.generate_postgresql_install_command(16, "22.04")
-      
+
       expect(command).to include("postgresql-16")
       expect(command).to include("apt.postgresql.org")
       expect(command).not_to include("apt-archive")
@@ -244,7 +244,7 @@ RSpec.describe VersionCompatibilityService do
 
     it "generates error command for PostgreSQL 16 on Ubuntu 20.04" do
       command = described_class.generate_postgresql_install_command(16, "20.04")
-      
+
       expect(command).to include("ERROR")
       expect(command).to include("not compatible")
       expect(command).to include("exit 1")
@@ -252,10 +252,9 @@ RSpec.describe VersionCompatibilityService do
 
     it "generates command without version check when Ubuntu version not provided" do
       command = described_class.generate_postgresql_install_command(16)
-      
+
       expect(command).to include("postgresql-16")
       expect(command).not_to include("ERROR")
     end
   end
 end
-

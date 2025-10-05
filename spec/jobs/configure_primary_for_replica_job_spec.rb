@@ -210,7 +210,7 @@ RSpec.describe ConfigurePrimaryForReplicaJob, type: :job do
 
         allow(Open3).to receive(:popen2e).and_yield(
           double('stdin', close: nil),
-          ['Ansible error'].each,
+          [ 'Ansible error' ].each,
           wait_thr
         )
 

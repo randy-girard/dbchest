@@ -190,7 +190,7 @@ RSpec.describe "Ansible Playbooks" do
   describe "playbook syntax validation" do
     it "all playbooks have valid YAML syntax" do
       playbook_files = Dir.glob(ansible_dir.join("**", "*.yml"))
-      
+
       playbook_files.each do |playbook_file|
         expect { YAML.load_file(playbook_file) }.not_to raise_error,
           "YAML syntax error in #{playbook_file}"
@@ -199,13 +199,13 @@ RSpec.describe "Ansible Playbooks" do
 
     it "all playbooks have required top-level keys" do
       playbook_files = Dir.glob(ansible_dir.join("**", "*.yml"))
-      
+
       playbook_files.each do |playbook_file|
         next if playbook_file.include?("roles/") # Skip role files
-        
+
         playbook = YAML.load_file(playbook_file)
         next unless playbook.is_a?(Array) && playbook.first.is_a?(Hash)
-        
+
         expect(playbook.first).to have_key("name"),
           "Missing 'name' key in #{playbook_file}"
         expect(playbook.first).to have_key("hosts"),
@@ -239,4 +239,3 @@ RSpec.describe "Ansible Playbooks" do
     end
   end
 end
-

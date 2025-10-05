@@ -120,4 +120,3 @@ module NodeIpAddressManagement
     hostname
   end
 end
-

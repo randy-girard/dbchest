@@ -21,7 +21,7 @@ class VersionCompatibilityValidator < ActiveModel::Validator
         :database_type_version,
         compatibility_info[:error_message] || "is not compatible with Ubuntu #{ubuntu_version}"
       )
-      
+
       # Add detailed notes as additional errors
       compatibility_info[:notes]&.each do |note|
         record.errors.add(:base, note)
@@ -29,4 +29,3 @@ class VersionCompatibilityValidator < ActiveModel::Validator
     end
   end
 end
-

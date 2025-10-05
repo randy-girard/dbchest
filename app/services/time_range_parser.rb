@@ -39,4 +39,3 @@ class TimeRangeParser
     end
   end
 end
-

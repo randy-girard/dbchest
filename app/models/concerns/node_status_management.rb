@@ -45,9 +45,9 @@ module NodeStatusManagement
     status == "destroying"
   end
 
-  #def destroyed?
+  # def destroyed?
   #  status == "destroyed"
-  #end
+  # end
 
   # Status management methods
   def update_status!(new_status, message = nil)

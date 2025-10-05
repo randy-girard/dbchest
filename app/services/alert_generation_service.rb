@@ -86,7 +86,7 @@ class AlertGenerationService
     alert_data[:mount] = mount if mount
     alert_data[:timestamp] = @latest_metrics.collected_at.iso8601 if include_timestamp?
 
-    [alert_data]
+    [ alert_data ]
   end
 
   def determine_alert_type(usage, thresholds)
@@ -127,8 +127,7 @@ class AlertGenerationService
       end
 
       # Sort by severity and timestamp
-      alerts.sort_by { |alert| [alert[:type] == "critical" ? 0 : 1, alert[:timestamp] || ""] }.reverse
+      alerts.sort_by { |alert| [ alert[:type] == "critical" ? 0 : 1, alert[:timestamp] || "" ] }.reverse
     end
   end
 end
-

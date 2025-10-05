@@ -147,13 +147,13 @@ module NodeMetricsManagement
     status = cpu_config.check_threshold(latest.cpu_usage_percent)
     return [] if status == "healthy"
 
-    [{
+    [ {
       type: status,
       category: "cpu",
       message: "CPU usage: #{latest.cpu_usage_percent}%",
       value: latest.cpu_usage_percent,
       threshold: status == "critical" ? cpu_config.critical_threshold : cpu_config.warning_threshold
-    }]
+    } ]
   end
 
   def memory_alerts(latest)
@@ -163,13 +163,13 @@ module NodeMetricsManagement
     status = memory_config.check_threshold(latest.memory_usage_percent)
     return [] if status == "healthy"
 
-    [{
+    [ {
       type: status,
       category: "memory",
       message: "Memory usage: #{latest.memory_usage_percent}%",
       value: latest.memory_usage_percent,
       threshold: status == "critical" ? memory_config.critical_threshold : memory_config.warning_threshold
-    }]
+    } ]
   end
 
   def disk_alerts(latest)
