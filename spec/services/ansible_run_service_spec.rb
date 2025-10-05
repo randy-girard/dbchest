@@ -18,7 +18,14 @@ RSpec.describe AnsibleRunService, type: :service do
 
     # Mock external dependencies
     allow(service).to receive(:`).with('which ansible-playbook').and_return('/usr/bin/ansible-playbook')
-    allow(Open3).to receive(:popen2e).and_yield(double(close: nil), [], double(value: double(exitstatus: 0)))
+
+    # Mock Process::Status for exit status
+    exit_status = double('Process::Status', success?: true, exitstatus: 0)
+    wait_thr = double('wait_thr', value: exit_status)
+    stdout_err = double('stdout_err', each: nil)
+    stdin = double('stdin', close: nil)
+
+    allow(Open3).to receive(:popen2e).and_yield(stdin, stdout_err, wait_thr)
     allow(Tempfile).to receive(:new).and_return(double(write: nil, flush: nil, path: '/tmp/test', close: nil, unlink: nil, chmod: nil))
     allow(IPAddr).to receive(:new).with('192.168.1.100').and_return(double(to_s: '192.168.1.100'))
   end
@@ -96,6 +103,7 @@ RSpec.describe AnsibleRunService, type: :service do
           '/usr/bin/ansible-playbook',
           '-i', '/tmp/inventory',
           '--private-key', '/tmp/key',
+          '-v',
           Rails.root.join("lib", "ansible", "postgresql", playbook).to_s
         ]
 
@@ -115,6 +123,7 @@ RSpec.describe AnsibleRunService, type: :service do
             '-i', '/tmp/inventory',
             '-e', '@/tmp/vars',
             '--private-key', '/tmp/key',
+            '-v',
             Rails.root.join("lib", "ansible", "postgresql", playbook).to_s
           ]
 
