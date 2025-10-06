@@ -117,7 +117,7 @@ RSpec.describe CredentialsController, type: :controller do
 
       it "redirects to the cluster" do
         post :create, params: { cluster_id: cluster.to_param, node_id: node.to_param, credential: valid_attributes }
-        expect(response).to redirect_to(cluster)
+        expect(response).to redirect_to([cluster, node])
       end
 
       it "sets a success notice" do
@@ -142,23 +142,30 @@ RSpec.describe CredentialsController, type: :controller do
   end
 
   describe "PUT #update" do
-    context "with valid params" do
+    context "attempting to change username" do
       let(:new_attributes) { { username: "updateduser" } }
 
-      it "updates the requested credential" do
+      it "does not update the username" do
+        original_username = credential.username
         put :update, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param, credential: new_attributes }
         credential.reload
-        expect(credential.username).to eq("updateduser")
+        expect(credential.username).to eq(original_username)
       end
 
-      it "redirects to the cluster" do
+      it "renders the edit template with error" do
         put :update, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param, credential: new_attributes }
-        expect(response).to redirect_to(cluster)
+        expect(response).to render_template(:edit)
+        expect(response).to have_http_status(:unprocessable_content)
       end
+    end
 
-      it "sets a success notice" do
-        put :update, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param, credential: new_attributes }
-        expect(flash[:notice]).to eq("Credential was successfully updated.")
+    context "attempting to change password" do
+      let(:password_change_attributes) { { password: "newpassword123" } }
+
+      it "does not update the password" do
+        put :update, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param, credential: password_change_attributes }
+        expect(response).to render_template(:edit)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 
@@ -185,21 +192,44 @@ RSpec.describe CredentialsController, type: :controller do
       end
     end
 
-    it "destroys the requested credential" do
-      credential # create the credential
-      expect {
+    context 'with non-default credential' do
+      it "destroys the requested credential" do
+        credential # create the credential
+        expect {
+          delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param }
+        }.to change(Credential, :count).by(-1)
+      end
+
+      it "redirects to the cluster" do
         delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param }
-      }.to change(Credential, :count).by(-1)
+        expect(response).to redirect_to([cluster, node])
+      end
+
+      it "sets a success notice" do
+        delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param }
+        expect(flash[:notice]).to eq("Credential was successfully destroyed.")
+      end
     end
 
-    it "redirects to the cluster" do
-      delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param }
-      expect(response).to redirect_to(cluster)
-    end
+    context 'with default credential' do
+      let(:default_credential) { create(:credential, node: node, username: 'default', password: 'password') }
 
-    it "sets a success notice" do
-      delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param }
-      expect(flash[:notice]).to eq("Credential was successfully destroyed.")
+      it "does not destroy the credential" do
+        default_credential # create the credential
+        expect {
+          delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: default_credential.to_param }
+        }.not_to change(Credential, :count)
+      end
+
+      it "redirects to the node" do
+        delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: default_credential.to_param }
+        expect(response).to redirect_to([cluster, node])
+      end
+
+      it "sets an alert message" do
+        delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: default_credential.to_param }
+        expect(flash[:alert]).to eq("Cannot delete the default credential.")
+      end
     end
   end
 
@@ -229,10 +259,18 @@ RSpec.describe CredentialsController, type: :controller do
     end
 
     describe "PUT #update" do
-      context "with valid params" do
-        it "returns JSON with ok status" do
+      context "attempting to change username" do
+        it "returns JSON with errors" do
           put :update, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param, credential: { username: "updated" } }, format: :json
-          expect(response).to have_http_status(:ok)
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(response.content_type).to include('application/json')
+        end
+      end
+
+      context "attempting to change password" do
+        it "returns JSON with errors" do
+          put :update, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param, credential: { password: "newpass" } }, format: :json
+          expect(response).to have_http_status(:unprocessable_content)
           expect(response.content_type).to include('application/json')
         end
       end
@@ -247,9 +285,25 @@ RSpec.describe CredentialsController, type: :controller do
     end
 
     describe "DELETE #destroy" do
-      it "returns no content status" do
-        delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param }, format: :json
-        expect(response).to have_http_status(:no_content)
+      context 'with non-default credential' do
+        it "returns no content status" do
+          delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param }, format: :json
+          expect(response).to have_http_status(:no_content)
+        end
+      end
+
+      context 'with default credential' do
+        let(:default_credential) { create(:credential, node: node, username: 'default', password: 'password') }
+
+        it "returns unprocessable entity status" do
+          delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: default_credential.to_param }, format: :json
+          expect(response).to have_http_status(:unprocessable_entity)
+        end
+
+        it "returns error message in JSON" do
+          delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: default_credential.to_param }, format: :json
+          expect(JSON.parse(response.body)['error']).to eq("Cannot delete the default credential")
+        end
       end
     end
   end

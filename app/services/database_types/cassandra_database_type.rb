@@ -15,6 +15,11 @@ module DatabaseTypes
       true
     end
 
+    def users_replicate_automatically?
+      # Cassandra roles/users are automatically replicated across the cluster
+      true
+    end
+
     def generate_cloud_init_script(node, is_replica: false)
       CloudInitGenerators::CassandraCloudInitGenerator.new(self, node).generate(is_replica: is_replica)
     end

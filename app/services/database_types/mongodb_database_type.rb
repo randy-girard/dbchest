@@ -15,6 +15,11 @@ module DatabaseTypes
       major_version >= 3
     end
 
+    def users_replicate_automatically?
+      # MongoDB replica sets automatically replicate users created in the admin database
+      true
+    end
+
     def generate_cloud_init_script(node, is_replica: false)
       CloudInitGenerators::MongodbCloudInitGenerator.new(self, node).generate(is_replica: is_replica)
     end

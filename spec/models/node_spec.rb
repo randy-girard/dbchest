@@ -98,6 +98,44 @@ RSpec.describe Node, type: :model do
         expect(node).not_to receive(:broadcast_status_change)
         node.update!(name: 'new-name')
       end
+
+      describe 'default credential provisioning' do
+        it 'provisions default credential when primary node becomes active' do
+          node.save!
+          expect(ProvisionDefaultCredentialJob).to receive(:perform_later).with(node.id)
+          node.update!(status: 'active')
+        end
+
+        it 'does not provision when replica node becomes active' do
+          parent_node = create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version)
+          replica = create(:node, cluster: cluster, provider: provider, database_type_version: database_type_version, parent_node: parent_node)
+
+          expect(ProvisionDefaultCredentialJob).not_to receive(:perform_later)
+          replica.update!(status: 'active')
+        end
+
+        it 'does not provision when node is updated but status does not change to active' do
+          node.save!
+          expect(ProvisionDefaultCredentialJob).not_to receive(:perform_later)
+          node.update!(name: 'new-name')
+        end
+
+        it 'does not provision when node is already active and updated' do
+          node.save!
+          node.update!(status: 'active')
+
+          expect(ProvisionDefaultCredentialJob).not_to receive(:perform_later)
+          node.update!(name: 'new-name-2')
+        end
+
+        it 'provisions when node transitions from error to active' do
+          node.save!
+          node.update!(status: 'error')
+
+          expect(ProvisionDefaultCredentialJob).to receive(:perform_later).with(node.id)
+          node.update!(status: 'active')
+        end
+      end
     end
   end
 

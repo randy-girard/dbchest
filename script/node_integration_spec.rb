@@ -212,7 +212,7 @@ end
 def cleanup_cluster
   puts "  🗑️  Deleting cluster"
 
-  within(:xpath, "//div.dropdown") do
+  within(:xpath, "//div[@class='dropdown']") do
     find("button.dropdown-toggle").click
   end
 

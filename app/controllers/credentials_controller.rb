@@ -28,7 +28,7 @@ class CredentialsController < ApplicationController
     respond_to do |format|
       if @credential.save
         @credential.provision!
-        format.html { redirect_to @cluster, notice: "Credential was successfully created." }
+        format.html { redirect_to [@cluster, @node], notice: "Credential was successfully created." }
         format.json { render :show, status: :created, location: [ @cluster, @node, @credential ] }
       else
         format.html { render :new, status: :unprocessable_content }
@@ -41,7 +41,7 @@ class CredentialsController < ApplicationController
   def update
     respond_to do |format|
       if @credential.update(credential_params)
-        format.html { redirect_to @cluster, notice: "Credential was successfully updated.", status: :see_other }
+        format.html { redirect_to [@cluster, @node], notice: "Credential was successfully updated.", status: :see_other }
         format.json { render :show, status: :ok, location: [ @cluster, @node, @credential ] }
       else
         format.html { render :edit, status: :unprocessable_content }
@@ -52,10 +52,18 @@ class CredentialsController < ApplicationController
 
   # DELETE /credentials/1 or /credentials/1.json
   def destroy
+    if @credential.default_credential?
+      respond_to do |format|
+        format.html { redirect_to [@cluster, @node], alert: "Cannot delete the default credential.", status: :see_other }
+        format.json { render json: { error: "Cannot delete the default credential" }, status: :unprocessable_entity }
+      end
+      return
+    end
+
     @credential.deprovision!
 
     respond_to do |format|
-      format.html { redirect_to @cluster, notice: "Credential was successfully destroyed.", status: :see_other }
+      format.html { redirect_to [@cluster, @node], notice: "Credential was successfully destroyed.", status: :see_other }
       format.json { head :no_content }
     end
   end
@@ -76,6 +84,6 @@ class CredentialsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def credential_params
-      params.expect(credential: [ :username ])
+      params.expect(credential: [ :username, :password ])
     end
 end

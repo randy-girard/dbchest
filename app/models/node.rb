@@ -10,6 +10,10 @@ class Node < ApplicationRecord
   belongs_to :parent_node, class_name: "Node", optional: true
   belongs_to :database_type_version
 
+  # Allow credentials to be deleted when node is destroyed
+  # This MUST be defined before has_many :credentials to ensure callback order
+  before_destroy :allow_credential_deletion
+
   has_many :credentials, dependent: :destroy
   has_many :node_settings, dependent: :destroy
   # node_metrics and monitoring_configs are defined in NodeMetricsManagement concern
@@ -233,5 +237,11 @@ class Node < ApplicationRecord
   def ensure_ssh_keys_and_password
     ensure_ssh_keys!
     ensure_root_password!
+  end
+
+  def allow_credential_deletion
+    credentials.each do |credential|
+      credential.skip_default_credential_protection = true
+    end
   end
 end

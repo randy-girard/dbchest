@@ -4,15 +4,31 @@
   become: true
 
   tasks:
-    - name: Get PostgreSQL configuration paths
-      community.postgresql.postgresql_info:
-        filter: settings
+    - name: Ensure python3-psycopg2 is installed
+      apt:
+        name: python3-psycopg2
+        state: present
+        update_cache: no
+      ignore_errors: yes
+
+    - name: Ensure remote_tmp exists for postgres user
+      file:
+        path: /var/lib/postgresql/.ansible/tmp
+        state: directory
+        owner: postgres
+        group: postgres
+        mode: '0700'
+
+    - name: Get PostgreSQL hba_file path
       become_user: postgres
-      register: pg_info
+      shell: |
+        psql -t -P format=unaligned -c 'SHOW hba_file;'
+      register: pg_hba_file
+      changed_when: false
 
     - name: Set fact for pg_hba.conf path
       set_fact:
-        pg_hba_conf: "{{ pg_info.settings.hba_file.setting }}"
+        pg_hba_conf: "{{ pg_hba_file.stdout | trim }}"
 
     - name: Ensure pg_hba.conf entry exists
       lineinfile:
@@ -21,16 +37,19 @@
         line: "host    all    {{ username }}    0.0.0.0/0    scram-sha-256"
         state: present
         insertafter: EOF
-      notify: Reload PostgreSQL
+      notify: reload postgresql
 
     - name: Ensure PostgreSQL user is present
+      become: true
       become_user: postgres
-      shell: |
-        psql -c "CREATE USER {{ username }} WITH SUPERUSER PASSWORD '{{ password }}';" postgres || 
-        psql -c "ALTER USER {{ username }} PASSWORD '{{ password }}';" postgres
+      community.postgresql.postgresql_user:
+        name: "{{ username }}"
+        password: "{{ password }}"
+        role_attr_flags: CREATEDB,LOGIN
+        state: present
 
   handlers:
-    - name: Reload PostgreSQL
-      service:
-        name: postgresql
-        state: reloaded
+    - name: reload postgresql
+      become_user: postgres
+      shell: |
+        psql -c "SELECT pg_reload_conf();" postgres

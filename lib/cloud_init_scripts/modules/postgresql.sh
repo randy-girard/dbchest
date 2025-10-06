@@ -99,6 +99,7 @@ configure_postgresql_primary() {
   echo "listen_addresses = '*'" >> "$pg_conf"
   echo "port = 5432" >> "$pg_conf"
   echo "max_connections = 100" >> "$pg_conf"
+  echo "password_encryption = 'scram-sha-256'" >> "$pg_conf"
   echo "shared_buffers = 128MB" >> "$pg_conf"
   echo "logging_collector = on" >> "$pg_conf"
   echo "log_directory = 'log'" >> "$pg_conf"

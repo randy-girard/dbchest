@@ -5,8 +5,8 @@ module NodeMetricsManagement
   extend ActiveSupport::Concern
 
   included do
-    has_many :node_metrics, dependent: :destroy
-    has_many :monitoring_configs, dependent: :destroy
+    has_many :node_metrics, dependent: :delete_all
+    has_many :monitoring_configs, dependent: :delete_all
 
     after_create :ensure_metrics_api_key
     after_create :setup_default_monitoring_configs

@@ -40,6 +40,15 @@ module DatabaseTypes
       end
     end
 
+    # Determines if database users are automatically replicated to replica nodes
+    # Returns true if users created on primary are automatically available on replicas
+    # Returns false if users must be created manually on each node
+    def users_replicate_automatically?
+      # By default, streaming replication replicates users (PostgreSQL, MySQL)
+      # Override in subclasses for databases with different behavior (MongoDB, Cassandra)
+      supports_streaming_replication?
+    end
+
     def generate_cloud_init_script(node, is_replica: false)
       raise NotImplementedError, "#{self.class} must implement #generate_cloud_init_script"
     end

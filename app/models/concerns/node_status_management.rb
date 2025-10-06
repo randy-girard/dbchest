@@ -22,6 +22,7 @@ module NodeStatusManagement
     before_validation :set_default_status
     after_create :broadcast_initial_status
     after_update :broadcast_status_change, if: :saved_change_to_status?
+    after_update :provision_default_credential, if: :should_provision_default_credential?
   end
 
   # Status query methods
@@ -163,5 +164,21 @@ module NodeStatusManagement
 
     ActionCable.server.broadcast("development_console", console_data)
     Rails.logger.debug "🖥️  Broadcasted to development console: #{console_data.inspect}"
+  end
+
+  def should_provision_default_credential?
+    # Only provision for primary nodes that just became active
+    return false unless primary?
+    return false unless saved_change_to_status?
+    return false unless status == "active"
+
+    # Check if status changed TO active (not just updated while already active)
+    status_before, status_after = saved_change_to_status
+    status_before != "active" && status_after == "active"
+  end
+
+  def provision_default_credential
+    Rails.logger.info "Node #{id} became active - queueing default credential provisioning"
+    ProvisionDefaultCredentialJob.perform_later(id)
   end
 end
