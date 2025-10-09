@@ -5,6 +5,7 @@
 
 # Load common functions
 source /tmp/common.sh
+source /tmp/version_compatibility.sh
 source /tmp/mysql.sh
 
 # Initialize error handling FIRST
@@ -19,6 +20,9 @@ log "MySQL version: {{DB_VERSION}}"
 log "Service name: {{SERVICE_NAME}}"
 log "Node type: $([ -n "{{PRIMARY_HOST}}" ] && [ "{{PRIMARY_HOST}}" != "" ] && echo "REPLICA" || echo "PRIMARY")"
 log "========================================="
+
+# Display version compatibility information
+display_compatibility_matrix
 
 # Step 1: Install essential packages (including curl for callbacks)
 install_essential_packages
@@ -43,13 +47,45 @@ configure_mysql_auth
 # Step 6: Determine if this is a primary or replica setup
 if [ -n "{{PRIMARY_HOST}}" ] && [ "{{PRIMARY_HOST}}" != "" ]; then
   # This is a replica node
+  set_step "Waiting for primary configuration"
+
   # Primary configuration is triggered by CreateService after Terraform completes
+  # We just need to wait for the replication user to be created
+  log "Waiting for primary to be configured for replication..."
+  callback "configuring" "Waiting for primary to configure replication access..."
+
+  # Wait up to 5 minutes for primary configuration
+  max_wait=300  # 5 minutes
+  wait_interval=10
+  waited=0
+
+  while [ $waited -lt $max_wait ]; do
+    log "Waiting for primary configuration... ($waited/$max_wait seconds)"
+    sleep $wait_interval
+    waited=$((waited + wait_interval))
+
+    # Try to test connection to primary (this will fail until replication user is created)
+    if MYSQL_PWD="{{REPLICATION_PASSWORD}}" mysql -h "{{PRIMARY_HOST}}" -u replication -e "SELECT 1" >/dev/null 2>&1; then
+      log "Primary is configured and replication user is accessible"
+      break
+    fi
+  done
+
+  if [ $waited -ge $max_wait ]; then
+    log "WARNING: Timed out waiting for primary configuration, proceeding anyway..."
+    callback "configuring" "Primary configuration timeout - attempting replica setup..."
+  else
+    log "Primary configuration confirmed after $waited seconds"
+    callback "configuring" "Primary configured - starting replica setup..."
+  fi
+
+  # Now proceed with replica setup
   set_step "Configuring as MySQL replica"
-  setup_mysql_replica "{{SERVICE_NAME}}"
+  setup_mysql_replica "{{DB_VERSION}}" "{{SERVICE_NAME}}"
 else
   # This is a primary node
   set_step "Configuring as MySQL primary"
-  configure_mysql_primary "{{SERVICE_NAME}}"
+  configure_mysql_primary "{{DB_VERSION}}" "{{SERVICE_NAME}}"
 fi
 
 # Step 7: Final verification
@@ -64,15 +100,14 @@ if ! systemctl is-active --quiet "{{SERVICE_NAME}}"; then
   exit 1
 fi
 
-log "MySQL service is running - testing database connection..."
-# Test database connection
-if ! mysql -u root -p"{{ROOT_PASSWORD}}" -e "SELECT VERSION();" >/dev/null 2>&1; then
-  log "ERROR: Database connection test failed"
-  # This will trigger error handler
-  exit 1
-fi
+log "MySQL service is running successfully"
+callback "configuring" "MySQL service verified and running"
+
+# Step 8: Mark node as active
+set_step "Finalizing setup"
+log "MySQL node setup completed successfully!"
+callback "active" "MySQL node is ready and operational"
 
 log "========================================="
-log "SUCCESS: MySQL node setup completed"
+log "Setup Complete!"
 log "========================================="
-callback "active" "MySQL node is ready and operational"

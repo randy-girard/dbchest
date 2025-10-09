@@ -48,15 +48,38 @@ class DatabaseTypeVersion < ApplicationRecord
       notes << "PostgreSQL 16+ requires Ubuntu 22.04 or later. Will fail on Ubuntu 20.04."
     end
 
+    if database_type.slug == "mysql"
+      case version
+      when "5.7"
+        notes << "MySQL 5.7 is only available on Ubuntu 18.04 and 20.04. For Ubuntu 22.04+, use MySQL 8.0 or later."
+      when "8.1", "8.2", "8.3", "8.4"
+        notes << "MySQL #{version} (Innovation release) requires Ubuntu 22.04 or later."
+      when "8.0"
+        notes << "MySQL 8.0 (LTS) is compatible with Ubuntu 20.04 and 22.04."
+      end
+    end
+
     notes
   end
 
   def ubuntu_compatible?(ubuntu_version = nil)
-    return true unless database_type.slug == "postgresql"
+    # PostgreSQL compatibility checks
+    if database_type.slug == "postgresql"
+      # For PostgreSQL 16+, we know it's not available in Ubuntu 20.04 repositories
+      if major_version >= 16
+        return false if ubuntu_version&.start_with?("20.04")
+      end
+    end
 
-    # For PostgreSQL 16+, we know it's not available in Ubuntu 20.04 repositories
-    if major_version >= 16
-      return false if ubuntu_version&.start_with?("20.04")
+    # MySQL compatibility checks
+    if database_type.slug == "mysql"
+      if version == "5.7"
+        # MySQL 5.7 only works on Ubuntu 18.04 and 20.04
+        return false if ubuntu_version&.start_with?("22.04") || ubuntu_version&.start_with?("24.04")
+      elsif ["8.1", "8.2", "8.3", "8.4"].include?(version)
+        # MySQL 8.1+ Innovation releases require Ubuntu 22.04+
+        return false if ubuntu_version&.start_with?("20.04") || ubuntu_version&.start_with?("18.04")
+      end
     end
 
     true

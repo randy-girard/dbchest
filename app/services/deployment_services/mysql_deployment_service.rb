@@ -4,7 +4,7 @@ module DeploymentServices
   class MysqlDeploymentService < BaseDeploymentService
     def deploy_primary!
       run_ansible_playbook(database_type_handler.primary_playbook, {
-        mysql_root_password: SecureRandom.alphanumeric(32)
+        mysql_root_password: get_root_password
       })
     end
 
@@ -13,9 +13,9 @@ module DeploymentServices
       return false unless primary_node
 
       run_ansible_playbook(database_type_handler.replica_playbook, {
-        primary_ip: primary_node.get_ip_address,
+        primary_host: primary_node.get_ip_address,
         replication_password: primary_node.get_replication_password,
-        mysql_root_password: SecureRandom.alphanumeric(32)
+        mysql_root_password: get_root_password
       })
     end
 
@@ -38,10 +38,15 @@ module DeploymentServices
     end
 
     def create_user!(username, password, privileges = nil)
+      # MySQL privileges format: "database.table:PRIVILEGE1,PRIVILEGE2"
+      # Default: "*.*:ALL" means all privileges on all databases
+      default_privileges = privileges || "*.*:ALL"
+
       run_ansible_playbook(database_type_handler.create_user_playbook, {
         username: username,
         password: password,
-        privileges: privileges || "*.*:ALL",
+        privileges: default_privileges,
+        host: '%',  # Allow connections from any host
         mysql_root_password: get_root_password
       })
     end
@@ -53,21 +58,20 @@ module DeploymentServices
       })
     end
 
-    def backup_database(database_name = nil)
+    def backup_database(database_name = nil, backup_file = nil)
       # MySQL-specific backup logic
-      timestamp = Time.current.strftime("%Y%m%d_%H%M%S")
-      backup_file = "backup_#{node.id}_#{timestamp}.sql"
+      backup_file ||= "backup_#{node.id}_#{Time.current.strftime('%Y%m%d_%H%M%S')}.sql"
 
-      run_ansible_playbook("backup_database.yml", {
+      run_ansible_playbook("mysql/backup_database.yml", {
         database_name: database_name || "--all-databases",
         backup_file: backup_file,
         mysql_root_password: get_root_password
       })
     end
 
-    def restore_database(backup_file, database_name = nil)
+    def restore_database(database_name, backup_file)
       # MySQL-specific restore logic
-      run_ansible_playbook("restore_database.yml", {
+      run_ansible_playbook("mysql/restore_database.yml", {
         database_name: database_name,
         backup_file: backup_file,
         mysql_root_password: get_root_password
@@ -77,11 +81,11 @@ module DeploymentServices
     def check_replication_status
       # MySQL-specific replication status check
       if node.replica?
-        run_ansible_playbook("check_replica_status.yml", {
+        run_ansible_playbook("mysql/check_replica_status.yml", {
           mysql_root_password: get_root_password
         })
       else
-        run_ansible_playbook("check_primary_status.yml", {
+        run_ansible_playbook("mysql/check_primary_status.yml", {
           mysql_root_password: get_root_password
         })
       end
@@ -90,8 +94,9 @@ module DeploymentServices
     private
 
     def get_root_password
-      # This would typically be stored securely and retrieved from credentials
-      SecureRandom.alphanumeric(32)
+      # Retrieve the stored root password from the node
+      # This password is set during node creation and stored encrypted
+      node.ensure_root_password!
     end
   end
 end

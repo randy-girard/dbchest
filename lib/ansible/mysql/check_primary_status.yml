@@ -1,0 +1,65 @@
+---
+# Check MySQL Primary Status
+- name: Check MySQL Primary Replication Status
+  hosts: all
+  become: yes
+
+  vars:
+    mysql_root_password: "{{ mysql_root_password }}"
+
+  tasks:
+    - name: Ensure python3-pymysql is installed
+      apt:
+        name: python3-pymysql
+        state: present
+        update_cache: no
+      ignore_errors: yes
+
+    - name: Get primary status
+      community.mysql.mysql_replication:
+        mode: getmaster
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+      register: primary_status
+      no_log: true
+
+    - name: Display primary status
+      debug:
+        msg:
+          - "Binary Log File: {{ primary_status.File | default('N/A') }}"
+          - "Binary Log Position: {{ primary_status.Position | default('N/A') }}"
+          - "Binlog Do DB: {{ primary_status.Binlog_Do_DB | default('N/A') }}"
+          - "Binlog Ignore DB: {{ primary_status.Binlog_Ignore_DB | default('N/A') }}"
+
+    - name: Check if binary logging is enabled
+      fail:
+        msg: "Binary logging is not enabled on this primary"
+      when: primary_status.File is not defined or primary_status.File == ''
+
+    - name: Get list of connected replicas
+      shell: |
+        mysql -u root -p'{{ mysql_root_password }}' -e "SHOW SLAVE HOSTS;" 2>/dev/null || echo "No replicas connected"
+      register: replica_list
+      no_log: true
+      changed_when: false
+
+    - name: Display connected replicas
+      debug:
+        var: replica_list.stdout_lines
+
+    - name: Get binary log status
+      shell: |
+        mysql -u root -p'{{ mysql_root_password }}' -e "SHOW BINARY LOGS;" 2>/dev/null
+      register: binary_logs
+      no_log: true
+      changed_when: false
+
+    - name: Display binary logs
+      debug:
+        var: binary_logs.stdout_lines
+
+    - name: Display success message
+      debug:
+        msg: "Primary is configured correctly for replication"
+

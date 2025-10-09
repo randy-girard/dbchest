@@ -1,0 +1,53 @@
+---
+# MySQL Database Backup
+- name: Backup MySQL Database
+  hosts: all
+  become: yes
+
+  vars:
+    database_name: "{{ database_name | default('--all-databases') }}"
+    backup_file: "{{ backup_file | default('mysql_backup.sql') }}"
+    backup_dir: "/var/backups/mysql"
+    mysql_root_password: "{{ mysql_root_password }}"
+
+  tasks:
+    - name: Ensure backup directory exists
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+
+    - name: Backup all databases
+      shell: |
+        mysqldump -u root -p'{{ mysql_root_password }}' {{ database_name }} > {{ backup_dir }}/{{ backup_file }}
+      when: database_name == '--all-databases'
+      no_log: true
+
+    - name: Backup specific database
+      shell: |
+        mysqldump -u root -p'{{ mysql_root_password }}' {{ database_name }} > {{ backup_dir }}/{{ backup_file }}
+      when: database_name != '--all-databases'
+      no_log: true
+
+    - name: Compress backup file
+      archive:
+        path: "{{ backup_dir }}/{{ backup_file }}"
+        dest: "{{ backup_dir }}/{{ backup_file }}.gz"
+        format: gz
+        remove: yes
+
+    - name: Display backup information
+      debug:
+        msg: "Backup completed: {{ backup_dir }}/{{ backup_file }}.gz"
+
+    - name: Get backup file size
+      stat:
+        path: "{{ backup_dir }}/{{ backup_file }}.gz"
+      register: backup_stat
+
+    - name: Display backup size
+      debug:
+        msg: "Backup size: {{ (backup_stat.stat.size / 1024 / 1024) | round(2) }} MB"
+

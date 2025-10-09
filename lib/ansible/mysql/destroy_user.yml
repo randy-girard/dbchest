@@ -5,10 +5,18 @@
   become: yes
 
   tasks:
+    - name: Ensure python3-pymysql is installed
+      apt:
+        name: python3-pymysql
+        state: present
+        update_cache: no
+      ignore_errors: yes
+
     - name: Remove MySQL user
-      mysql_user:
+      community.mysql.mysql_user:
         name: "{{ username }}"
         host: "{{ host | default('%') }}"
         login_user: root
         login_password: "{{ mysql_root_password }}"
         state: absent
+        login_unix_socket: /var/run/mysqld/mysqld.sock

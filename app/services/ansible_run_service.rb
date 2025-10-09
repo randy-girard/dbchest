@@ -82,7 +82,7 @@ class AnsibleRunService
           end
         end
 
-        varfile = Tempfile.new("ansible_vars")
+        varfile = Tempfile.new([ "ansible_vars", ".json" ])
 
         # Log variables (hide sensitive ones)
         ansible_log.puts "\nAnsible Variables:"
@@ -96,9 +96,9 @@ class AnsibleRunService
         ansible_log.puts ""
         ansible_log.flush
 
-        vars.each do |key, value|
-          varfile.write("#{key}: #{value}\n")
-        end
+        # Write variables as JSON (Ansible accepts both YAML and JSON for -e @file)
+        require 'json'
+        varfile.write(vars.to_json)
         varfile.flush
         cmd += [ "-e", "@#{varfile.path}" ]
       end

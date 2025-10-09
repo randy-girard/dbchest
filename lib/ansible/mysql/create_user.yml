@@ -5,8 +5,15 @@
   become: yes
 
   tasks:
+    - name: Ensure python3-pymysql is installed
+      apt:
+        name: python3-pymysql
+        state: present
+        update_cache: no
+      ignore_errors: yes
+
     - name: Create MySQL user
-      mysql_user:
+      community.mysql.mysql_user:
         name: "{{ username }}"
         password: "{{ password }}"
         priv: "{{ privileges | default('*.*:ALL') }}"
@@ -14,3 +21,33 @@
         login_user: root
         login_password: "{{ mysql_root_password }}"
         state: present
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+      register: user_creation_result
+
+    - name: Display user creation result
+      debug:
+        var: user_creation_result
+
+    - name: Flush privileges
+      community.mysql.mysql_query:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        query: FLUSH PRIVILEGES
+
+    - name: Verify user was created
+      community.mysql.mysql_query:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        query: "SELECT user, host FROM mysql.user WHERE user = '{{ username }}' AND host = '{{ host | default('%') }}'"
+      register: user_verification
+
+    - name: Display user verification
+      debug:
+        msg: "User '{{ username }}'@'{{ host | default('%') }}' {{ 'exists' if user_verification.rowcount[0] > 0 else 'does NOT exist' }}"
+
+    - name: Fail if user was not created
+      fail:
+        msg: "Failed to create user '{{ username }}'@'{{ host | default('%') }}'"
+      when: user_verification.rowcount[0] == 0

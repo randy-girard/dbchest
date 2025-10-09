@@ -144,7 +144,7 @@ RSpec.describe DatabaseTypes::MysqlDatabaseType, type: :service do
 
   describe '#readiness_check_command' do
     it 'returns mysqladmin ping command' do
-      expect(mysql_handler.readiness_check_command).to eq('mysqladmin ping')
+      expect(mysql_handler.readiness_check_command).to eq('mysqladmin ping -h localhost')
     end
   end
 

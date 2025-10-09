@@ -54,10 +54,10 @@ DATABASE_TEST_CONFIGS = {
   },
   mysql: {
     name: "MySQL",
-    versions: [ "5.7", "8.0" ],
+    versions: [ "5.7", "8.0", "8.1", "8.2", "8.3", "8.4" ],
     cluster_prefix: "mysql",
     node_prefix: "mysql-node",
-    enabled: false # Enable when MySQL support is ready
+    enabled: true # Enable when MySQL support is ready
   },
   mongodb: {
     name: "MongoDB",

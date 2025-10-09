@@ -1,0 +1,69 @@
+---
+# MySQL Database Restore
+- name: Restore MySQL Database
+  hosts: all
+  become: yes
+
+  vars:
+    database_name: "{{ database_name | default('') }}"
+    backup_file: "{{ backup_file }}"
+    backup_dir: "/var/backups/mysql"
+    mysql_root_password: "{{ mysql_root_password }}"
+
+  tasks:
+    - name: Check if backup file exists
+      stat:
+        path: "{{ backup_dir }}/{{ backup_file }}"
+      register: backup_check
+
+    - name: Check if compressed backup exists
+      stat:
+        path: "{{ backup_dir }}/{{ backup_file }}.gz"
+      register: compressed_backup_check
+      when: not backup_check.stat.exists
+
+    - name: Fail if backup file not found
+      fail:
+        msg: "Backup file not found: {{ backup_dir }}/{{ backup_file }}"
+      when: not backup_check.stat.exists and not compressed_backup_check.stat.exists
+
+    - name: Decompress backup if needed
+      shell: |
+        gunzip -c {{ backup_dir }}/{{ backup_file }}.gz > {{ backup_dir }}/{{ backup_file }}.tmp
+      when: compressed_backup_check.stat.exists and not backup_check.stat.exists
+
+    - name: Set backup file path
+      set_fact:
+        restore_file: "{{ backup_dir }}/{{ backup_file if backup_check.stat.exists else backup_file + '.tmp' }}"
+
+    - name: Restore all databases
+      shell: |
+        mysql -u root -p'{{ mysql_root_password }}' < {{ restore_file }}
+      when: database_name == ''
+      no_log: true
+
+    - name: Create database if restoring specific database
+      mysql_db:
+        name: "{{ database_name }}"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+      when: database_name != ''
+      no_log: true
+
+    - name: Restore specific database
+      shell: |
+        mysql -u root -p'{{ mysql_root_password }}' {{ database_name }} < {{ restore_file }}
+      when: database_name != ''
+      no_log: true
+
+    - name: Clean up temporary file
+      file:
+        path: "{{ backup_dir }}/{{ backup_file }}.tmp"
+        state: absent
+      when: compressed_backup_check.stat.exists and not backup_check.stat.exists
+
+    - name: Display restore information
+      debug:
+        msg: "Database restore completed successfully"
+

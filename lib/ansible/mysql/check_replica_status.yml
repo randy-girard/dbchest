@@ -1,0 +1,57 @@
+---
+# Check MySQL Replica Status
+- name: Check MySQL Replica Replication Status
+  hosts: all
+  become: yes
+
+  vars:
+    mysql_root_password: "{{ mysql_root_password }}"
+
+  tasks:
+    - name: Ensure python3-pymysql is installed
+      apt:
+        name: python3-pymysql
+        state: present
+        update_cache: no
+      ignore_errors: yes
+
+    - name: Get replica status
+      community.mysql.mysql_replication:
+        mode: getslave
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+      register: replica_status
+      no_log: true
+
+    - name: Display replica status
+      debug:
+        msg:
+          - "Slave IO Running: {{ replica_status.Slave_IO_Running | default('N/A') }}"
+          - "Slave SQL Running: {{ replica_status.Slave_SQL_Running | default('N/A') }}"
+          - "Seconds Behind Master: {{ replica_status.Seconds_Behind_Master | default('N/A') }}"
+          - "Master Host: {{ replica_status.Master_Host | default('N/A') }}"
+          - "Master Port: {{ replica_status.Master_Port | default('N/A') }}"
+          - "Last IO Error: {{ replica_status.Last_IO_Error | default('None') }}"
+          - "Last SQL Error: {{ replica_status.Last_SQL_Error | default('None') }}"
+
+    - name: Check if replication is healthy
+      fail:
+        msg: "Replication is not running properly"
+      when: >
+        replica_status.Slave_IO_Running != 'Yes' or
+        replica_status.Slave_SQL_Running != 'Yes'
+
+    - name: Check replication lag
+      debug:
+        msg: "WARNING: Replication lag is {{ replica_status.Seconds_Behind_Master }} seconds"
+      when: replica_status.Seconds_Behind_Master | int > 10
+
+    - name: Display success message
+      debug:
+        msg: "Replication is healthy and running normally"
+      when: >
+        replica_status.Slave_IO_Running == 'Yes' and
+        replica_status.Slave_SQL_Running == 'Yes' and
+        replica_status.Seconds_Behind_Master | int <= 10
+

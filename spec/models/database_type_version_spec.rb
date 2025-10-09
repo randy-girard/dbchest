@@ -176,44 +176,127 @@ RSpec.describe DatabaseTypeVersion, type: :model do
         expect(database_type_version.compatibility_notes).to be_empty
       end
     end
-  end
 
-  describe '#ubuntu_compatible?' do
-    before { database_type.update!(slug: 'postgresql') }
-
-    context 'for PostgreSQL 16+' do
-      before { database_type_version.version = '16' }
-
-      it 'returns false for Ubuntu 20.04' do
-        expect(database_type_version.ubuntu_compatible?('20.04')).to be false
+    context 'for MySQL 5.7' do
+      before do
+        database_type.update!(slug: 'mysql')
+        database_type_version.version = '5.7'
       end
 
-      it 'returns true for Ubuntu 22.04' do
-        expect(database_type_version.ubuntu_compatible?('22.04')).to be true
-      end
-
-      it 'returns true when ubuntu_version is nil' do
-        expect(database_type_version.ubuntu_compatible?(nil)).to be true
+      it 'includes Ubuntu compatibility warning' do
+        notes = database_type_version.compatibility_notes
+        expect(notes).to include('MySQL 5.7 is only available on Ubuntu 18.04 and 20.04. For Ubuntu 22.04+, use MySQL 8.0 or later.')
       end
     end
 
-    context 'for PostgreSQL 15' do
-      before { database_type_version.version = '15' }
-
-      it 'returns true for any Ubuntu version' do
-        expect(database_type_version.ubuntu_compatible?('20.04')).to be true
-        expect(database_type_version.ubuntu_compatible?('22.04')).to be true
-      end
-    end
-
-    context 'for non-PostgreSQL' do
+    context 'for MySQL 8.0' do
       before do
         database_type.update!(slug: 'mysql')
         database_type_version.version = '8.0'
       end
 
-      it 'returns true for any Ubuntu version' do
-        expect(database_type_version.ubuntu_compatible?('20.04')).to be true
+      it 'includes compatibility note' do
+        notes = database_type_version.compatibility_notes
+        expect(notes).to include('MySQL 8.0 (LTS) is compatible with Ubuntu 20.04 and 22.04.')
+      end
+    end
+
+    context 'for MySQL 8.4' do
+      before do
+        database_type.update!(slug: 'mysql')
+        database_type_version.version = '8.4'
+      end
+
+      it 'includes Ubuntu compatibility warning' do
+        notes = database_type_version.compatibility_notes
+        expect(notes).to include('MySQL 8.4 (Innovation release) requires Ubuntu 22.04 or later.')
+      end
+    end
+  end
+
+  describe '#ubuntu_compatible?' do
+    context 'for PostgreSQL' do
+      before { database_type.update!(slug: 'postgresql') }
+
+      context 'for PostgreSQL 16+' do
+        before { database_type_version.version = '16' }
+
+        it 'returns false for Ubuntu 20.04' do
+          expect(database_type_version.ubuntu_compatible?('20.04')).to be false
+        end
+
+        it 'returns true for Ubuntu 22.04' do
+          expect(database_type_version.ubuntu_compatible?('22.04')).to be true
+        end
+
+        it 'returns true when ubuntu_version is nil' do
+          expect(database_type_version.ubuntu_compatible?(nil)).to be true
+        end
+      end
+
+      context 'for PostgreSQL 15' do
+        before { database_type_version.version = '15' }
+
+        it 'returns true for any Ubuntu version' do
+          expect(database_type_version.ubuntu_compatible?('20.04')).to be true
+          expect(database_type_version.ubuntu_compatible?('22.04')).to be true
+        end
+      end
+    end
+
+    context 'for MySQL' do
+      before { database_type.update!(slug: 'mysql') }
+
+      context 'for MySQL 5.7' do
+        before { database_type_version.version = '5.7' }
+
+        it 'returns true for Ubuntu 18.04' do
+          expect(database_type_version.ubuntu_compatible?('18.04')).to be true
+        end
+
+        it 'returns true for Ubuntu 20.04' do
+          expect(database_type_version.ubuntu_compatible?('20.04')).to be true
+        end
+
+        it 'returns false for Ubuntu 22.04' do
+          expect(database_type_version.ubuntu_compatible?('22.04')).to be false
+        end
+
+        it 'returns false for Ubuntu 24.04' do
+          expect(database_type_version.ubuntu_compatible?('24.04')).to be false
+        end
+      end
+
+      context 'for MySQL 8.0' do
+        before { database_type_version.version = '8.0' }
+
+        it 'returns true for Ubuntu 20.04' do
+          expect(database_type_version.ubuntu_compatible?('20.04')).to be true
+        end
+
+        it 'returns true for Ubuntu 22.04' do
+          expect(database_type_version.ubuntu_compatible?('22.04')).to be true
+        end
+      end
+
+      context 'for MySQL 8.4' do
+        before { database_type_version.version = '8.4' }
+
+        it 'returns false for Ubuntu 18.04' do
+          expect(database_type_version.ubuntu_compatible?('18.04')).to be false
+        end
+
+        it 'returns false for Ubuntu 20.04' do
+          expect(database_type_version.ubuntu_compatible?('20.04')).to be false
+        end
+
+        it 'returns true for Ubuntu 22.04' do
+          expect(database_type_version.ubuntu_compatible?('22.04')).to be true
+        end
+
+        it 'returns true for Ubuntu 24.04' do
+          expect(database_type_version.ubuntu_compatible?('24.04')).to be true
+        end
       end
     end
   end

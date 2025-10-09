@@ -1,0 +1,40 @@
+---
+# List MySQL Users for Debugging
+- name: List MySQL Users
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Get list of MySQL users
+      shell: |
+        mysql -u root -p'{{ mysql_root_password }}' -e "SELECT user, host FROM mysql.user;" 2>/dev/null
+      register: mysql_users
+      no_log: true
+      changed_when: false
+
+    - name: Display MySQL users
+      debug:
+        var: mysql_users.stdout_lines
+
+    - name: Get grants for default user if exists
+      shell: |
+        mysql -u root -p'{{ mysql_root_password }}' -e "SHOW GRANTS FOR 'default'@'%';" 2>/dev/null || echo "User 'default'@'%' does not exist"
+      register: default_user_grants
+      no_log: true
+      changed_when: false
+
+    - name: Display default user grants
+      debug:
+        var: default_user_grants.stdout_lines
+
+    - name: Check for default user with localhost
+      shell: |
+        mysql -u root -p'{{ mysql_root_password }}' -e "SHOW GRANTS FOR 'default'@'localhost';" 2>/dev/null || echo "User 'default'@'localhost' does not exist"
+      register: default_localhost_grants
+      no_log: true
+      changed_when: false
+
+    - name: Display default localhost grants
+      debug:
+        var: default_localhost_grants.stdout_lines
+
