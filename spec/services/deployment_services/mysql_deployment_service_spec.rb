@@ -284,4 +284,3 @@ RSpec.describe DeploymentServices::MysqlDeploymentService, type: :service do
     end
   end
 end
-

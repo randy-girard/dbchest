@@ -14,8 +14,8 @@ RSpec.describe Node, type: :model do
     it { should belong_to(:parent_node).class_name('Node').optional }
     it { should have_many(:credentials).dependent(:destroy) }
     it { should have_many(:node_settings).dependent(:destroy) }
-    it { should have_many(:node_metrics).dependent(:destroy) }
-    it { should have_many(:monitoring_configs).dependent(:destroy) }
+    it { should have_many(:node_metrics).dependent(:delete_all) }
+    it { should have_many(:monitoring_configs).dependent(:delete_all) }
     it { should have_many(:replicas).class_name('Node').with_foreign_key('parent_node_id').dependent(:destroy) }
   end
 
@@ -423,7 +423,7 @@ RSpec.describe Node, type: :model do
       end
 
       it 'returns nil when database types do not match' do
-        other_db_type = create(:database_type, name: 'MySQL')
+        other_db_type = create(:database_type, :mysql)
         other_version = create(:database_type_version, database_type: other_db_type)
         target_node.database_type_version = other_version
         expect(node.replication_method_for(target_node)).to be_nil

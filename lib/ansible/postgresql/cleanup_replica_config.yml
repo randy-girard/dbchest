@@ -24,21 +24,35 @@
         msg: "replica_ip variable is empty or undefined. Cannot clean up pg_hba.conf"
       when: replica_ip is undefined or replica_ip == ""
 
-    - name: Remove replica-specific pg_hba.conf entry for replication
+    - name: Remove replica-specific pg_hba.conf comment
       lineinfile:
         path: "{{ postgresql_hba_file }}"
-        line: "host replication replicator {{ replica_ip }}/32 md5"
+        regexp: "^# Replication from .* \\({{ replica_ip }}\\)"
         state: absent
         backup: yes
-      notify: reload postgresql
 
-    - name: Remove replica-specific pg_hba.conf entry for regular connections
+    - name: Remove replica-specific pg_hba.conf entry for replication protocol
       lineinfile:
         path: "{{ postgresql_hba_file }}"
-        line: "host all all {{ replica_ip }}/32 md5"
+        regexp: "^host\\s+replication\\s+replication\\s+{{ replica_ip }}/32"
         state: absent
         backup: yes
-      notify: reload postgresql
+
+    - name: Remove replica-specific pg_hba.conf entry for postgres database
+      lineinfile:
+        path: "{{ postgresql_hba_file }}"
+        regexp: "^host\\s+postgres\\s+replication\\s+{{ replica_ip }}/32"
+        state: absent
+        backup: yes
+
+    # Note: We no longer add/remove catch-all pg_hba entries for replicas
+    # User-specific entries are managed separately
+
+    - name: Reload PostgreSQL configuration
+      become_user: postgres
+      shell: |
+        psql -c "SELECT pg_reload_conf();" postgres
+      changed_when: true
 
   handlers:
     - name: reload postgresql

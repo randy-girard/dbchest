@@ -33,7 +33,8 @@ module DatabaseTypes
       [
         "echo \"hot_standby = on\" >> #{config_file_path}",
         "echo \"max_standby_streaming_delay = 30s\" >> #{config_file_path}",
-        "echo \"wal_receiver_status_interval = 10s\" >> #{config_file_path}"
+        "echo \"wal_receiver_status_interval = 10s\" >> #{config_file_path}",
+        "echo \"listen_addresses = '*'\" >> #{config_file_path}"
       ]
     end
 

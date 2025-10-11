@@ -54,10 +54,18 @@ module NodeStatusManagement
   def update_status!(new_status, message = nil)
     Rails.logger.info "Updating node #{id} status from '#{status}' to '#{new_status}': #{message}"
 
+    old_status = status
+
     if update!(status: new_status)
       Rails.logger.info "Node #{id} status successfully updated to '#{new_status}'"
       broadcast_status_update(message)
       broadcast_to_development_console("node_update_status", message) if Rails.env.development?
+
+      # Trigger credential synchronization when replica becomes active
+      if replica? && new_status == "active" && old_status != "active"
+        Rails.logger.info "Node #{id} is a replica becoming active - triggering credential sync"
+        SyncCredentialsToReplicaJob.perform_later(id)
+      end
     else
       Rails.logger.error "Failed to update node #{id} status to '#{new_status}': #{errors.full_messages.join(', ')}"
     end

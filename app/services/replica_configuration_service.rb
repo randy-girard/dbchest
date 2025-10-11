@@ -43,9 +43,6 @@ class ReplicaConfigurationService
       # For simplicity, assume /24 subnet - in production you might want to be more specific
       ip_parts = primary_ip.split(".")
       "#{ip_parts[0]}.#{ip_parts[1]}.#{ip_parts[2]}.0/24"
-    else
-      # Fallback to allow any IP (less secure but functional)
-      "0.0.0.0/0"
     end
   end
 

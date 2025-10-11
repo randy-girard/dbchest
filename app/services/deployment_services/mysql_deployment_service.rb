@@ -46,7 +46,7 @@ module DeploymentServices
         username: username,
         password: password,
         privileges: default_privileges,
-        host: '%',  # Allow connections from any host
+        host: "%",  # Allow connections from any host
         mysql_root_password: get_root_password
       })
     end

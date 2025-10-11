@@ -174,4 +174,3 @@ RSpec.describe CloudInitGenerators::MysqlCloudInitGenerator do
     end
   end
 end
-

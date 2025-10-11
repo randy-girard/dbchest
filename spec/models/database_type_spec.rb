@@ -57,7 +57,7 @@ RSpec.describe DatabaseType, type: :model do
     describe '.active' do
       it 'returns database types with versions' do
         db_type_with_versions = create(:database_type, :with_versions)
-        db_type_without_versions = create(:database_type)
+        db_type_without_versions = create(:database_type, :mysql)  # Use a different database type
 
         expect(DatabaseType.active).to include(db_type_with_versions)
         expect(DatabaseType.active).not_to include(db_type_without_versions)

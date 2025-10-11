@@ -43,25 +43,75 @@
         path: "{{ postgresql_hba_file }}"
         line: "# Replication from {{ replica_node_name }} ({{ replica_ip }})"
         backup: yes
-      notify: reload postgresql
 
-    - name: Add replication host entry for specific replica
+    - name: Add replication protocol entry for specific replica
       lineinfile:
         path: "{{ postgresql_hba_file }}"
-        line: "host    replication     replication     {{ replica_ip }}/32          md5"
+        line: "host    replication     replication     {{ replica_ip }}/32          scram-sha-256"
         insertafter: "# Replication from {{ replica_node_name }}"
         backup: yes
-      notify: reload postgresql
 
-    - name: Add replica-specific pg_hba.conf entry for regular connections
+    - name: Add postgres database entry for replication user connection testing
       lineinfile:
         path: "{{ postgresql_hba_file }}"
-        line: "host all all {{ replica_ip }}/32 md5"
+        line: "host    postgres        replication     {{ replica_ip }}/32          scram-sha-256"
+        insertafter: "host    replication     replication     {{ replica_ip }}/32"
         backup: yes
-      notify: reload postgresql
+      register: pg_hba_changed
 
-  handlers:
-    - name: reload postgresql
+    # Note: We no longer add a catch-all pg_hba entry for replicas
+    # User-specific entries are managed separately and will allow replica connections
+    # The replication user can connect to postgres db for testing but has no privileges to query data
+
+    - name: Reload PostgreSQL configuration via SQL
       become_user: postgres
       shell: |
         psql -c "SELECT pg_reload_conf();" postgres
+      register: reload_result
+      changed_when: true
+      failed_when: reload_result.rc != 0
+
+    - name: Display SQL reload result
+      debug:
+        msg: "pg_reload_conf() result: {{ reload_result.stdout }}"
+
+    - name: Get PostgreSQL service name
+      shell: |
+        if systemctl list-units --type=service --all | grep -q 'postgresql@'; then
+          systemctl list-units --type=service --all | grep 'postgresql@' | awk '{print $1}' | head -n1
+        elif systemctl list-units --type=service --all | grep -q 'postgresql.service'; then
+          echo "postgresql.service"
+        else
+          echo ""
+        fi
+      register: pg_service_name
+      changed_when: false
+
+    - name: Display detected PostgreSQL service
+      debug:
+        msg: "Detected PostgreSQL service: {{ pg_service_name.stdout }}"
+
+    - name: Reload PostgreSQL via systemctl as backup
+      systemd:
+        name: "{{ pg_service_name.stdout }}"
+        state: reloaded
+      when: pg_service_name.stdout != ""
+      register: systemctl_reload_result
+
+    - name: Display systemctl reload result
+      debug:
+        msg: "PostgreSQL service {{ pg_service_name.stdout }} reloaded via systemctl"
+      when: pg_service_name.stdout != ""
+
+    - name: Verify PostgreSQL is accepting connections
+      become_user: postgres
+      shell: |
+        psql -t -A -c "SELECT pg_is_in_recovery();" postgres
+      register: pg_status
+      changed_when: false
+      retries: 3
+      delay: 2
+
+    - name: Display reload status
+      debug:
+        msg: "PostgreSQL configuration reloaded. Recovery mode: {{ pg_status.stdout }}"

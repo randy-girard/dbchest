@@ -135,12 +135,8 @@
         group: postgres
         mode: '0700'
 
-    - name: Configure remote connections
-      lineinfile:
-        path: "{{ postgresql_hba_file }}"
-        line: "host all all 0.0.0.0/0 md5"
-        state: present
-      notify: Restart postgresql
+    # Note: We no longer add a catch-all pg_hba entry for security reasons
+    # User-specific entries will be added when credentials are created
 
     - name: Set postgres password
       become: yes

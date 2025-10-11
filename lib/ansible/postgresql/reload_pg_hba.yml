@@ -1,0 +1,29 @@
+---
+# Reload PostgreSQL pg_hba.conf configuration
+# Use this to manually reload pg_hba.conf after making changes
+- name: Reload PostgreSQL pg_hba.conf
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Reload PostgreSQL configuration
+      become_user: postgres
+      shell: |
+        psql -c "SELECT pg_reload_conf();" postgres
+      register: reload_result
+
+    - name: Display reload result
+      debug:
+        var: reload_result.stdout_lines
+
+    - name: Verify configuration was reloaded
+      become_user: postgres
+      shell: |
+        psql -t -A -c "SELECT pg_postmaster_start_time();" postgres
+      register: start_time
+      changed_when: false
+
+    - name: Display PostgreSQL status
+      debug:
+        msg: "PostgreSQL has been running since: {{ start_time.stdout }}"
+

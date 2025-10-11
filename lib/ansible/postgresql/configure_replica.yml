@@ -84,6 +84,7 @@
         line: "{{ item.key }} = {{ item.value }}"
         backup: yes
       loop:
+        - { key: "listen_addresses", value: "'*'" }
         - { key: "hot_standby", value: "on" }
         - { key: "max_standby_streaming_delay", value: "30s" }
         - { key: "wal_receiver_status_interval", value: "10s" }

@@ -34,7 +34,7 @@ class ProvisionDefaultCredentialJob < ApplicationJob
 
     if credential.persisted?
       Rails.logger.info "ProvisionDefaultCredentialJob: Created default credential #{credential.id} for node #{@node.id}"
-      
+
       # Provision the credential on the appropriate nodes
       provision_credential_on_nodes(credential)
     else
@@ -72,10 +72,10 @@ class ProvisionDefaultCredentialJob < ApplicationJob
     else
       # Users must be created on each node - provision on primary and all active replicas
       Rails.logger.info "ProvisionDefaultCredentialJob: Database type #{@node.database_type_slug} requires manual user replication - provisioning on all nodes"
-      
+
       # Provision on primary
       provision_on_node(@node, credential)
-      
+
       # Provision on all active replicas
       @node.replicas.active.each do |replica|
         Rails.logger.info "ProvisionDefaultCredentialJob: Provisioning on replica #{replica.id} (#{replica.name})"
@@ -86,7 +86,7 @@ class ProvisionDefaultCredentialJob < ApplicationJob
 
   def provision_on_node(node, credential)
     deployment_service = node.deployment_service
-    
+
     begin
       deployment_service.create_user!(
         credential.username,
@@ -116,4 +116,3 @@ class ProvisionDefaultCredentialJob < ApplicationJob
     end
   end
 end
-

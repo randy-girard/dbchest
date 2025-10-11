@@ -17,6 +17,7 @@
         path: /etc/mysql/mysql.conf.d/mysqld.cnf
         marker: "# {mark} REPLICA CONFIG"
         block: |
+          bind-address = 0.0.0.0
           server-id = 2
           read-only = ON
           super-read-only = ON

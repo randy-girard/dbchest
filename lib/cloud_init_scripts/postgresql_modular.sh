@@ -64,9 +64,11 @@ if [ -n "{{PRIMARY_HOST}}" ] && [ "{{PRIMARY_HOST}}" != "" ]; then
     sleep $wait_interval
     waited=$((waited + wait_interval))
 
-    # Try to test connection to primary (this will fail until replication user is created)
-    if PGPASSWORD="{{REPLICATION_PASSWORD}}" psql -h "{{PRIMARY_HOST}}" -U replication -d postgres -c "SELECT 1" >/dev/null 2>&1; then
-      log "Primary is configured and replication user is accessible"
+    # Try to test connection to primary using replication user
+    # The primary adds a pg_hba entry allowing replication user to connect to postgres db for testing
+    # Note: replication user has no privileges to query data, but can connect to verify pg_hba is configured
+    if PGPASSWORD="{{REPLICATION_PASSWORD}}" psql -h "{{PRIMARY_HOST}}" -U replication -d postgres -c "SELECT 1;" >/dev/null 2>&1; then
+      log "Primary is configured and replication user can connect"
       break
     fi
   done

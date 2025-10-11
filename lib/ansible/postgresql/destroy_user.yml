@@ -28,6 +28,9 @@
 
   handlers:
     - name: Reload PostgreSQL
-      service:
-        name: postgresql
-        state: reloaded
+      become_user: postgres
+      shell: |
+        psql -c "SELECT pg_reload_conf();" postgres
+      register: reload_result
+      changed_when: true
+      failed_when: reload_result.rc != 0

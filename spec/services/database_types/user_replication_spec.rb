@@ -41,7 +41,7 @@ RSpec.describe 'Database Type User Replication', type: :service do
 
   describe 'BaseDatabaseType default behavior' do
     let(:version) { create(:database_type_version, database_type: database_type, version: '1.0') }
-    
+
     # Create a test handler that doesn't override users_replicate_automatically?
     let(:test_handler_class) do
       Class.new(DatabaseTypes::BaseDatabaseType) do
@@ -90,4 +90,3 @@ RSpec.describe 'Database Type User Replication', type: :service do
     end
   end
 end
-

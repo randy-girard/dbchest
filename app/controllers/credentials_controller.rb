@@ -14,6 +14,15 @@ class CredentialsController < ApplicationController
 
   # GET /credentials/new
   def new
+    # Check if this is a replica with automatic user replication
+    if @node.replica? && @node.parent_node.present?
+      database_type_handler = @node.database_type_handler
+      if database_type_handler.respond_to?(:users_replicate_automatically?) && database_type_handler.users_replicate_automatically?
+        redirect_to [ @cluster, @node ], alert: "Cannot create credentials on a replica node. Create credentials on the primary node instead."
+        return
+      end
+    end
+
     @credential = @node.credentials.new
   end
 
@@ -28,7 +37,7 @@ class CredentialsController < ApplicationController
     respond_to do |format|
       if @credential.save
         @credential.provision!
-        format.html { redirect_to [@cluster, @node], notice: "Credential was successfully created." }
+        format.html { redirect_to [ @cluster, @node ], notice: "Credential was successfully created." }
         format.json { render :show, status: :created, location: [ @cluster, @node, @credential ] }
       else
         format.html { render :new, status: :unprocessable_content }
@@ -41,7 +50,7 @@ class CredentialsController < ApplicationController
   def update
     respond_to do |format|
       if @credential.update(credential_params)
-        format.html { redirect_to [@cluster, @node], notice: "Credential was successfully updated.", status: :see_other }
+        format.html { redirect_to [ @cluster, @node ], notice: "Credential was successfully updated.", status: :see_other }
         format.json { render :show, status: :ok, location: [ @cluster, @node, @credential ] }
       else
         format.html { render :edit, status: :unprocessable_content }
@@ -54,8 +63,16 @@ class CredentialsController < ApplicationController
   def destroy
     if @credential.default_credential?
       respond_to do |format|
-        format.html { redirect_to [@cluster, @node], alert: "Cannot delete the default credential.", status: :see_other }
+        format.html { redirect_to [ @cluster, @node ], alert: "Cannot delete the default credential.", status: :see_other }
         format.json { render json: { error: "Cannot delete the default credential" }, status: :unprocessable_entity }
+      end
+      return
+    end
+
+    if @credential.is_replicated?
+      respond_to do |format|
+        format.html { redirect_to [ @cluster, @node ], alert: "Cannot delete replicated credentials. Delete the credential from the primary node instead.", status: :see_other }
+        format.json { render json: { error: "Cannot delete replicated credentials" }, status: :unprocessable_entity }
       end
       return
     end
@@ -63,7 +80,7 @@ class CredentialsController < ApplicationController
     @credential.deprovision!
 
     respond_to do |format|
-      format.html { redirect_to [@cluster, @node], notice: "Credential was successfully destroyed.", status: :see_other }
+      format.html { redirect_to [ @cluster, @node ], notice: "Credential was successfully destroyed.", status: :see_other }
       format.json { head :no_content }
     end
   end

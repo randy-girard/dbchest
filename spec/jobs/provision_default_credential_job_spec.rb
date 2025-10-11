@@ -181,4 +181,3 @@ RSpec.describe ProvisionDefaultCredentialJob, type: :job do
     end
   end
 end
-

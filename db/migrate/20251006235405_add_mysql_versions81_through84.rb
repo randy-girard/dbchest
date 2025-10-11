@@ -107,6 +107,6 @@ class AddMysqlVersions81Through84 < ActiveRecord::Migration[8.0]
     return unless mysql_type
 
     # Remove the added versions
-    mysql_type.database_type_versions.where(version: ["8.1", "8.2", "8.3", "8.4"]).destroy_all
+    mysql_type.database_type_versions.where(version: [ "8.1", "8.2", "8.3", "8.4" ]).destroy_all
   end
 end

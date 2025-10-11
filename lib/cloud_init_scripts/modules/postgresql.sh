@@ -70,10 +70,6 @@ configure_postgresql_primary() {
 
   log "Configuring PostgreSQL as primary for replication..."
 
-  # Create replication user (using su to avoid sudo issues)
-  log "Creating replication user..."
-  su - postgres -c "psql -c \"CREATE USER replication REPLICATION LOGIN CONNECTION LIMIT 5 PASSWORD '{{REPLICATION_PASSWORD}}'\"" || true
-
   # Configure PostgreSQL for replication
   local pg_conf="/etc/postgresql/$db_version/main/postgresql.conf"
   local pg_hba="/etc/postgresql/$db_version/main/pg_hba.conf"
@@ -113,6 +109,8 @@ configure_postgresql_primary() {
   #echo "wal_keep_size = 64MB" >> "$pg_conf"
   echo "hot_standby = on" >> "$pg_conf"
 
+  # Note: pg_hba entries for replication will be added by Ansible when replicas are created
+  # This ensures we only allow specific replica IPs, not a catch-all 0.0.0.0/0
 
   # Restart PostgreSQL to apply configuration
   log "Restarting PostgreSQL to apply configuration..."
@@ -121,6 +119,10 @@ configure_postgresql_primary() {
   # Wait for PostgreSQL to be ready
   log "Waiting for PostgreSQL to be ready after restart..."
   wait_for_service "$service_name"
+
+  # Create replication user AFTER setting password_encryption and restarting
+  log "Creating replication user with SCRAM-SHA-256 encryption..."
+  su - postgres -c "psql -c \"CREATE USER replication REPLICATION LOGIN CONNECTION LIMIT 5 PASSWORD '{{REPLICATION_PASSWORD}}'\"" || true
 
   log "PostgreSQL primary configuration completed successfully"
 }
@@ -197,6 +199,21 @@ setup_postgresql_replica() {
     callback "error" "Base backup failed - check node logs for details"
     rm -f "$backup_log"
     exit 1
+  fi
+
+  # Configure PostgreSQL to listen on all addresses
+  log "Configuring PostgreSQL to accept external connections..."
+  local pg_conf="/etc/postgresql/$db_version/main/postgresql.conf"
+
+  if [ -f "$pg_conf" ]; then
+    # Add listen_addresses configuration
+    echo "listen_addresses = '*'" >> "$pg_conf"
+    echo "hot_standby = on" >> "$pg_conf"
+    echo "max_standby_streaming_delay = 30s" >> "$pg_conf"
+    echo "wal_receiver_status_interval = 10s" >> "$pg_conf"
+    log "PostgreSQL configured to listen on all addresses"
+  else
+    log "WARNING: PostgreSQL config file not found at $pg_conf"
   fi
 
   # Start PostgreSQL as replica

@@ -97,7 +97,7 @@ class AnsibleRunService
         ansible_log.flush
 
         # Write variables as JSON (Ansible accepts both YAML and JSON for -e @file)
-        require 'json'
+        require "json"
         varfile.write(vars.to_json)
         varfile.flush
         cmd += [ "-e", "@#{varfile.path}" ]

@@ -76,7 +76,7 @@ class DatabaseTypeVersion < ApplicationRecord
       if version == "5.7"
         # MySQL 5.7 only works on Ubuntu 18.04 and 20.04
         return false if ubuntu_version&.start_with?("22.04") || ubuntu_version&.start_with?("24.04")
-      elsif ["8.1", "8.2", "8.3", "8.4"].include?(version)
+      elsif [ "8.1", "8.2", "8.3", "8.4" ].include?(version)
         # MySQL 8.1+ Innovation releases require Ubuntu 22.04+
         return false if ubuntu_version&.start_with?("20.04") || ubuntu_version&.start_with?("18.04")
       end

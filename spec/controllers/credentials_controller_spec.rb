@@ -117,7 +117,7 @@ RSpec.describe CredentialsController, type: :controller do
 
       it "redirects to the cluster" do
         post :create, params: { cluster_id: cluster.to_param, node_id: node.to_param, credential: valid_attributes }
-        expect(response).to redirect_to([cluster, node])
+        expect(response).to redirect_to([ cluster, node ])
       end
 
       it "sets a success notice" do
@@ -202,7 +202,7 @@ RSpec.describe CredentialsController, type: :controller do
 
       it "redirects to the cluster" do
         delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: credential.to_param }
-        expect(response).to redirect_to([cluster, node])
+        expect(response).to redirect_to([ cluster, node ])
       end
 
       it "sets a success notice" do
@@ -223,7 +223,7 @@ RSpec.describe CredentialsController, type: :controller do
 
       it "redirects to the node" do
         delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: default_credential.to_param }
-        expect(response).to redirect_to([cluster, node])
+        expect(response).to redirect_to([ cluster, node ])
       end
 
       it "sets an alert message" do
@@ -304,6 +304,73 @@ RSpec.describe CredentialsController, type: :controller do
           delete :destroy, params: { cluster_id: cluster.to_param, node_id: node.to_param, id: default_credential.to_param }, format: :json
           expect(JSON.parse(response.body)['error']).to eq("Cannot delete the default credential")
         end
+      end
+    end
+  end
+
+  describe "credential replication restrictions" do
+    let(:mysql_database_type) { create(:database_type, slug: 'mysql', name: 'MySQL') }
+    let(:mysql_cluster) { create(:cluster, database_type: mysql_database_type) }
+    let(:mysql_version) { create(:database_type_version, database_type: mysql_database_type, version: '8.0') }
+    let(:primary_node) { create(:node, cluster: mysql_cluster, provider: provider, database_type_version: mysql_version, parent_node: nil) }
+    let(:replica_node) { create(:node, cluster: mysql_cluster, provider: provider, database_type_version: mysql_version, parent_node: primary_node, status: 'active') }
+
+    before do
+      # Mock the database type handler
+      allow_any_instance_of(Node).to receive(:database_type_handler).and_return(
+        double(users_replicate_automatically?: true)
+      )
+    end
+
+    describe "GET #new on replica" do
+      it "redirects to node page with error" do
+        get :new, params: { cluster_id: mysql_cluster.to_param, node_id: replica_node.to_param }
+        expect(response).to redirect_to([ mysql_cluster, replica_node ])
+      end
+
+      it "sets alert message" do
+        get :new, params: { cluster_id: mysql_cluster.to_param, node_id: replica_node.to_param }
+        expect(flash[:alert]).to eq("Cannot create credentials on a replica node. Create credentials on the primary node instead.")
+      end
+    end
+
+    describe "GET #new on primary" do
+      it "allows creating credentials" do
+        get :new, params: { cluster_id: mysql_cluster.to_param, node_id: primary_node.to_param }
+        expect(response).to be_successful
+      end
+    end
+
+    describe "DELETE #destroy on replicated credential" do
+      let(:primary_credential) do
+        allow_any_instance_of(Credential).to receive(:replicate_to_replicas)
+        primary_node.credentials.create!(username: 'testuser', password: 'testpass')
+      end
+
+      let(:replicated_credential) do
+        replica_node.credentials.create!(
+          username: 'testuser',
+          password: 'testpass',
+          source_credential_id: primary_credential.id,
+          is_replicated: true
+        )
+      end
+
+      it "redirects with error message" do
+        delete :destroy, params: { cluster_id: mysql_cluster.to_param, node_id: replica_node.to_param, id: replicated_credential.to_param }
+        expect(response).to redirect_to([ mysql_cluster, replica_node ])
+      end
+
+      it "sets alert message" do
+        delete :destroy, params: { cluster_id: mysql_cluster.to_param, node_id: replica_node.to_param, id: replicated_credential.to_param }
+        expect(flash[:alert]).to eq("Cannot delete replicated credentials. Delete the credential from the primary node instead.")
+      end
+
+      it "does not delete the credential" do
+        replicated_credential # create it
+        expect {
+          delete :destroy, params: { cluster_id: mysql_cluster.to_param, node_id: replica_node.to_param, id: replicated_credential.to_param }
+        }.not_to change { Credential.count }
       end
     end
   end

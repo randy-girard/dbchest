@@ -68,7 +68,7 @@ RSpec.describe AnsibleRunService, type: :service do
 
     before do
       allow(Tempfile).to receive(:new).with("ansible_inventory").and_return(inventory_file)
-      allow(Tempfile).to receive(:new).with("ansible_vars").and_return(vars_file)
+      allow(Tempfile).to receive(:new).with([ "ansible_vars", ".json" ]).and_return(vars_file)
       allow(Tempfile).to receive(:new).with("ansible_key").and_return(key_file)
     end
 
@@ -116,12 +116,13 @@ RSpec.describe AnsibleRunService, type: :service do
           # Mock the secure ansible binary finder
           allow(service).to receive(:find_ansible_binary).and_return('/usr/bin/ansible-playbook')
 
-          expect(vars_file).to receive(:write).with("test_var: test_value\n")
+          # The service now writes JSON instead of YAML
+          expect(vars_file).to receive(:write).with('{"test_var":"test_value"}')
 
           expected_cmd = [
             '/usr/bin/ansible-playbook',
             '-i', '/tmp/inventory',
-            '-e', '@/tmp/vars',
+            '-e', '@/tmp/vars',  # This matches the vars_file mock path
             '--private-key', '/tmp/key',
             '-v',
             Rails.root.join("lib", "ansible", "postgresql", playbook).to_s
